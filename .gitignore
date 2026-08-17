@@ -23,8 +23,8 @@ env/
 .env.*
 !.env.example
 
-# Local AI models / large artifacts
-models/
+# Local AI model weights / large artifacts (not app/models domain package)
+/models/
 *.gguf
 *.safetensors
 *.bin
