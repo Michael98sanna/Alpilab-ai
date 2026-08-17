@@ -1,68 +1,131 @@
 # Alpilab AI
 
-Assistente tecnico AI indipendente da Alpilab Check.
+Assistente tecnico AI **cloud/web** per laboratorio di riparazione smartphone.
 
-## Obiettivo
+Progetto **separato** da Alpilab Check (applicazione Windows al banco). Alpilab AI non importa il codice interno di Alpilab Check e non lo modifica.
 
-Alpilab AI nasce come progetto separato da Alpilab Check. L'obiettivo è creare un assistente per il laboratorio di riparazione smartphone capace di:
+## Differenza rispetto ad Alpilab Check
 
-- ragionare sui problemi tecnici;
-- consultare una knowledge base tecnica;
-- utilizzare più motori AI tramite un router comune;
-- lavorare anche con modelli locali quando possibile;
-- ricevere in futuro dati diagnostici da Alpilab Check senza dipendere dal suo codice;
-- conservare uno storico delle riparazioni e usarlo come conoscenza del laboratorio.
+| | **Alpilab Check** | **Alpilab AI** |
+|---|---|---|
+| Tipo | App Windows al banco | Sistema cloud/web (PC, Android, iPhone, tablet, futura PWA) |
+| Uso principale | Identificazione e diagnostica dispositivo | Assistente tecnico AI, knowledge base, storico riparazioni |
+| Integrazione | Prodotto autonomo | Futuro bridge tramite API/contratto stabile (`AlpilabCheckConnector`) |
 
-## Principio architetturale
+## Architettura (visione)
 
 ```text
-                    ALPILAB AI
-                        |
-                  AI Router
-          _____________|_____________
-         |             |             |
-      Local AI      Online AI      Fallback
-         |             |             |
-         +_____________+_____________+
-                       |
-                Knowledge Base
-                       |
-             Repair History / RAG
-                       |
-              Alpilab Check Bridge
+                    ALPILAB AI CLOUD
+                           |
+             +-------------+-------------+
+             |             |             |
+          AI Router    Knowledge Base   Database
+             |             |             |
+             +-------------+-------------+
+                           |
+                      Web / PWA
+                           |
+              +------------+------------+
+              |            |            |
+             PC         Tablet      Smartphone
+                           |
+                    ALPILAB HUB (futuro)
+                           |
+          +----------------+----------------+
+          |                |                |
+    Alpilab Check      Software          Hardware
+                       3uTools            Microscopio
+                       Borneo             Termocamera
+                       ZXW                 Multimetro / PSU
 ```
 
-Alpilab Check rimane un progetto autonomo e operativo al banco. Alpilab AI non deve importare direttamente moduli interni di Alpilab Check: in futuro useremo un contratto dati/API stabile.
+Dettaglio: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Stato iniziale
+## Principio AI
 
-Questa repository contiene solo la base architetturale. In questa fase non ci sono ancora API a pagamento, credenziali o dipendenze da un singolo provider.
+Non costruiamo un modello da zero. Usiamo provider esistenti dietro un’interfaccia unica (`AIProvider`). L’applicazione non sa se la risposta arriva da mock, locale o cloud.
 
-## Regole del progetto
+## Struttura repository
 
-1. Nessuna API key nel repository.
-2. I provider AI devono essere intercambiabili.
-3. La logica tecnica non deve dipendere dal provider scelto.
-4. Le informazioni provenienti da Alpilab Check devono arrivare tramite un'interfaccia dati separata.
-5. Ogni risposta tecnica importante dovrà distinguere fatti, dati rilevati, ipotesi e livello di confidenza.
-6. Prima di automatizzare una diagnosi, l'assistente deve proporre controlli verificabili.
+```text
+alpilab-ai/
+├── app/                 # Backend applicativo
+│   ├── api/             # HTTP FastAPI (health + ask)
+│   ├── core/            # Settings / .env
+│   ├── models/          # Contratto dati riparazione
+│   ├── schemas/         # DTO API
+│   ├── services/        # Orchestrazione
+│   └── integrations/    # Bridge Alpilab Check (interfaccia + mock)
+├── ai/                  # Layer AI
+│   ├── providers/       # AIProvider + MockProvider
+│   ├── prompts/         # Template prompt
+│   ├── router.py        # AI Router
+│   └── schemas.py
+├── knowledge/           # Placeholder knowledge base
+├── frontend/            # Placeholder web/PWA
+├── hub/                 # Alpilab Hub (interfaccia + mock, no shell)
+├── tests/
+├── docs/
+├── app.py               # Entry CLI / --api
+├── requirements.txt
+├── .env.example
+└── README.md
+```
+
+## Cosa è implementato (fase fondazione)
+
+- Interfaccia `AIProvider` (`is_available`, `generate`, `generate_with_image`, `generate_stream`)
+- `MockProvider` chiaramente identificato
+- `AIRouter` con provider iniettabile e hook per fallback futuri
+- Modelli dati: Device, RepairSession, CustomerIssue, DiagnosticTest, Measurement, Diagnosis, RepairAction, RepairResult, ImageAttachment, Note
+- `AlpilabCheckConnector` + mock (nessun import da Alpilab Check)
+- `AlpilabHub` + mock (nessuna esecuzione di programmi Windows / shell)
+- API HTTP minima (`GET /health`, `POST /v1/ask`)
+- CLI interattiva
+- Test pytest per provider, router, modelli, connector, hub
+- Configurazione via `.env` (senza segreti nel repo)
+
+## Cosa è pianificato (non in questa fase)
+
+Autenticazione completa, deploy cloud, provider AI reali (OpenAI/Gemini/…), DB cloud, RAG completo, hardware, 3uTools/Borneo/ZXW, voce, computer vision avanzata, Hub Windows reale, PWA.
 
 ## Avvio
 
 ```bash
-python app.py
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env        # opzionale
+python app.py               # CLI con MockProvider
+python app.py --api         # API su http://127.0.0.1:8000
 ```
 
-La prima versione usa un provider locale di test (`mock`) per verificare l'architettura senza configurare servizi esterni.
+Esempio API:
 
-## Prossimi passi
+```bash
+curl -s http://127.0.0.1:8000/health
+curl -s -X POST http://127.0.0.1:8000/v1/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"iPhone non si accende"}'
+```
 
-- definire il modello dati per dispositivi e diagnosi;
-- aggiungere il primo vero provider AI;
-- introdurre configurazione tramite `.env` senza salvare segreti;
-- costruire la knowledge base;
-- aggiungere RAG;
-- definire il bridge verso Alpilab Check;
-- creare l'interfaccia grafica;
-- aggiungere storico delle riparazioni;
-- introdurre routing tra modelli locali e online.
+## Test
+
+```bash
+pytest -q
+```
+
+## Sicurezza
+
+- Nessuna API key nel repository
+- `.env` ignorato da git; usare `.env.example` come template
+- Nessuna esecuzione arbitraria di comandi
+- Azioni Hub future: allow-list + conferma esplicita per azioni potenzialmente pericolose
+
+## Regole
+
+1. Non implementare funzionalità future solo perché descritte.
+2. Mock e placeholder devono essere evidenti.
+3. Nessun lock-in a un singolo provider AI.
+4. Nessuna dipendenza dal codice interno di Alpilab Check.
+5. Backend predisposto per client web/mobile.

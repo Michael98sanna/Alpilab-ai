@@ -2,6 +2,15 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
 # Virtual environments
 .venv/
@@ -14,10 +23,11 @@ env/
 !.env.example
 
 # Local AI models / large artifacts
-models/
+# (do not confuse with the ai/ Python package)
 *.gguf
 *.safetensors
-*.bin
+# binary model dumps only — not Python packages
+/models/
 
 # Local data
 runtime_data/
@@ -32,3 +42,8 @@ runtime_data/
 # OS
 .DS_Store
 Thumbs.db
+
+# Frontend build artifacts (future)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
