@@ -54,6 +54,7 @@ La sessione appartiene alla **riparazione**, non al dispositivo.
 Repair Session
     |
     +-- PC / Smartphone / Tablet (SessionParticipant)
+    +-- PC Agent (technical participant — V0.1)
     |
     +-- Chat (ConversationMessage)
     +-- Voice (stesso engine, post-STT)
@@ -144,6 +145,60 @@ Il client **non** fa broadcast peer-to-peer: notifica il server, il server muta 
 `RealtimeSessionManager` gestisce sessioni in-memory, presence dispositivi, broadcast eventi e snapshot iniziale per nuovi partecipanti.
 
 **Frontend realtime:** `frontend/src/realtime/` — `RealtimeClient`, `RealtimeProvider`, `applyStateChanges`, modalità `MOCK` | `REALTIME`.
+
+---
+
+## 4.1 PC Agent (V0.1 — connected but idle)
+
+The PC Agent is a **local Windows process** that joins a RepairSession as a technical participant. It is not a separate session.
+
+```text
+                    ALPILAB AI
+                         │
+                  RepairSession
+                         │
+                   AgentGateway
+                         │
+              WebSocket /ws/agent/{session_id}
+                         │
+                         ▼
+                  ALPILAB PC AGENT
+                         │
+                  AGENT_TEST ONLY
+```
+
+### Components
+
+| Component | Location | Role |
+|-----------|----------|------|
+| `AgentRegistry` | `app/agent/registry.py` | In-memory runtime registry (register, heartbeat, list) |
+| `AgentGateway` | `app/agent/gateway.py` | Registration, heartbeat, command routing, session broadcast |
+| Agent WebSocket | `app/agent/ws.py` | `/ws/agent/{session_id}` endpoint |
+| PC Agent process | `pc_agent/` | Local client: identity, connect, heartbeat, reconnect |
+| Session state | `RealtimeSessionData.pc_agent` | Agent presence on shared session |
+
+### Connection states
+
+`OFFLINE` → `CONNECTING` → `CONNECTED` → `REGISTERING` → `ONLINE`  
+On disconnect: `RECONNECTING` with exponential backoff.
+
+### Realtime events
+
+| Event | Role |
+|-------|------|
+| `AGENT_CONNECTED` | Agent registered; smartphone/tablet see PC Agent online |
+| `AGENT_DISCONNECTED` | Agent offline |
+| `AGENT_HEARTBEAT` | Liveness refresh |
+| `AGENT_TEST_RESULT` | Response to server-initiated test command |
+
+### Security (V0.1)
+
+- WebSocket is **not** a secure command channel for real execution
+- Agent allowlist accepts **only** `AGENT_TEST`
+- No `subprocess`, `os.system`, PowerShell, or shell execution from network commands
+- Declared capabilities are informational — not executable in V0.1
+
+Full details: [PC_AGENT.md](PC_AGENT.md)
 
 ---
 
@@ -301,6 +356,7 @@ Viewport, theme-color; service worker non implementato.
 | Repair schemas | ✅ Pydantic |
 | Session multi-device | ✅ Mock store |
 | Realtime events | ✅ In-memory manager |
+| PC Agent V0.1 | ✅ Connected but idle (AGENT_TEST only) |
 | Conversation/Command engine | ✅ Mock parser |
 | Voice interfaces | ✅ Mock STT/TTS |
 | Diagnostic state + anti-loop | ✅ |

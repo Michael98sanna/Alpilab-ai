@@ -16,6 +16,8 @@ from app.realtime.payloads import (
     SessionSnapshotPayload,
 )
 
+from app.agent.payloads import AgentPresencePayload
+
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -44,6 +46,7 @@ class RealtimeSessionData:
     diagnostics: list[DiagnosticTestPayload] = field(default_factory=list)
     assistant_status: AssistantStatus = "IDLE"
     state_version: int = 0
+    pc_agent: AgentPresencePayload | None = None
     created_at: datetime = field(default_factory=utc_now)
 
     def repair_context(self) -> RepairContextPayload:
@@ -79,6 +82,7 @@ class RealtimeSessionData:
             diagnostic_state=list(self.diagnostics),
             assistant_status=self.assistant_status,
             state_version=self.state_version,
+            pc_agent=self.pc_agent,
         )
 
 

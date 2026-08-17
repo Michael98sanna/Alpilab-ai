@@ -58,6 +58,14 @@ export interface SessionSnapshot {
   }>;
   assistant_status: CoreState;
   state_version?: number;
+  pc_agent?: {
+    agent_id: string;
+    agent_name: string;
+    platform: string;
+    agent_version: string;
+    online: boolean;
+    status: string;
+  } | null;
 }
 
 export interface RealtimeClientOptions {

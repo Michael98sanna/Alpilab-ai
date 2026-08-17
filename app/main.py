@@ -10,6 +10,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes.agents import (
+    AgentStatusResponse,
+    AgentTestRequest,
+    AgentTestResponse,
+    get_agents_status,
+    send_agent_test,
+)
 from app.api.routes.ai import generate_text
 from app.api.routes.health import get_health
 from app.api.routes.realtime import (
@@ -21,6 +28,7 @@ from app.api.routes.realtime import (
 )
 from app.api.schemas import HealthResponse
 from app.api.ws import session_websocket
+from app.agent.ws import agent_websocket
 from app.api import create_route_registry
 from app.core.config import settings
 
@@ -78,6 +86,29 @@ async def ws_session(
         device_name,
         seed_demo=seed_demo,
     )
+
+
+@app.websocket("/ws/agent/{session_id}")
+async def ws_agent(
+    websocket: WebSocket,
+    session_id: str,
+    agent_id: str = Query(..., min_length=1, max_length=128),
+) -> None:
+    await agent_websocket(websocket, session_id, agent_id)
+
+
+@app.get("/api/v1/agents/status", response_model=AgentStatusResponse, tags=["agents"])
+def agents_status(session_id: str | None = Query(None)) -> AgentStatusResponse:
+    return get_agents_status(session_id)
+
+
+@app.post(
+    "/api/v1/sessions/{session_id}/agents/{agent_id}/test",
+    response_model=AgentTestResponse,
+    tags=["agents"],
+)
+async def post_agent_test(session_id: str, agent_id: str) -> AgentTestResponse:
+    return await send_agent_test(session_id, agent_id)
 
 
 # Legacy AI route (foundation compatibility)

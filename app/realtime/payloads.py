@@ -5,6 +5,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.agent.payloads import AgentPresencePayload
+
 MAX_MESSAGE_LENGTH = 4000
 
 DeviceType = Literal["pc", "phone", "tablet"]
@@ -77,6 +79,7 @@ class SessionSnapshotPayload(BaseModel):
     diagnostic_state: list[DiagnosticTestPayload]
     assistant_status: AssistantStatus = "IDLE"
     state_version: int = 0
+    pc_agent: AgentPresencePayload | None = None
 
 
 class SessionStateUpdatedPayload(BaseModel):

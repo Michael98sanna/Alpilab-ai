@@ -48,6 +48,7 @@ const baseState: RepairState = {
   stateVersion: 1,
   savingTestId: "t3",
   stateError: null,
+  pcAgent: null,
 };
 
 describe("mapEvents state sync", () => {
@@ -165,6 +166,32 @@ describe("applySessionChanges", () => {
     const next = reduceState(baseState, action!);
     expect(next.stateError).toBe("diagnosis is paused");
     expect(next.savingTestId).toBeNull();
+  });
+
+  it("maps AGENT_CONNECTED to SET_PC_AGENT", () => {
+    const actions = mapRealtimeEventToActions({
+      id: "e-agent",
+      repair_session_id: "repair-1",
+      event_type: "AGENT_CONNECTED",
+      payload: {
+        agent_id: "agent-abc",
+        agent_name: "ALPILAB-PC",
+        platform: "windows",
+        agent_version: "0.1.0",
+        online: true,
+      },
+    });
+    expect(actions[0]).toEqual({
+      type: "SET_PC_AGENT",
+      agent: {
+        agentId: "agent-abc",
+        agentName: "ALPILAB-PC",
+        online: true,
+        status: "ONLINE",
+        platform: "windows",
+        agentVersion: "0.1.0",
+      },
+    });
   });
 });
 

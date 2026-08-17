@@ -84,6 +84,7 @@ export function HomePage() {
         onVoiceClick={simulateVoice}
         connectionState={state.connectionState}
         showConnection={mode === "realtime"}
+        pcAgent={mode === "realtime" ? state.pcAgent : null}
       />
 
       {showContext && <RepairContextBanner session={state.session} />}

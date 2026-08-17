@@ -37,6 +37,7 @@ const defaultUiState = {
   stateVersion: 0,
   savingTestId: null as string | null,
   stateError: null as string | null,
+  pcAgent: null as import("../types").PcAgentStatus | null,
 };
 
 function buildInitialState(): RepairState {
@@ -268,8 +269,21 @@ function repairReducer(state: RepairState, action: Action): RepairState {
         stateVersion: snap.state_version ?? 0,
         savingTestId: null,
         stateError: null,
+        pcAgent: snap.pc_agent
+          ? {
+              agentId: snap.pc_agent.agent_id,
+              agentName: snap.pc_agent.agent_name,
+              online: snap.pc_agent.online,
+              status: snap.pc_agent.status,
+              platform: snap.pc_agent.platform,
+              agentVersion: snap.pc_agent.agent_version,
+            }
+          : null,
       };
     }
+
+    case "SET_PC_AGENT":
+      return { ...state, pcAgent: action.agent };
 
     case "APPLY_STATE_UPDATE": {
       if (action.stateVersion <= state.stateVersion) {

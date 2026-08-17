@@ -70,6 +70,35 @@ export function mapRealtimeEventToActions(event: RealtimeEventEnvelope): RepairA
           online: Boolean(payload.online),
         },
       ];
+    case "AGENT_CONNECTED":
+    case "AGENT_HEARTBEAT":
+      return [
+        {
+          type: "SET_PC_AGENT",
+          agent: {
+            agentId: String(payload.agent_id),
+            agentName: String(payload.agent_name),
+            online: true,
+            status: String(payload.status ?? "ONLINE"),
+            platform: String(payload.platform ?? "windows"),
+            agentVersion: String(payload.agent_version ?? "0.1.0"),
+          },
+        },
+      ];
+    case "AGENT_DISCONNECTED":
+      return [
+        {
+          type: "SET_PC_AGENT",
+          agent: {
+            agentId: String(payload.agent_id),
+            agentName: String(payload.agent_name ?? "PC Agent"),
+            online: false,
+            status: "OFFLINE",
+            platform: String(payload.platform ?? "windows"),
+            agentVersion: String(payload.agent_version ?? "0.1.0"),
+          },
+        },
+      ];
     case "DIAGNOSTIC_UPDATED":
     case "DIAGNOSTIC_TEST_COMPLETED":
     case "DIAGNOSTIC_TEST_STARTED":

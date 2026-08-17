@@ -52,6 +52,15 @@ export interface SessionDevice {
   online: boolean;
 }
 
+export interface PcAgentStatus {
+  agentId: string;
+  agentName: string;
+  online: boolean;
+  status: string;
+  platform: string;
+  agentVersion: string;
+}
+
 export type RepairStatus = "none" | "active" | "paused";
 
 export interface RepairSession {
@@ -90,6 +99,7 @@ export interface RepairState {
   stateVersion: number;
   savingTestId: string | null;
   stateError: string | null;
+  pcAgent: PcAgentStatus | null;
 }
 
 export type RepairAction =
@@ -120,7 +130,8 @@ export type RepairAction =
     }
   | { type: "SET_SAVING_TEST"; testId: string | null }
   | { type: "SET_STATE_ERROR"; message: string | null }
-  | { type: "STATE_UPDATE_REJECTED"; reason: string; stateVersion: number };
+  | { type: "STATE_UPDATE_REJECTED"; reason: string; stateVersion: number }
+  | { type: "SET_PC_AGENT"; agent: PcAgentStatus | null };
 
 /** @deprecated Use CORE_STATUS_CONFIG from config/coreStatus */
 export const STATUS_LABELS: Record<CoreState, string> = {

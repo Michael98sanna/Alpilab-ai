@@ -55,6 +55,7 @@ alpilab-ai/
 │   ├── commands/           # CommandEngine + MockCommandParser
 │   ├── diagnostics/        # DiagnosticStateManager + anti-loop
 │   ├── realtime/           # RealtimeSessionManager + events
+│   ├── agent/              # PC Agent gateway, registry, WS handler
 │   ├── session/            # InMemorySessionStore + SessionResumeManager
 │   ├── security/           # Permission / authorization model
 │   ├── tools/              # Tool abstraction + registry
@@ -75,6 +76,7 @@ alpilab-ai/
 │   ├── public/
 │   └── src/
 ├── hub/                    # Interfacce Alpilab Hub (mock)
+├── pc_agent/               # PC Agent V0.1 (Windows process, connected but idle)
 ├── tests/                  # Test pytest
 ├── docs/                   # Documentazione
 ├── app.py                  # Entry point CLI
@@ -198,6 +200,30 @@ cd frontend && npm test
 - **71 test pytest** + **44 test frontend** — tutti passing
 
 > **Chat realtime ≠ Session realtime.** La chat era già sincronizzata in V1; V1.1 sincronizza l'intero stato della RepairSession (diagnostica, contesto, AI status, pause).
+
+### PC Agent V0.1 (connected but idle)
+- **Processo Windows locale** (`pc_agent/`) — connessione persistente al backend
+- WebSocket dedicato: `/ws/agent/{session_id}`
+- Registrazione, heartbeat, reconnect con backoff, capability dichiarative
+- **Un solo comando accettato:** `AGENT_TEST` (allowlist lato agent)
+- **Nessuna esecuzione reale** di shell, subprocess, PowerShell o controllo hardware
+- Backend: `AgentRegistry`, `AgentGateway`, eventi realtime `AGENT_CONNECTED` / `AGENT_DISCONNECTED`
+- UI realtime: badge `PC Agent ● ONLINE` / `○ OFFLINE` in header
+- Documentazione: [docs/PC_AGENT.md](docs/PC_AGENT.md)
+
+Avvio PC Agent (Windows):
+
+```powershell
+set ALPILAB_WS_URL=ws://127.0.0.1:8000
+set ALPILAB_SESSION_ID=repair-001
+python -m pc_agent
+```
+
+Test AGENT_TEST:
+
+```bash
+POST /api/v1/sessions/repair-001/agents/{agent_id}/test
+```
 
 ## Cosa è pianificato (prossime fasi)
 

@@ -9,6 +9,7 @@ interface AppHeaderProps {
   onVoiceClick?: () => void;
   connectionState?: import("../../types").ConnectionState;
   showConnection?: boolean;
+  pcAgent?: import("../../types").PcAgentStatus | null;
 }
 
 export function AppHeader({
@@ -18,6 +19,7 @@ export function AppHeader({
   onVoiceClick,
   connectionState = "DISCONNECTED",
   showConnection = false,
+  pcAgent = null,
 }: AppHeaderProps) {
   const connectionLabel =
     connectionState === "CONNECTED"
@@ -41,6 +43,15 @@ export function AppHeader({
             aria-label={`Connection: ${connectionLabel}`}
           >
             {connectionState === "CONNECTED" ? "●" : "○"} {connectionLabel}
+          </span>
+        )}
+        {pcAgent && (
+          <span
+            className={styles.connection}
+            data-testid="pc-agent-status"
+            aria-label={`PC Agent: ${pcAgent.online ? "online" : "offline"}`}
+          >
+            {pcAgent.online ? "●" : "○"} PC Agent
           </span>
         )}
         {devices.length > 0 && onToggleSessionDevices && (
