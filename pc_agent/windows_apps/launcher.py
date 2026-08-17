@@ -1,4 +1,4 @@
-"""Structured process launcher — never uses shell=True."""
+"""Structured process launcher — never uses shell=True or cmd.exe strings."""
 
 from __future__ import annotations
 
@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Protocol
 
 logger = logging.getLogger(__name__)
+
+# ShellExecuteW return values <= 32 indicate failure (Windows).
+_SHELL_EXECUTE_SUCCESS_THRESHOLD = 32
 
 
 class ProcessLauncher(Protocol):
@@ -25,23 +28,56 @@ class LaunchResult:
 
 
 class SubprocessLauncher:
-    """Launch executables via subprocess.Popen without shell invocation."""
+    """Launch executables with platform-appropriate safe APIs."""
 
     def start_executable(self, executable_path: str) -> LaunchResult:
         exe = Path(executable_path)
-        cwd = str(exe.parent)
+        if not exe.is_file():
+            raise RuntimeError(f"executable not found: {executable_path}")
 
+        if sys.platform == "win32":
+            return self._start_windows(exe)
+
+        return self._start_subprocess(exe)
+
+    def _start_windows(self, exe: Path) -> LaunchResult:
+        """Use ShellExecuteW with install directory — standard for Windows GUI apps."""
+        import ctypes
+
+        cwd = str(exe.resolve().parent)
+        exe_path = str(exe.resolve())
+        result = ctypes.windll.shell32.ShellExecuteW(  # type: ignore[attr-defined]
+            None,
+            "open",
+            exe_path,
+            None,
+            cwd,
+            1,  # SW_SHOWNORMAL
+        )
+        if int(result) <= _SHELL_EXECUTE_SUCCESS_THRESHOLD:
+            logger.warning(
+                "ShellExecuteW failed code=%s exe=%s cwd=%s",
+                result,
+                exe_path,
+                cwd,
+            )
+            return self._start_subprocess(exe)
+
+        logger.info("Started via ShellExecuteW: %s", exe_path)
+        return LaunchResult(started=True)
+
+    def _start_subprocess(self, exe: Path) -> LaunchResult:
+        cwd = str(exe.resolve().parent)
         popen_kwargs: dict = {
-            "args": [executable_path],
+            "args": [str(exe.resolve())],
             "shell": False,
             "cwd": cwd,
         }
 
         if sys.platform == "win32":
-            # GUI apps (e.g. 3uTools): detach from console, run from install directory.
-            popen_kwargs["creationflags"] = (
-                subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-            )
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            popen_kwargs["startupinfo"] = startupinfo
         else:
             popen_kwargs["stdin"] = subprocess.DEVNULL
             popen_kwargs["stdout"] = subprocess.DEVNULL
@@ -50,7 +86,7 @@ class SubprocessLauncher:
         try:
             process = subprocess.Popen(**popen_kwargs)  # noqa: S603
         except OSError as exc:
-            logger.exception("Failed to start executable: %s", executable_path)
+            logger.exception("Failed to start executable: %s", exe)
             raise RuntimeError(f"process start failed: {exc}") from exc
 
         return LaunchResult(started=True, pid=process.pid)
