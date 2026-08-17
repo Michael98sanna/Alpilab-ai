@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Alpilab AI</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #101418;
+        --card: #1b2128;
+        --text: #e8edf2;
+        --muted: #9aa7b4;
+        --accent: #3d8bfd;
+        --border: #2a333d;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.45;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 3rem;
+      }
+      h1 { font-size: 1.6rem; margin: 0 0 0.35rem; }
+      p { color: var(--muted); }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+      label { display: block; margin-bottom: 0.4rem; font-weight: 600; }
+      textarea {
+        width: 100%;
+        min-height: 110px;
+        resize: vertical;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #0e1318;
+        color: var(--text);
+        padding: 0.75rem;
+        font: inherit;
+      }
+      button {
+        margin-top: 0.75rem;
+        background: var(--accent);
+        color: #fff;
+        border: 0;
+        border-radius: 8px;
+        padding: 0.65rem 1rem;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.6; cursor: default; }
+      pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #0e1318;
+        border-radius: 8px;
+        padding: 0.75rem;
+        min-height: 4rem;
+      }
+      .status { font-size: 0.9rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Alpilab AI</h1>
+      <p>
+        Assistente tecnico cloud-first per il laboratorio. In questa fase è attivo solo
+        un provider di test (<strong>mock</strong>), senza modelli reali e senza API a pagamento.
+      </p>
+      <section class="card">
+        <p class="status" id="health">Controllo stato API...</p>
+      </section>
+      <section class="card">
+        <label for="prompt">Domanda tecnica</label>
+        <textarea id="prompt" placeholder="Esempio: iPhone 12 non si accende dopo caduta in acqua"></textarea>
+        <button id="ask" type="button">Invia al mock</button>
+        <pre id="answer">La risposta apparirà qui.</pre>
+      </section>
+    </main>
+    <script>
+      const healthEl = document.getElementById("health");
+      const promptEl = document.getElementById("prompt");
+      const answerEl = document.getElementById("answer");
+      const askBtn = document.getElementById("ask");
+
+      async function loadHealth() {
+        try {
+          const response = await fetch("/api/health");
+          const data = await response.json();
+          healthEl.textContent =
+            "API " + data.status + " · provider " + data.ai_provider + " · v" + data.version;
+        } catch (error) {
+          healthEl.textContent = "API non raggiungibile.";
+        }
+      }
+
+      askBtn.addEventListener("click", async () => {
+        const prompt = promptEl.value.trim();
+        if (!prompt) {
+          answerEl.textContent = "Inserisci una domanda.";
+          return;
+        }
+        askBtn.disabled = true;
+        answerEl.textContent = "Attendi...";
+        try {
+          const response = await fetch("/api/ai/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt }),
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error("Richiesta non valida");
+          }
+          answerEl.textContent = data.text;
+        } catch (error) {
+          answerEl.textContent = "Errore di comunicazione con l'API.";
+        } finally {
+          askBtn.disabled = false;
+        }
+      });
+
+      loadHealth();
+    </script>
+  </body>
+</html>

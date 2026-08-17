@@ -2,6 +2,13 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
 
 # Virtual environments
 .venv/
@@ -14,13 +21,15 @@ env/
 !.env.example
 
 # Local AI models / large artifacts
-models/
+# Top-level models/ only; app/models/ is source code and must be tracked.
+/models/
 *.gguf
 *.safetensors
 *.bin
 
 # Local data
 runtime_data/
+uploads/
 *.db
 *.sqlite
 *.sqlite3

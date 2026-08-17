@@ -1,28 +1,29 @@
-"""Alpilab AI - minimal application entry point."""
+"""Start the Alpilab AI web API.
 
-from ai.router import AIRouter
+This project is cloud-first: the entry point serves a web backend (and a
+minimal frontend) rather than a desktop-only loop.
+"""
+
+from __future__ import annotations
+
+import argparse
+
+import uvicorn
+
+from app.core.config import get_settings
+
+
+def parse_args() -> argparse.Namespace:
+    settings = get_settings()
+    parser = argparse.ArgumentParser(description="Alpilab AI API server")
+    parser.add_argument("--host", default=settings.host)
+    parser.add_argument("--port", type=int, default=settings.port)
+    return parser.parse_args()
 
 
 def main() -> None:
-    router = AIRouter()
-    print("Alpilab AI - base architecture")
-    print("Provider attivo:", router.provider_name)
-    print("Scrivi una domanda tecnica (exit per uscire).")
-
-    while True:
-        try:
-            question = input("\nTu > ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print()
-            break
-
-        if question.lower() in {"exit", "quit", "esci"}:
-            break
-        if not question:
-            continue
-
-        response = router.ask(question)
-        print("\nAlpilab AI >", response)
+    args = parse_args()
+    uvicorn.run("app.main:app", host=args.host, port=args.port, reload=False)
 
 
 if __name__ == "__main__":
