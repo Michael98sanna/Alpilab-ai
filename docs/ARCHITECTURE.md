@@ -302,6 +302,9 @@ Comandi: `STOP`, `PAUSE`, `RESUME`, `RESET_DIAGNOSTIC_FLOW`, `CONTINUE_DIAGNOSIS
 | Tool | ID | Risk | Capability |
 |------|-----|------|------------|
 | Safe Test | `demo.safe_test` | SAFE | `safe_test` |
+| Open 3uTools | `windows.3utools.open` | CONFIRM_REQUIRED | `windows_apps` + local app config |
+
+**WindowsAppTool (V0.3):** server sends `tool_id` only; PC Agent resolves executable from `%USERPROFILE%\.alpilab\windows_apps.json` or env vars. Supports `dry_run` and structured execution via `subprocess.Popen(..., shell=False)`.
 
 Execution flow:
 
@@ -316,7 +319,7 @@ Command (TOOL_EXECUTE)
     → RepairSession broadcast
 ```
 
-Tipi futuri (non eseguibili ancora): microscope, thermal_camera, multimeter, power_supply, 3utools, borneo, zxw, alpilab_check.
+Tipi futuri (hardware/inventory mock): microscope, thermal_camera, multimeter, power_supply, alpilab_check. Windows apps Borneo/ZXW: `windows.borneo.open`, `windows.zxw.open` (same WindowsAppTool).
 
 `ToolRegistry` — in-memory; rifiuta tool sconosciuti (`TOOL_NOT_FOUND`).
 
