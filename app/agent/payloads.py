@@ -21,6 +21,7 @@ AgentPlatform = Literal["windows", "linux", "macos", "unknown"]
 class AgentCapabilities(BaseModel):
     """Declarative capabilities — not execution permission."""
 
+    safe_test: bool = True
     windows_apps: bool = False
     alpilab_check: bool = False
     microscope: bool = False
@@ -65,6 +66,7 @@ class ResultEnvelope(BaseModel):
     request_id: str
     command_id: str | None = None
     agent_id: str
+    tool_id: str | None = None
     success: bool
     result: dict[str, Any] = Field(default_factory=dict)
     error: str | None = None
@@ -72,7 +74,7 @@ class ResultEnvelope(BaseModel):
 
 
 class AgentInboundMessage(BaseModel):
-    type: Literal["register", "heartbeat", "agent_test_result"]
+    type: Literal["register", "heartbeat", "agent_test_result", "tool_execute_result"]
     agent_id: str | None = None
     agent_name: str | None = None
     platform: AgentPlatform | None = None
@@ -81,6 +83,7 @@ class AgentInboundMessage(BaseModel):
     status: AgentConnectionState | None = None
     request_id: str | None = None
     command_id: str | None = None
+    tool_id: str | None = None
     success: bool | None = None
     result: dict[str, Any] | None = None
     error: str | None = None

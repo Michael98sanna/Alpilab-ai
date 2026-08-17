@@ -76,7 +76,7 @@ alpilab-ai/
 │   ├── public/
 │   └── src/
 ├── hub/                    # Interfacce Alpilab Hub (mock)
-├── pc_agent/               # PC Agent V0.1 (Windows process, connected but idle)
+├── pc_agent/               # PC Agent V0.2 (Windows process, safe tool execution)
 ├── tests/                  # Test pytest
 ├── docs/                   # Documentazione
 ├── app.py                  # Entry point CLI
@@ -180,7 +180,7 @@ cd frontend && npm test
 - Mock voice (`SpeechToText`, `TextToSpeech`)
 
 - Configurazione via `.env` (senza segreti nel repo)
-- **46 test pytest** — tutti passing
+- **115 test pytest** — tutti passing
 - Documentazione: `docs/ARCHITECTURE.md` (V2)
 
 ### Realtime V1 (multi-device foundation)
@@ -211,11 +211,22 @@ cd frontend && npm test
 - UI realtime: badge `PC Agent ● ONLINE` / `○ OFFLINE` in header
 - Documentazione: [docs/PC_AGENT.md](docs/PC_AGENT.md)
 
+### PC Agent V0.2 (safe tool execution)
+- **Prima pipeline controllata:** Authorization → ToolRegistry → AgentGateway → PC Agent → tool registrato
+- Comando `TOOL_EXECUTE` con envelope validato (`tool_id`, `arguments`)
+- Unico tool eseguibile: `demo.safe_test` (risultato innocuo, nessun accesso OS)
+- `LocalToolDispatcher` lato agent — solo tool pre-registrati, no shell/subprocess
+- Idempotency (`request_id`), timeout (30s), audit events
+- REST dev: `POST .../tools/demo.safe_test/execute`, `GET /api/v1/tools`
+- Risultato broadcast alla RepairSession (`TOOL_EXECUTE_RESULT`) — smartphone incluso
+- **Non implementato:** 3uTools, Borneo, ZXW, hardware, shell, integrazione conversazionale AI
+
 Avvio PC Agent (Windows):
 
 ```powershell
 set ALPILAB_WS_URL=ws://127.0.0.1:8000
 set ALPILAB_SESSION_ID=repair-001
+set ALPILAB_CAP_SAFE_TEST=true
 python -m pc_agent
 ```
 
@@ -223,6 +234,12 @@ Test AGENT_TEST:
 
 ```bash
 POST /api/v1/sessions/repair-001/agents/{agent_id}/test
+```
+
+Test SAFE_TEST (V0.2):
+
+```bash
+POST /api/v1/sessions/repair-001/agents/{agent_id}/tools/demo.safe_test/execute
 ```
 
 ## Cosa è pianificato (prossime fasi)

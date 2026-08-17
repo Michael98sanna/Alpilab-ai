@@ -11,7 +11,7 @@ from typing import Any
 import websockets
 from websockets.asyncio.client import ClientConnection
 
-from pc_agent.commands import handle_command
+from pc_agent.commands import configure_dispatcher, handle_command
 from pc_agent.config import AgentConfig
 
 logger = logging.getLogger("alpilab.pc_agent")
@@ -38,6 +38,17 @@ class AgentClient:
         self._stop = asyncio.Event()
         self._heartbeat_task: asyncio.Task[None] | None = None
         self._reconnect_attempts = 0
+        configure_dispatcher(
+            {
+                "safe_test": config.capabilities_safe_test,
+                "windows_apps": config.capabilities_windows_apps,
+                "alpilab_check": config.capabilities_alpilab_check,
+                "microscope": config.capabilities_microscope,
+                "thermal_camera": config.capabilities_thermal_camera,
+                "multimeter": config.capabilities_multimeter,
+                "power_supply": config.capabilities_power_supply,
+            }
+        )
 
     @property
     def url(self) -> str:
@@ -107,6 +118,7 @@ class AgentClient:
             "platform": self.config.platform,
             "agent_version": self.config.agent_version,
             "capabilities": {
+                "safe_test": self.config.capabilities_safe_test,
                 "windows_apps": self.config.capabilities_windows_apps,
                 "alpilab_check": self.config.capabilities_alpilab_check,
                 "microscope": self.config.capabilities_microscope,
@@ -159,6 +171,9 @@ class AgentClient:
         command = envelope.get("command") or {}
         cmd_type = str(command.get("type", ""))
         logger.info("Received %s", cmd_type)
+        if cmd_type == "TOOL_EXECUTE":
+            payload = command.get("payload") or {}
+            logger.info("Received TOOL_EXECUTE tool=%s", payload.get("tool_id"))
         result = handle_command(command, self.agent_id)
         if result is None:
             logger.warning("Malformed command envelope")

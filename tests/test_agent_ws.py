@@ -38,8 +38,9 @@ def _register(ws, agent_id: str = "agent-test-01") -> dict:
             "platform": "windows",
             "agent_version": "0.1.0",
             "capabilities": {
-                "windows_apps": True,
-                "alpilab_check": True,
+                "safe_test": True,
+                "windows_apps": False,
+                "alpilab_check": False,
                 "microscope": False,
                 "thermal_camera": False,
                 "multimeter": False,

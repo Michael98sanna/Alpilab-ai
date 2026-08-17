@@ -12,9 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.agents import (
     AgentStatusResponse,
-    AgentTestRequest,
     AgentTestResponse,
+    ToolExecuteResponse,
+    ToolListResponse,
+    execute_safe_test,
     get_agents_status,
+    list_executable_tools,
     send_agent_test,
 )
 from app.api.routes.ai import generate_text
@@ -109,6 +112,20 @@ def agents_status(session_id: str | None = Query(None)) -> AgentStatusResponse:
 )
 async def post_agent_test(session_id: str, agent_id: str) -> AgentTestResponse:
     return await send_agent_test(session_id, agent_id)
+
+
+@app.get("/api/v1/tools", response_model=ToolListResponse, tags=["agents"])
+def get_tools() -> ToolListResponse:
+    return list_executable_tools()
+
+
+@app.post(
+    "/api/v1/sessions/{session_id}/agents/{agent_id}/tools/demo.safe_test/execute",
+    response_model=ToolExecuteResponse,
+    tags=["agents"],
+)
+async def post_safe_test_execute(session_id: str, agent_id: str) -> ToolExecuteResponse:
+    return await execute_safe_test(session_id, agent_id)
 
 
 # Legacy AI route (foundation compatibility)

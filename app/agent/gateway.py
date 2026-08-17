@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+from app.agent.execution_store import tool_execution_store
 from app.agent.allowlist import is_command_allowed, reject_reason
 from app.agent.payloads import (
     AgentCapabilities,
@@ -117,6 +118,63 @@ class AgentGateway:
         await self._send_to_agent(agent, envelope)
         return command
 
+    async def send_tool_execute(
+        self,
+        session_id: str,
+        agent_id: str,
+        tool_id: str,
+        arguments: dict[str, Any],
+        *,
+        request_id: str | None = None,
+        command_id: str | None = None,
+    ) -> CommandEnvelope:
+        agent = agent_registry.get(session_id, agent_id)
+        if agent is None:
+            raise ValueError("agent not found")
+
+        req_id = request_id or str(uuid4())
+        cmd_id = command_id or str(uuid4())
+
+        cached = tool_execution_store.get_completed(req_id)
+        if cached is not None:
+            return CommandEnvelope(
+                command_id=cached.command_id or cmd_id,
+                request_id=req_id,
+                type="TOOL_EXECUTE",
+                source="alpilab_ai",
+                target=agent_id,
+                timestamp=_iso_now(),
+                payload={"tool_id": tool_id, "arguments": arguments},
+            )
+
+        command = CommandEnvelope(
+            command_id=cmd_id,
+            request_id=req_id,
+            type="TOOL_EXECUTE",
+            source="alpilab_ai",
+            target=agent_id,
+            timestamp=_iso_now(),
+            payload={"tool_id": tool_id, "arguments": arguments},
+        )
+
+        await self._emit_tool_audit(
+            session_id,
+            RealtimeEventType.TOOL_EXECUTION_STARTED,
+            {
+                "request_id": req_id,
+                "command_id": cmd_id,
+                "tool_id": tool_id,
+                "agent_id": agent_id,
+                "source": "alpilab_ai",
+                "success": None,
+            },
+            agent_id,
+        )
+
+        envelope = AgentOutboundMessage(type="command", command=command)
+        await self._send_to_agent(agent, envelope)
+        return command
+
     async def handle_test_result(
         self,
         session_id: str,
@@ -140,6 +198,55 @@ class AgentGateway:
             source_client_device_id=message.agent_id,
         )
         await realtime_manager.send_event_ws(session_id, event)
+        return result
+
+    async def handle_tool_execute_result(
+        self,
+        session_id: str,
+        message: AgentInboundMessage,
+    ) -> ResultEnvelope:
+        if not message.agent_id or not message.request_id:
+            raise ValueError("agent_id and request_id required")
+
+        result = ResultEnvelope(
+            request_id=message.request_id,
+            command_id=message.command_id,
+            agent_id=message.agent_id,
+            tool_id=message.tool_id,
+            success=bool(message.success),
+            result=message.result or {},
+            error=message.error,
+            timestamp=message.timestamp or _iso_now(),
+        )
+
+        is_new = tool_execution_store.complete(result)
+
+        summary = {
+            "request_id": result.request_id,
+            "command_id": result.command_id,
+            "tool_id": result.tool_id,
+            "agent_id": result.agent_id,
+            "source": "pc_agent",
+            "success": result.success,
+            "error": result.error,
+            "result_summary": result.result.get("message") if result.result else None,
+        }
+        await self._emit_tool_audit(
+            session_id,
+            RealtimeEventType.TOOL_EXECUTION_COMPLETED,
+            summary,
+            message.agent_id,
+        )
+
+        if is_new:
+            event = realtime_manager.emit(
+                session_id,
+                RealtimeEventType.TOOL_EXECUTE_RESULT,
+                payload=result.model_dump(mode="json"),
+                source_client_device_id=message.agent_id,
+            )
+            await realtime_manager.send_event_ws(session_id, event)
+
         return result
 
     async def handle_inbound_command_request(
@@ -199,6 +306,21 @@ class AgentGateway:
         result = agent.send_json(payload)
         if asyncio.iscoroutine(result):
             await result
+
+    async def _emit_tool_audit(
+        self,
+        session_id: str,
+        event_type: RealtimeEventType,
+        payload: dict[str, Any],
+        agent_id: str,
+    ) -> None:
+        event = realtime_manager.emit(
+            session_id,
+            event_type,
+            payload=payload,
+            source_client_device_id=agent_id,
+        )
+        await realtime_manager.send_event_ws(session_id, event)
 
 
 agent_gateway = AgentGateway()

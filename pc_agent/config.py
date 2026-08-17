@@ -45,6 +45,7 @@ class AgentConfig:
     capabilities_thermal_camera: bool
     capabilities_multimeter: bool
     capabilities_power_supply: bool
+    capabilities_safe_test: bool
 
     @classmethod
     def from_env(cls) -> "AgentConfig":
@@ -56,7 +57,7 @@ class AgentConfig:
             session_id=session_id,
             agent_name=os.getenv("ALPILAB_AGENT_NAME", "ALPILAB-PC"),
             platform=os.getenv("ALPILAB_AGENT_PLATFORM", "windows"),
-            agent_version=os.getenv("ALPILAB_AGENT_VERSION", "0.1.0"),
+            agent_version=os.getenv("ALPILAB_AGENT_VERSION", "0.2.0"),
             heartbeat_interval_sec=_env_float("ALPILAB_HEARTBEAT_INTERVAL", 25.0),
             reconnect_base_delay_sec=_env_float("ALPILAB_RECONNECT_BASE_DELAY", 1.0),
             reconnect_max_delay_sec=_env_float("ALPILAB_RECONNECT_MAX_DELAY", 32.0),
@@ -79,6 +80,8 @@ class AgentConfig:
             capabilities_multimeter=os.getenv("ALPILAB_CAP_MULTIMETER", "false").lower()
             in {"1", "true", "yes"},
             capabilities_power_supply=os.getenv("ALPILAB_CAP_POWER_SUPPLY", "false").lower()
+            in {"1", "true", "yes"},
+            capabilities_safe_test=os.getenv("ALPILAB_CAP_SAFE_TEST", "true").lower()
             in {"1", "true", "yes"},
         )
 

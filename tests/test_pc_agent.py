@@ -11,9 +11,10 @@ from pc_agent.config import AgentConfig
 from pc_agent.identity import load_or_create_agent_id
 
 
-def test_allowlist_only_agent_test() -> None:
-    assert ALLOWED_COMMANDS == frozenset({"AGENT_TEST"})
+def test_allowlist_commands() -> None:
+    assert ALLOWED_COMMANDS == frozenset({"AGENT_TEST", "TOOL_EXECUTE"})
     assert is_allowed_command("AGENT_TEST")
+    assert is_allowed_command("TOOL_EXECUTE")
     assert not is_allowed_command("OPEN_APPLICATION")
     assert not is_allowed_command("EXECUTE_PROCESS")
 

@@ -148,7 +148,7 @@ Il client **non** fa broadcast peer-to-peer: notifica il server, il server muta 
 
 ---
 
-## 4.1 PC Agent (V0.1 — connected but idle)
+## 4.1 PC Agent (V0.1 + V0.2)
 
 The PC Agent is a **local Windows process** that joins a RepairSession as a technical participant. It is not a separate session.
 
@@ -157,6 +157,12 @@ The PC Agent is a **local Windows process** that joins a RepairSession as a tech
                          │
                   RepairSession
                          │
+              ToolExecutionService
+                         │
+                  Authorization
+                         │
+                   ToolRegistry
+                         │
                    AgentGateway
                          │
               WebSocket /ws/agent/{session_id}
@@ -164,7 +170,9 @@ The PC Agent is a **local Windows process** that joins a RepairSession as a tech
                          ▼
                   ALPILAB PC AGENT
                          │
-                  AGENT_TEST ONLY
+                LocalToolDispatcher
+                         │
+              demo.safe_test (V0.2)
 ```
 
 ### Components
@@ -173,8 +181,12 @@ The PC Agent is a **local Windows process** that joins a RepairSession as a tech
 |-----------|----------|------|
 | `AgentRegistry` | `app/agent/registry.py` | In-memory runtime registry (register, heartbeat, list) |
 | `AgentGateway` | `app/agent/gateway.py` | Registration, heartbeat, command routing, session broadcast |
+| `ToolExecutionService` | `app/agent/tool_executor.py` | Auth + registry + dispatch + timeout + idempotency |
+| `ToolExecutionStore` | `app/agent/execution_store.py` | Pending/completed executions by `request_id` |
+| `authorize_tool_execution` | `app/security/tool_authorization.py` | Risk level + capability checks |
+| `ExecutableToolSpec` | `app/tools/executable.py` | Server-controlled tool definitions |
 | Agent WebSocket | `app/agent/ws.py` | `/ws/agent/{session_id}` endpoint |
-| PC Agent process | `pc_agent/` | Local client: identity, connect, heartbeat, reconnect |
+| PC Agent process | `pc_agent/` | Local client + `LocalToolDispatcher` |
 | Session state | `RealtimeSessionData.pc_agent` | Agent presence on shared session |
 
 ### Connection states
@@ -190,13 +202,18 @@ On disconnect: `RECONNECTING` with exponential backoff.
 | `AGENT_DISCONNECTED` | Agent offline |
 | `AGENT_HEARTBEAT` | Liveness refresh |
 | `AGENT_TEST_RESULT` | Response to server-initiated test command |
+| `TOOL_EXECUTION_STARTED` | Authorized tool dispatch to agent (V0.2) |
+| `TOOL_EXECUTION_COMPLETED` | Agent result received (V0.2) |
+| `TOOL_EXECUTE_RESULT` | Result broadcast to RepairSession clients (V0.2) |
 
-### Security (V0.1)
+### Security (V0.2)
 
-- WebSocket is **not** a secure command channel for real execution
-- Agent allowlist accepts **only** `AGENT_TEST`
-- No `subprocess`, `os.system`, PowerShell, or shell execution from network commands
-- Declared capabilities are informational — not executable in V0.1
+- WebSocket is **not** a secure command channel for arbitrary execution
+- Agent allowlist accepts **only** `AGENT_TEST` and `TOOL_EXECUTE`
+- Server `ToolRegistry` is the source of truth — clients cannot define tools
+- `LocalToolDispatcher` executes only pre-registered handlers — no shell/subprocess
+- `ActionRiskLevel` SAFE/READ_ONLY auto-execute; higher levels rejected until confirmation flow exists
+- Idempotency via `request_id`; execution timeout (default 30s)
 
 Full details: [PC_AGENT.md](PC_AGENT.md)
 
@@ -276,13 +293,32 @@ Comandi: `STOP`, `PAUSE`, `RESUME`, `RESET_DIAGNOSTIC_FLOW`, `CONTINUE_DIAGNOSIS
 
 ## 10. Tool architecture
 
-**Layer:** `app/tools/`
+**Layer:** `app/tools/` + `pc_agent/tools/`
 
-`Tool` generico: id, name, type, status, capabilities.
+`Tool` generico: id, name, type, status, capabilities (UI/inventory mock).
 
-Tipi futuri: microscope, thermal_camera, multimeter, power_supply, 3utools, borneo, zxw, alpilab_check.
+**Executable tools (V0.2):** `ExecutableToolSpec` — server-controlled registration with `tool_id`, `risk_level`, `required_capabilities`, `allowed_argument_keys`.
 
-`ToolRegistry` — in-memory, no controllo reale.
+| Tool | ID | Risk | Capability |
+|------|-----|------|------------|
+| Safe Test | `demo.safe_test` | SAFE | `safe_test` |
+
+Execution flow:
+
+```text
+Command (TOOL_EXECUTE)
+    → authorize_tool_execution()
+    → ToolRegistry.resolve_executable()
+    → AgentGateway.send_tool_execute()
+    → PC Agent LocalToolDispatcher
+    → registered handler
+    → tool_execute_result
+    → RepairSession broadcast
+```
+
+Tipi futuri (non eseguibili ancora): microscope, thermal_camera, multimeter, power_supply, 3utools, borneo, zxw, alpilab_check.
+
+`ToolRegistry` — in-memory; rifiuta tool sconosciuti (`TOOL_NOT_FOUND`).
 
 ---
 
@@ -357,6 +393,7 @@ Viewport, theme-color; service worker non implementato.
 | Session multi-device | ✅ Mock store |
 | Realtime events | ✅ In-memory manager |
 | PC Agent V0.1 | ✅ Connected but idle (AGENT_TEST only) |
+| PC Agent V0.2 | ✅ Safe tool execution (`demo.safe_test` pipeline) |
 | Conversation/Command engine | ✅ Mock parser |
 | Voice interfaces | ✅ Mock STT/TTS |
 | Diagnostic state + anti-loop | ✅ |

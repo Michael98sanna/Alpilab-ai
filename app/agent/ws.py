@@ -115,6 +115,11 @@ async def agent_websocket(
                 await agent_gateway.handle_test_result(session_id, message)
                 continue
 
+            if message.type == "tool_execute_result":
+                message.agent_id = registered_agent_id
+                await agent_gateway.handle_tool_execute_result(session_id, message)
+                continue
+
             await send_json(
                 AgentOutboundMessage(
                     type="error",
