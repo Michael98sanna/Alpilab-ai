@@ -10,6 +10,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from app.realtime.payloads import WsEnvelope
 from app.realtime.session_manager import realtime_manager
+from app.realtime.state_sync import StateUpdateRejected
 
 logger = logging.getLogger(__name__)
 
@@ -74,8 +75,16 @@ async def session_websocket(
                     )
                 )
                 continue
-            await realtime_manager.handle_client_message(session_id, device_id, raw)
-            await send_json(WsEnvelope(type="ack").model_dump(mode="json"))
+            try:
+                result = await realtime_manager.handle_client_message(
+                    session_id, device_id, raw
+                )
+            except StateUpdateRejected as exc:
+                await realtime_manager.send_state_rejected(session_id, device_id, exc)
+                await send_json(WsEnvelope(type="ack").model_dump(mode="json"))
+                continue
+            if result != "snapshot_sent":
+                await send_json(WsEnvelope(type="ack").model_dump(mode="json"))
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected session=%s device=%s", session_id, device_id)

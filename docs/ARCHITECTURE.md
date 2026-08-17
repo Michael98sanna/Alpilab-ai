@@ -85,29 +85,65 @@ Repair Session
 
 ---
 
-## 4. Realtime events (V1)
+## 4. Realtime events (V1 + V1.1)
 
 **Layer:** `app/realtime/` + `app/main.py` (FastAPI)
 
+### Chat realtime ≠ Session realtime
+
+| V1 | V1.1 |
+|----|------|
+| Chat sincronizzata tra dispositivi | **Intera RepairSession** sincronizzata |
+| Snapshot solo per onboarding UI | Snapshot = stato completo + `state_version` |
+| Diagnostica locale per device | Server valida e broadcasta ogni modifica |
+
+### Flusso condiviso (source of truth)
+
 ```text
-Browser (PWA)
-     ↓ WebSocket
-FastAPI /ws/sessions/{session_id}
-     ↓
-RealtimeSessionManager
-     ↓
-RepairSession (in-memory)
+DEVICE A
+    ↓  action (diagnostic_update, diagnosis_pause, …)
+WebSocket
+    ↓
+FastAPI
+    ↓
+RealtimeSessionManager / RepairSession (in-memory)
+    ↓  state_version++
+SESSION_STATE_UPDATED (+ optional legacy events)
+    ↓  broadcast
+┌─────────┬─────────┬─────────┐
+DEVICE A  DEVICE B  DEVICE C
 ```
 
-`RealtimeSessionManager` gestisce sessioni in-memory, presence dispositivi, broadcast eventi e snapshot iniziale per nuovi partecipanti.
+Il client **non** fa broadcast peer-to-peer: notifica il server, il server muta lo stato e trasmette.
+
+### Eventi principali
+
+| Evento | Ruolo |
+|--------|--------|
+| `SESSION_SNAPSHOT` | Stato completo su connect / reconnect / `request_snapshot` |
+| `SESSION_STATE_UPDATED` | Delta incrementale con `state_version` + `changes` |
+| `STATE_UPDATE_REJECTED` | Modifica rifiutata (validazione, pausa, test sconosciuto) |
+| `CHAT_MESSAGE` | Messaggi conversazione |
+| `ASSISTANT_STATUS` | Legacy compat; anche in `SESSION_STATE_UPDATED.changes` |
+| `DIAGNOSTIC_UPDATED` | Lista completa diagnostica (legacy compat) |
+| `DEVICE_CONNECTED` / `DEVICE_DISCONNECTED` | Presence multi-device |
+
+### state_version e conflitti
+
+- Ogni mutazione server-side incrementa `state_version` (1, 2, 3, …)
+- Il server serializza le richieste concorrenti (last-write-wins per campo)
+- Se un client riceve versione `N+2` senza `N+1`, invia `request_snapshot` (no inventing state)
+- Duplicati (`version <= locale`) vengono ignorati
+
+### Inbound WebSocket (client → server)
+
+`chat_message`, `heartbeat`, `assistant_status`, `diagnostic_update`, `diagnosis_pause`, `repair_context_update`, `request_snapshot`
 
 **Authentication and authorization will be implemented before production deployment.**
 
-Eventi supportati (`RealtimeEventType`):
+`RealtimeSessionManager` gestisce sessioni in-memory, presence dispositivi, broadcast eventi e snapshot iniziale per nuovi partecipanti.
 
-`SESSION_SNAPSHOT`, `CHAT_MESSAGE`, `ASSISTANT_STATUS`, `DEVICE_CONNECTED`, `DEVICE_DISCONNECTED`, `DEVICE_HEARTBEAT`, `DIAGNOSTIC_UPDATED`, `DIAGNOSTIC_TEST_STARTED`, `DIAGNOSTIC_TEST_COMPLETED`, `SESSION_CREATED`, `MESSAGE_CREATED`, …
-
-**Frontend realtime:** `frontend/src/realtime/` — `RealtimeClient`, `RealtimeProvider`, modalità `MOCK` | `REALTIME`.
+**Frontend realtime:** `frontend/src/realtime/` — `RealtimeClient`, `RealtimeProvider`, `applyStateChanges`, modalità `MOCK` | `REALTIME`.
 
 ---
 

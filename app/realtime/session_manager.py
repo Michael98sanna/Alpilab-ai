@@ -17,6 +17,7 @@ from app.realtime.payloads import (
     ClientInboundMessage,
     DeviceType,
     SessionSnapshotPayload,
+    StateUpdateRejectedPayload,
     WsEnvelope,
 )
 from app.realtime.session_state import (
@@ -25,6 +26,13 @@ from app.realtime.session_state import (
     default_demo_session,
     new_session,
     utc_now,
+)
+from app.realtime.state_sync import (
+    StateUpdateRejected,
+    apply_assistant_status_change,
+    apply_diagnosis_pause,
+    apply_diagnostic_update,
+    apply_repair_context_update,
 )
 
 RealtimeSubscriber = Callable[[RealtimeEvent], None]
@@ -200,6 +208,95 @@ class RealtimeSessionManager:
             exclude_device_id=exclude_device_id,
         )
 
+    async def send_snapshot_ws(self, session_id: str, device_id: str) -> None:
+        session = self.get_session(session_id)
+        if not session:
+            raise ValueError("session not found")
+        await self._send_ws(
+            session_id,
+            device_id,
+            WsEnvelope(
+                type="snapshot",
+                payload=session.snapshot().model_dump(mode="json"),
+            ),
+        )
+
+    async def send_state_rejected(
+        self,
+        session_id: str,
+        device_id: str,
+        exc: StateUpdateRejected,
+    ) -> None:
+        session = self.get_session(session_id)
+        if not session:
+            return
+        payload = StateUpdateRejectedPayload(
+            reason=str(exc.reason),
+            request_type=exc.request_type,
+            state_version=session.state_version,
+        )
+        event = self.emit(
+            session_id,
+            RealtimeEventType.STATE_UPDATE_REJECTED,
+            payload=payload.model_dump(mode="json"),
+            source_client_device_id=device_id,
+        )
+        await self._send_ws(
+            session_id,
+            device_id,
+            WsEnvelope(type="event", event=event.model_dump(mode="json")),
+        )
+
+    def _apply_repair_context_fields(
+        self,
+        session: RealtimeSessionData,
+        ctx: dict[str, Any],
+    ) -> None:
+        if "label" in ctx and ctx["label"] is not None:
+            session.label = str(ctx["label"])
+        if "device" in ctx:
+            session.device = ctx["device"]
+        if "issue" in ctx:
+            session.issue = ctx["issue"]
+        if "status" in ctx and ctx["status"] is not None:
+            session.status = str(ctx["status"])
+        if "diagnosis_label" in ctx and ctx["diagnosis_label"] is not None:
+            session.diagnosis_label = str(ctx["diagnosis_label"])
+
+    async def _broadcast_state_update(
+        self,
+        session_id: str,
+        device_id: str,
+        changes: dict[str, Any],
+    ) -> RealtimeEvent:
+        session = self.get_session(session_id)
+        if not session:
+            raise ValueError("session not found")
+
+        if "repair_context" in changes:
+            self._apply_repair_context_fields(session, changes["repair_context"])
+
+        if "assistant_status" in changes:
+            session.assistant_status = changes["assistant_status"]
+
+        session.state_version += 1
+        payload = {
+            "event_id": str(uuid4()),
+            "session_id": session_id,
+            "timestamp": utc_now().isoformat(),
+            "source_device_id": device_id,
+            "state_version": session.state_version,
+            "changes": changes,
+        }
+        event = self.emit(
+            session_id,
+            RealtimeEventType.SESSION_STATE_UPDATED,
+            payload=payload,
+            source_client_device_id=device_id,
+        )
+        await self.send_event_ws(session_id, event)
+        return event
+
     # --- Device presence ---
 
     async def connect_device(
@@ -308,6 +405,7 @@ class RealtimeSessionManager:
             timestamp=utc_now().strftime("%H:%M"),
         )
         session.messages.append(message)
+        session.state_version += 1
         payload = message.model_dump(mode="json")
         event = self.emit(
             session_id,
@@ -328,32 +426,96 @@ class RealtimeSessionManager:
         session = self.get_session(session_id)
         if not session:
             return
-        session.assistant_status = status
+        changes = apply_assistant_status_change(status)
+        await self._broadcast_state_update(
+            session_id,
+            source_device_id or "system",
+            changes,
+        )
         event = self.emit(
             session_id,
             RealtimeEventType.ASSISTANT_STATUS,
-            payload={"status": status},
+            payload={"status": status, "state_version": session.state_version},
             source_client_device_id=source_device_id,
         )
         await self.send_event_ws(session_id, event)
+
+    async def update_diagnostic_measurement(
+        self,
+        session_id: str,
+        device_id: str,
+        test_id: str,
+        value: str,
+    ) -> None:
+        session = self.get_session(session_id)
+        if not session:
+            raise ValueError("session not found")
+        if session.status == "paused":
+            raise StateUpdateRejected(
+                "diagnosis is paused",
+                request_type="diagnostic_update",
+            )
+        _, changes = apply_diagnostic_update(session.diagnostics, test_id, value)
+        await self._broadcast_state_update(session_id, device_id, changes)
+        event = self.emit(
+            session_id,
+            RealtimeEventType.DIAGNOSTIC_UPDATED,
+            payload={
+                "tests": [t.model_dump(mode="json") for t in session.diagnostics],
+                "state_version": session.state_version,
+            },
+            source_client_device_id=device_id,
+        )
+        await self.send_event_ws(session_id, event)
+
+    async def set_diagnosis_paused(
+        self,
+        session_id: str,
+        device_id: str,
+        paused: bool,
+    ) -> None:
+        session = self.get_session(session_id)
+        if not session:
+            raise ValueError("session not found")
+        changes = apply_diagnosis_pause(paused)
+        await self._broadcast_state_update(session_id, device_id, changes)
+
+    async def update_repair_context(
+        self,
+        session_id: str,
+        device_id: str,
+        *,
+        device: str | None = None,
+        issue: str | None = None,
+        label: str | None = None,
+    ) -> None:
+        session = self.get_session(session_id)
+        if not session:
+            raise ValueError("session not found")
+        changes = apply_repair_context_update(device=device, issue=issue, label=label)
+        await self._broadcast_state_update(session_id, device_id, changes)
 
     async def handle_client_message(
         self,
         session_id: str,
         device_id: str,
         raw: dict[str, Any],
-    ) -> None:
+    ) -> str:
+        """Process inbound client message. Returns 'ack' or 'snapshot_sent'."""
         message = ClientInboundMessage.model_validate(raw)
         if message.type == "heartbeat":
             await self.heartbeat(session_id, device_id)
-            return
+            return "ack"
+        if message.type == "request_snapshot":
+            await self.send_snapshot_ws(session_id, device_id)
+            return "snapshot_sent"
         if message.type == "assistant_status" and message.status:
             await self.set_assistant_status(
                 session_id,
                 message.status,
                 source_device_id=device_id,
             )
-            return
+            return "ack"
         if message.type == "chat_message":
             if not message.content:
                 raise ValueError("content required")
@@ -363,7 +525,37 @@ class RealtimeSessionManager:
                 message.content,
                 role=message.role,
             )
-            return
+            return "ack"
+        if message.type == "diagnostic_update":
+            if not message.test_id or not message.value:
+                raise StateUpdateRejected(
+                    "test_id and value required",
+                    request_type="diagnostic_update",
+                )
+            await self.update_diagnostic_measurement(
+                session_id,
+                device_id,
+                message.test_id,
+                message.value,
+            )
+            return "ack"
+        if message.type == "diagnosis_pause":
+            if message.paused is None:
+                raise StateUpdateRejected(
+                    "paused required",
+                    request_type="diagnosis_pause",
+                )
+            await self.set_diagnosis_paused(session_id, device_id, message.paused)
+            return "ack"
+        if message.type == "repair_context_update":
+            await self.update_repair_context(
+                session_id,
+                device_id,
+                device=message.device,
+                issue=message.issue,
+                label=message.label,
+            )
+            return "ack"
         raise ValueError("unsupported message type")
 
     def connection_count(self, session_id: str | None = None) -> int:

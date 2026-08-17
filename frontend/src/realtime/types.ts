@@ -2,6 +2,8 @@ import type { CoreState, DeviceKind, DiagnosticStatus, MessageRole } from "../ty
 
 export type RealtimeEventType =
   | "SESSION_SNAPSHOT"
+  | "SESSION_STATE_UPDATED"
+  | "STATE_UPDATE_REJECTED"
   | "CHAT_MESSAGE"
   | "ASSISTANT_STATUS"
   | "DEVICE_CONNECTED"
@@ -55,6 +57,7 @@ export interface SessionSnapshot {
     status: string;
   }>;
   assistant_status: CoreState;
+  state_version?: number;
 }
 
 export interface RealtimeClientOptions {
@@ -70,7 +73,11 @@ export interface RealtimeClientOptions {
 export type OutboundMessage =
   | { type: "chat_message"; content: string; role: MessageRole }
   | { type: "heartbeat" }
-  | { type: "assistant_status"; status: CoreState };
+  | { type: "assistant_status"; status: CoreState }
+  | { type: "diagnostic_update"; test_id: string; value: string }
+  | { type: "diagnosis_pause"; paused: boolean }
+  | { type: "repair_context_update"; device?: string; issue?: string; label?: string }
+  | { type: "request_snapshot" };
 
 export function mapDiagnosticStatus(status: string): DiagnosticStatus {
   const upper = status.toUpperCase();

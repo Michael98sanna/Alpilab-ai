@@ -87,6 +87,9 @@ export interface RepairState {
   sessionDevicesExpanded: boolean;
   connectionState: ConnectionState;
   pendingMessageIds: string[];
+  stateVersion: number;
+  savingTestId: string | null;
+  stateError: string | null;
 }
 
 export type RepairAction =
@@ -109,7 +112,15 @@ export type RepairAction =
   | { type: "REMOVE_PENDING_MESSAGE"; clientId: string }
   | { type: "APPLY_SNAPSHOT"; snapshot: import("../realtime/types").SessionSnapshot }
   | { type: "APPLY_DEVICE_PRESENCE"; deviceId: string; deviceType: DeviceKind; label: string; online: boolean }
-  | { type: "SYNC_DIAGNOSTICS"; tests: DiagnosticTest[] };
+  | { type: "SYNC_DIAGNOSTICS"; tests: DiagnosticTest[] }
+  | {
+      type: "APPLY_STATE_UPDATE";
+      stateVersion: number;
+      changes: Record<string, unknown>;
+    }
+  | { type: "SET_SAVING_TEST"; testId: string | null }
+  | { type: "SET_STATE_ERROR"; message: string | null }
+  | { type: "STATE_UPDATE_REJECTED"; reason: string; stateVersion: number };
 
 /** @deprecated Use CORE_STATUS_CONFIG from config/coreStatus */
 export const STATUS_LABELS: Record<CoreState, string> = {

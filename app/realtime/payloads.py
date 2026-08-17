@@ -76,13 +76,43 @@ class SessionSnapshotPayload(BaseModel):
     repair_context: RepairContextPayload
     diagnostic_state: list[DiagnosticTestPayload]
     assistant_status: AssistantStatus = "IDLE"
+    state_version: int = 0
+
+
+class SessionStateUpdatedPayload(BaseModel):
+    event_id: str
+    session_id: str
+    timestamp: str
+    source_device_id: str
+    state_version: int
+    changes: dict[str, Any]
+
+
+class StateUpdateRejectedPayload(BaseModel):
+    reason: str
+    request_type: str | None = None
+    state_version: int
 
 
 class ClientInboundMessage(BaseModel):
-    type: Literal["chat_message", "heartbeat", "assistant_status"]
+    type: Literal[
+        "chat_message",
+        "heartbeat",
+        "assistant_status",
+        "diagnostic_update",
+        "diagnosis_pause",
+        "repair_context_update",
+        "request_snapshot",
+    ]
     content: str | None = None
     role: MessageRole = "user"
     status: AssistantStatus | None = None
+    test_id: str | None = None
+    value: str | None = None
+    paused: bool | None = None
+    device: str | None = None
+    issue: str | None = None
+    label: str | None = None
 
 
 class WsEnvelope(BaseModel):

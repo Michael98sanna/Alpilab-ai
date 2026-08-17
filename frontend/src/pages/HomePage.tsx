@@ -150,6 +150,7 @@ export function HomePage() {
             onPause={pauseDiagnosis}
             onResume={resumeDiagnosis}
             isPaused={state.session.status === "paused"}
+            isSaving={state.savingTestId === nextPendingTest?.id}
             variant="side"
             showHeader
           />
@@ -183,6 +184,7 @@ export function HomePage() {
             onPause={pauseDiagnosis}
             onResume={resumeDiagnosis}
             isPaused={state.session.status === "paused"}
+            isSaving={state.savingTestId === nextPendingTest?.id}
             variant="sheet"
           />
         </BottomSheet>

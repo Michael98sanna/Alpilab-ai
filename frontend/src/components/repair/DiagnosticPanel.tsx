@@ -11,6 +11,7 @@ interface DiagnosticPanelProps {
   onPause: () => void;
   onResume: () => void;
   isPaused: boolean;
+  isSaving?: boolean;
   variant?: "sheet" | "side";
   showHeader?: boolean;
 }
@@ -45,6 +46,7 @@ export function DiagnosticPanel({
   onPause,
   onResume,
   isPaused,
+  isSaving = false,
   variant = "sheet",
   showHeader = false,
 }: DiagnosticPanelProps) {
@@ -53,7 +55,7 @@ export function DiagnosticPanel({
   if (tests.length === 0) return null;
 
   function handleSubmit() {
-    if (!nextTest || !value.trim()) return;
+    if (!nextTest || !value.trim() || isSaving) return;
     onSubmitMeasurement(nextTest.id, value.trim());
     setValue("");
   }
@@ -104,8 +106,8 @@ export function DiagnosticPanel({
               onChange={(e) => setValue(e.target.value)}
               aria-label="Valore misura"
             />
-            <Button variant="primary" onClick={handleSubmit}>
-              Inserisci
+            <Button variant="primary" onClick={handleSubmit} disabled={isSaving}>
+              {isSaving ? "Salvataggio..." : "Inserisci"}
             </Button>
           </div>
         </div>

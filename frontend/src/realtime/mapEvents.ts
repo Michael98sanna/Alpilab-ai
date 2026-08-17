@@ -19,6 +19,22 @@ export function mapWsMessageToActions(msg: WsServerMessage): RepairAction[] {
 export function mapRealtimeEventToActions(event: RealtimeEventEnvelope): RepairAction[] {
   const payload = event.payload;
   switch (event.event_type) {
+    case "SESSION_STATE_UPDATED":
+      return [
+        {
+          type: "APPLY_STATE_UPDATE",
+          stateVersion: Number(payload.state_version),
+          changes: (payload.changes as Record<string, unknown>) ?? {},
+        },
+      ];
+    case "STATE_UPDATE_REJECTED":
+      return [
+        {
+          type: "STATE_UPDATE_REJECTED",
+          reason: String(payload.reason ?? "update rejected"),
+          stateVersion: Number(payload.state_version ?? 0),
+        },
+      ];
     case "CHAT_MESSAGE":
       return [
         {
@@ -74,4 +90,11 @@ export function mapRealtimeEventToActions(event: RealtimeEventEnvelope): RepairA
     default:
       return [];
   }
+}
+
+export function shouldRequestSnapshot(
+  currentVersion: number,
+  incomingVersion: number,
+): boolean {
+  return incomingVersion > currentVersion + 1;
 }

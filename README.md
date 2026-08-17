@@ -187,7 +187,17 @@ cd frontend && npm test
 - Eventi: `CHAT_MESSAGE`, `ASSISTANT_STATUS`, `DEVICE_*`, `DIAGNOSTIC_*`, `SESSION_SNAPSHOT`
 - Frontend: `RealtimeClient`, `RealtimeProvider`, modalità MOCK/REALTIME
 - Session resume via `localStorage` + `?session=` URL param
-- **57 test pytest** + **35 test frontend** — tutti passing
+
+### Realtime V1.1 (shared session state)
+- **Server = source of truth** per diagnostica, repair context, assistant status, pause/resume
+- `state_version` monotono per ordinamento eventi e gap detection
+- Eventi: `SESSION_STATE_UPDATED`, `STATE_UPDATE_REJECTED` (+ eventi V1)
+- Snapshot completo su connect/reconnect (`request_snapshot`)
+- Frontend: unico stato in `useRepairSession`; UI deriva da lì (no duplicazione)
+- Outbound WS: `diagnostic_update`, `diagnosis_pause`, `repair_context_update`
+- **71 test pytest** + **44 test frontend** — tutti passing
+
+> **Chat realtime ≠ Session realtime.** La chat era già sincronizzata in V1; V1.1 sincronizza l'intero stato della RepairSession (diagnostica, contesto, AI status, pause).
 
 ## Cosa è pianificato (prossime fasi)
 

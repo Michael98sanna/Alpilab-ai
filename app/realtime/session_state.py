@@ -43,6 +43,7 @@ class RealtimeSessionData:
     devices: dict[str, ConnectedDevice] = field(default_factory=dict)
     diagnostics: list[DiagnosticTestPayload] = field(default_factory=list)
     assistant_status: AssistantStatus = "IDLE"
+    state_version: int = 0
     created_at: datetime = field(default_factory=utc_now)
 
     def repair_context(self) -> RepairContextPayload:
@@ -77,6 +78,7 @@ class RealtimeSessionData:
             repair_context=ctx,
             diagnostic_state=list(self.diagnostics),
             assistant_status=self.assistant_status,
+            state_version=self.state_version,
         )
 
 

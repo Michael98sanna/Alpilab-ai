@@ -11,7 +11,7 @@ import { getAppMode, getSessionIdFromUrl, type AppMode } from "../config/env";
 import { useRepairSession, type RepairSessionApi } from "../hooks/useRepairSession";
 import type { RepairAction } from "../types";
 import { RealtimeClient } from "./RealtimeClient";
-import { mapWsMessageToActions } from "./mapEvents";
+import { mapWsMessageToActions, shouldRequestSnapshot } from "./mapEvents";
 import {
   loadDeviceName,
   loadDeviceType,
@@ -38,8 +38,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const session = useRepairSession(!isRealtime);
   const clientRef = useRef<RealtimeClient | null>(null);
   const dispatchRef = useRef(session.dispatch);
+  const stateVersionRef = useRef(session.state.stateVersion);
+  const wasReconnectingRef = useRef(false);
 
   dispatchRef.current = session.dispatch;
+  stateVersionRef.current = session.state.stateVersion;
 
   useEffect(() => {
     if (!isRealtime) return;
@@ -51,11 +54,25 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       deviceName,
       seedDemo: Boolean(getSessionIdFromUrl()) || true,
       onMessage: (msg) => {
+        if (msg.type === "event" && msg.event?.event_type === "SESSION_STATE_UPDATED") {
+          const incoming = Number(msg.event.payload.state_version);
+          if (shouldRequestSnapshot(stateVersionRef.current, incoming)) {
+            clientRef.current?.send({ type: "request_snapshot" });
+            return;
+          }
+        }
         const actions = mapWsMessageToActions(msg);
         actions.forEach((action) => dispatchRef.current(action));
       },
       onConnectionChange: (connectionState) => {
         dispatchRef.current({ type: "SET_CONNECTION_STATE", state: connectionState });
+        if (connectionState === "RECONNECTING") {
+          wasReconnectingRef.current = true;
+        }
+        if (connectionState === "CONNECTED" && wasReconnectingRef.current) {
+          wasReconnectingRef.current = false;
+          clientRef.current?.send({ type: "request_snapshot" });
+        }
       },
     });
 
@@ -74,6 +91,24 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     clientRef.current.send({ type: "chat_message", content: trimmed, role: "user" });
   }, []);
 
+  const submitMeasurementRealtime = useCallback((testId: string, value: string) => {
+    if (!clientRef.current || !value.trim()) return;
+    dispatchRef.current({ type: "SET_SAVING_TEST", testId });
+    clientRef.current.send({
+      type: "diagnostic_update",
+      test_id: testId,
+      value: value.trim(),
+    });
+  }, []);
+
+  const pauseDiagnosisRealtime = useCallback(() => {
+    clientRef.current?.send({ type: "diagnosis_pause", paused: true });
+  }, []);
+
+  const resumeDiagnosisRealtime = useCallback(() => {
+    clientRef.current?.send({ type: "diagnosis_pause", paused: false });
+  }, []);
+
   const value: SessionContextValue = useMemo(
     () => ({
       ...session,
@@ -81,8 +116,23 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       sessionId,
       deviceId,
       sendMessage: isRealtime ? sendMessageRealtime : session.sendMessage,
+      submitMeasurement: isRealtime
+        ? submitMeasurementRealtime
+        : session.submitMeasurement,
+      pauseDiagnosis: isRealtime ? pauseDiagnosisRealtime : session.pauseDiagnosis,
+      resumeDiagnosis: isRealtime ? resumeDiagnosisRealtime : session.resumeDiagnosis,
     }),
-    [session, mode, sessionId, deviceId, isRealtime, sendMessageRealtime],
+    [
+      session,
+      mode,
+      sessionId,
+      deviceId,
+      isRealtime,
+      sendMessageRealtime,
+      submitMeasurementRealtime,
+      pauseDiagnosisRealtime,
+      resumeDiagnosisRealtime,
+    ],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

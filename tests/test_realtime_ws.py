@@ -166,8 +166,11 @@ def test_assistant_status_event(client: TestClient) -> None:
     ) as ws:
         ws.receive_json()
         ws.send_json({"type": "assistant_status", "status": "THINKING"})
-        event = ws.receive_json()
-        assert event["type"] == "event"
-        assert event["event"]["event_type"] == "ASSISTANT_STATUS"
-        assert event["event"]["payload"]["status"] == "THINKING"
+        state_evt = ws.receive_json()
+        assert state_evt["type"] == "event"
+        assert state_evt["event"]["event_type"] == "SESSION_STATE_UPDATED"
+        assert state_evt["event"]["payload"]["changes"]["assistant_status"] == "THINKING"
+        legacy = ws.receive_json()
+        assert legacy["event"]["event_type"] == "ASSISTANT_STATUS"
+        assert legacy["event"]["payload"]["status"] == "THINKING"
         ws.receive_json()  # ack

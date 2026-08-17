@@ -1,6 +1,7 @@
 import { useCallback, useReducer } from "react";
 import type { DiagnosticStatus, RepairState, ToolId } from "../types";
 import { mapDiagnosticStatus } from "../realtime/types";
+import { applySessionChanges } from "../realtime/applyStateChanges";
 import {
   emptySession,
   initialDevices,
@@ -33,6 +34,9 @@ const defaultUiState = {
   sessionDevicesExpanded: false,
   connectionState: "DISCONNECTED" as import("../types").ConnectionState,
   pendingMessageIds: [] as string[],
+  stateVersion: 0,
+  savingTestId: null as string | null,
+  stateError: null as string | null,
 };
 
 function buildInitialState(): RepairState {
@@ -261,8 +265,36 @@ function repairReducer(state: RepairState, action: Action): RepairState {
         })),
         coreState: snap.assistant_status,
         onboardingStep: snap.session.device && snap.session.issue ? "complete" : "idle",
+        stateVersion: snap.state_version ?? 0,
+        savingTestId: null,
+        stateError: null,
       };
     }
+
+    case "APPLY_STATE_UPDATE": {
+      if (action.stateVersion <= state.stateVersion) {
+        return state;
+      }
+      const updated = applySessionChanges(state, action.changes);
+      return {
+        ...updated,
+        stateVersion: action.stateVersion,
+      };
+    }
+
+    case "SET_SAVING_TEST":
+      return { ...state, savingTestId: action.testId, stateError: null };
+
+    case "SET_STATE_ERROR":
+      return { ...state, stateError: action.message, savingTestId: null };
+
+    case "STATE_UPDATE_REJECTED":
+      return {
+        ...state,
+        stateVersion: Math.max(state.stateVersion, action.stateVersion),
+        savingTestId: null,
+        stateError: action.reason,
+      };
 
     case "APPLY_DEVICE_PRESENCE": {
       const existing = state.devices.find((d) => d.id === action.deviceId);
