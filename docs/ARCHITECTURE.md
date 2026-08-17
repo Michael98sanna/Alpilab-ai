@@ -394,6 +394,7 @@ Viewport, theme-color; service worker non implementato.
 | Realtime events | ✅ In-memory manager |
 | PC Agent V0.1 | ✅ Connected but idle (AGENT_TEST only) |
 | PC Agent V0.2 | ✅ Safe tool execution (`demo.safe_test` pipeline) |
+| PC Agent V0.3 | ✅ WindowsAppTool + `windows.3utools.open` (dry-run + execution) |
 | Conversation/Command engine | ✅ Mock parser |
 | Voice interfaces | ✅ Mock STT/TTS |
 | Diagnostic state + anti-loop | ✅ |

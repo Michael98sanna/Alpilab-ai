@@ -2,7 +2,7 @@
 
 from app.schemas.enums import ToolStatus, ToolType
 from app.tools.base import Tool, ToolCapability
-from app.tools.executable import ExecutableToolSpec, SAFE_TEST_TOOL
+from app.tools.executable import ExecutableToolSpec, SAFE_TEST_TOOL, WINDOWS_3UTOOLS_OPEN_TOOL
 
 
 class ToolRegistry:
@@ -54,6 +54,7 @@ class ToolRegistry:
 
     def _seed_executable(self) -> None:
         self.register_executable(SAFE_TEST_TOOL)
+        self.register_executable(WINDOWS_3UTOOLS_OPEN_TOOL)
 
     def _seed_defaults(self) -> None:
         defaults = [

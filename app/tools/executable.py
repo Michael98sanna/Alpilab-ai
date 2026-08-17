@@ -9,6 +9,18 @@ from pydantic import BaseModel, Field
 from app.schemas.enums import ActionRiskLevel, ToolType
 
 
+FORBIDDEN_REMOTE_ARGUMENT_KEYS = frozenset(
+    {
+        "path",
+        "executable",
+        "executable_path",
+        "shell_command",
+        "command",
+        "args",
+    }
+)
+
+
 class ExecutableToolSpec(BaseModel):
     """Server-controlled tool registration — clients cannot define tools."""
 
@@ -31,6 +43,8 @@ def validate_tool_arguments(
     if not isinstance(arguments, dict):
         return "INVALID_ARGUMENTS"
     keys = frozenset(arguments.keys())
+    if keys & FORBIDDEN_REMOTE_ARGUMENT_KEYS:
+        return "INVALID_ARGUMENTS"
     if keys != spec.allowed_argument_keys:
         return "INVALID_ARGUMENTS"
     return None
@@ -44,6 +58,18 @@ SAFE_TEST_TOOL = ExecutableToolSpec(
     tool_type=ToolType.GENERIC,
     risk_level=ActionRiskLevel.SAFE,
     required_capabilities=["safe_test"],
+    enabled=True,
+    allowed_argument_keys=frozenset(),
+)
+
+WINDOWS_3UTOOLS_OPEN_TOOL = ExecutableToolSpec(
+    tool_id="windows.3utools.open",
+    name="Open 3uTools",
+    description="Open the locally registered 3uTools installation on the PC Agent",
+    version="1.0",
+    tool_type=ToolType.SOFTWARE_3UTOOLS,
+    risk_level=ActionRiskLevel.CONFIRM_REQUIRED,
+    required_capabilities=["windows_apps"],
     enabled=True,
     allowed_argument_keys=frozenset(),
 )

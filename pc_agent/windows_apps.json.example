@@ -1,0 +1,10 @@
+{
+  "windows_apps": {
+    "3utools": {
+      "enabled": true,
+      "executable": "3uTools.exe",
+      "executable_path": "C:\\Program Files\\3uTools\\3uTools.exe",
+      "dry_run": true
+    }
+  }
+}

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from pc_agent.tools.registry import LocalToolRegistry, local_tool_registry
+from pc_agent.windows_apps.tool import WindowsAppToolError
 
 
 class LocalToolDispatcher:
@@ -78,6 +79,15 @@ class LocalToolDispatcher:
 
         try:
             result_payload = spec.handler(arguments)
+        except WindowsAppToolError as exc:
+            return self._result(
+                request_id=request_id,
+                command_id=command_id,
+                agent_id=agent_id,
+                tool_id=tool_id,
+                success=False,
+                error=exc.code,
+            )
         except Exception:
             return self._result(
                 request_id=request_id,

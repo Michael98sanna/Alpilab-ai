@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 from pc_agent.tools.dispatcher import LocalToolDispatcher
+from pc_agent.tools.windows_handlers import configure_windows_app_tool
+from pc_agent.windows_apps.registry import local_app_registry
 
 ALLOWED_COMMANDS = frozenset({"AGENT_TEST", "TOOL_EXECUTE"})
 
@@ -22,6 +24,8 @@ def is_allowed_command(command_type: str) -> bool:
 
 def configure_dispatcher(capabilities: dict[str, bool]) -> None:
     _dispatcher.set_capabilities(capabilities)
+    local_app_registry.reload()
+    configure_windows_app_tool()
 
 
 def handle_command(

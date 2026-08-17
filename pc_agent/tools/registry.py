@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from pc_agent.tools.base import LocalToolSpec, execute_safe_test
+from pc_agent.tools.windows_handlers import make_windows_app_handler
+from pc_agent.windows_apps.registry import TOOL_ID_TO_APP_ID
 
 SAFE_TEST_TOOL_ID = "demo.safe_test"
+WINDOWS_3UTOOLS_OPEN_TOOL_ID = "windows.3utools.open"
 
 
 class LocalToolRegistry:
@@ -30,6 +33,15 @@ class LocalToolRegistry:
                 handler=execute_safe_test,
             )
         )
+        for tool_id in TOOL_ID_TO_APP_ID:
+            self.register(
+                LocalToolSpec(
+                    tool_id=tool_id,
+                    required_capability="windows_apps",
+                    allowed_argument_keys=frozenset(),
+                    handler=make_windows_app_handler(tool_id),
+                )
+            )
 
 
 local_tool_registry = LocalToolRegistry()

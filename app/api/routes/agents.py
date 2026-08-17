@@ -79,11 +79,19 @@ def list_executable_tools() -> ToolListResponse:
 
 
 async def execute_safe_test(session_id: str, agent_id: str) -> ToolExecuteResponse:
+    return await _execute_tool(session_id, agent_id, "demo.safe_test")
+
+
+async def execute_3utools_open(session_id: str, agent_id: str) -> ToolExecuteResponse:
+    return await _execute_tool(session_id, agent_id, "windows.3utools.open")
+
+
+async def _execute_tool(session_id: str, agent_id: str, tool_id: str) -> ToolExecuteResponse:
     try:
         result = await tool_execution_service.execute_tool(
             session_id,
             agent_id,
-            "demo.safe_test",
+            tool_id,
             {},
         )
     except ToolExecutionError as exc:
@@ -91,7 +99,7 @@ async def execute_safe_test(session_id: str, agent_id: str) -> ToolExecuteRespon
             status="error",
             request_id="",
             agent_id=agent_id,
-            tool_id="demo.safe_test",
+            tool_id=tool_id,
             success=False,
             error=exc.error_code,
         )
@@ -100,7 +108,7 @@ async def execute_safe_test(session_id: str, agent_id: str) -> ToolExecuteRespon
         request_id=result.request_id,
         command_id=result.command_id,
         agent_id=result.agent_id,
-        tool_id=result.tool_id or "demo.safe_test",
+        tool_id=result.tool_id or tool_id,
         success=result.success,
         result=result.result,
         error=result.error,

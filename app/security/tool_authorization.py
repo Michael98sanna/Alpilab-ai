@@ -11,6 +11,16 @@ from app.tools.executable import ExecutableToolSpec
 _AUTO_EXECUTE_RISK = {ActionRiskLevel.READ_ONLY, ActionRiskLevel.SAFE}
 
 
+def _is_auto_executable(tool: ExecutableToolSpec) -> bool:
+    if tool.risk_level in _AUTO_EXECUTE_RISK:
+        return True
+    # V0.3: Windows app open tools are CONFIRM_REQUIRED (launch external software).
+    # UI confirmation is deferred; dev/test endpoints may auto-execute until then.
+    if tool.tool_id.startswith("windows.") and tool.tool_id.endswith(".open"):
+        return tool.risk_level == ActionRiskLevel.CONFIRM_REQUIRED
+    return False
+
+
 def authorize_tool_execution(
     tool: ExecutableToolSpec,
     agent_capabilities: AgentCapabilities,
@@ -24,7 +34,7 @@ def authorize_tool_execution(
             metadata={"error": "TOOL_DISABLED"},
         )
 
-    if tool.risk_level not in _AUTO_EXECUTE_RISK:
+    if not _is_auto_executable(tool):
         return ActionAuthorization(
             allowed=False,
             requires_confirmation=True,

@@ -57,7 +57,7 @@ class AgentConfig:
             session_id=session_id,
             agent_name=os.getenv("ALPILAB_AGENT_NAME", "ALPILAB-PC"),
             platform=os.getenv("ALPILAB_AGENT_PLATFORM", "windows"),
-            agent_version=os.getenv("ALPILAB_AGENT_VERSION", "0.2.0"),
+            agent_version=os.getenv("ALPILAB_AGENT_VERSION", "0.3.0"),
             heartbeat_interval_sec=_env_float("ALPILAB_HEARTBEAT_INTERVAL", 25.0),
             reconnect_base_delay_sec=_env_float("ALPILAB_RECONNECT_BASE_DELAY", 1.0),
             reconnect_max_delay_sec=_env_float("ALPILAB_RECONNECT_MAX_DELAY", 32.0),
@@ -69,7 +69,7 @@ class AgentConfig:
             ),
             capabilities_windows_apps=os.getenv("ALPILAB_CAP_WINDOWS_APPS", "true").lower()
             in {"1", "true", "yes"},
-            capabilities_alpilab_check=os.getenv("ALPILAB_CAP_ALPILAB_CHECK", "true").lower()
+            capabilities_alpilab_check=os.getenv("ALPILAB_CAP_ALPILAB_CHECK", "false").lower()
             in {"1", "true", "yes"},
             capabilities_microscope=os.getenv("ALPILAB_CAP_MICROSCOPE", "false").lower()
             in {"1", "true", "yes"},

@@ -1,4 +1,4 @@
-# Alpilab PC Agent (V0.1 + V0.2)
+# Alpilab PC Agent (V0.1 + V0.2 + V0.3)
 
 The PC Agent is a local Windows process that connects Alpilab AI to the laboratory PC.
 
@@ -33,7 +33,7 @@ The PC Agent is a local Windows process that connects Alpilab AI to the laborato
                       RESULT
 ```
 
-V0.1 supported only `AGENT_TEST`. V0.2 adds the first real execution path: `demo.safe_test`.
+V0.1 supported only `AGENT_TEST`. V0.2 adds `demo.safe_test`. V0.3 adds **WindowsAppTool** and `windows.3utools.open`.
 
 ## Requirements
 
@@ -239,6 +239,144 @@ curl -X POST "http://127.0.0.1:8000/api/v1/sessions/repair-001/agents/{agent_id}
 
 Smartphone on the same RepairSession receives `TOOL_EXECUTE_RESULT` via the existing realtime WebSocket.
 
+## PC Agent V0.3 — WindowsAppTool
+
+### Architecture
+
+```text
+ALPILAB AI
+    ↓
+windows.3utools.open
+    ↓
+Authorization
+    ↓
+ToolRegistry (server — no local path)
+    ↓
+AgentGateway
+    ↓
+PC Agent
+    ↓
+LocalToolRegistry
+    ↓
+WindowsAppTool
+    ↓
+Local App Registry + trusted config
+    ↓
+DRY_RUN or execution
+```
+
+**Principle:** the server sends only `tool_id`. The PC Agent resolves the **local executable path** from trusted configuration. The server never sends `path`, `executable`, or shell commands.
+
+### Tool ID
+
+| Tool | ID |
+|------|-----|
+| Open 3uTools | `windows.3utools.open` |
+
+Future: `windows.borneo.open`, `windows.zxw.open` — same `WindowsAppTool`, different local registration.
+
+### Risk level
+
+`windows.3utools.open` is classified **`CONFIRM_REQUIRED`** (launches external software). V0.3 auto-executes via dev/test endpoints until a confirmation UI exists.
+
+### Local configuration
+
+Copy `pc_agent/windows_apps.json.example` to `%USERPROFILE%\.alpilab\windows_apps.json` or use environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `ALPILAB_CAP_WINDOWS_APPS` | Capability declaration (`true`) |
+| `ALPILAB_WINAPP_3UTOOLS_ENABLED` | Enable 3uTools locally |
+| `ALPILAB_WINAPP_3UTOOLS_PATH` | Full path to `3uTools.exe` on this PC |
+| `ALPILAB_WINAPP_3UTOOLS_DRY_RUN` | `true` = validate only, do not launch |
+
+Example `.env`:
+
+```powershell
+$env:ALPILAB_CAP_WINDOWS_APPS="true"
+$env:ALPILAB_WINAPP_3UTOOLS_ENABLED="true"
+$env:ALPILAB_WINAPP_3UTOOLS_PATH="C:\Program Files\3uTools\3uTools.exe"
+$env:ALPILAB_WINAPP_3UTOOLS_DRY_RUN="true"
+```
+
+### DRY RUN result
+
+```json
+{
+  "mode": "dry_run",
+  "app_id": "3utools",
+  "executable": "3uTools.exe",
+  "validated": true,
+  "would_execute": true
+}
+```
+
+3uTools **must not** open when `dry_run=true`.
+
+### Execution result
+
+Set `ALPILAB_WINAPP_3UTOOLS_DRY_RUN=false` only after dry-run succeeds:
+
+```json
+{
+  "mode": "execution",
+  "app_id": "3utools",
+  "started": true
+}
+```
+
+Launch uses `subprocess.Popen([path], shell=False)` — never `shell=True`, PowerShell, or `cmd.exe`.
+
+### REST dev endpoint
+
+```text
+POST /api/v1/sessions/{session_id}/agents/{agent_id}/tools/windows.3utools.open/execute
+```
+
+PowerShell:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:8000/api/v1/sessions/repair-001/agents/$agentId/tools/windows.3utools.open/execute"
+```
+
+### Manual Windows test
+
+**STEP 1** — Configure 3uTools path locally (`DRY_RUN=true`).
+
+**STEP 2** — Start backend: `python -m uvicorn app.main:app --host 0.0.0.0 --port 8000`
+
+**STEP 3** — (Optional) Start frontend on `?session=repair-001`
+
+**STEP 4** — Start PC Agent with `windows_apps` capability and 3uTools config.
+
+**STEP 5** — Verify PC Agent ● ONLINE.
+
+**STEP 6** — Dry run: POST `windows.3utools.open` → `validated=true`, `would_execute=true`, 3uTools **does not open**.
+
+**STEP 7** — Set `ALPILAB_WINAPP_3UTOOLS_DRY_RUN=false`, restart agent, POST again.
+
+**STEP 8** — 3uTools opens → `started=true`.
+
+### Error codes (V0.3)
+
+| Code | Meaning |
+|------|---------|
+| `TOOL_NOT_FOUND` | Unknown tool_id |
+| `TOOL_DISABLED` | Tool or app disabled locally |
+| `CAPABILITY_MISSING` | Agent lacks `windows_apps` |
+| `EXECUTABLE_NOT_FOUND` | Path missing or file not found |
+| `INVALID_ARGUMENTS` | Remote args include forbidden keys (`path`, `executable`, …) |
+| `APP_NOT_REGISTERED` | No local config for app |
+| `AUTHORIZATION_DENIED` | Server authorization failed |
+
+### Limitations (V0.3)
+
+- No process lifecycle / PID management / close app
+- No duplicate-instance detection (may start second 3uTools window)
+- Borneo and ZXW not implemented yet
+- No conversation text → tool mapping yet
+- No remote path or arbitrary executable from server/client payload
+
 ## What V0.1 cannot do
 
 - Open 3uTools, Borneo, ZXW
@@ -250,5 +388,5 @@ Smartphone on the same RepairSession receives `TOOL_EXECUTE_RESULT` via the exis
 ## Tests
 
 ```bash
-python3 -m pytest tests/test_tool_execution.py tests/test_agent_ws.py tests/test_pc_agent.py -v
+python3 -m pytest tests/test_tool_execution.py tests/test_windows_app_tool.py tests/test_agent_ws.py tests/test_pc_agent.py -v
 ```

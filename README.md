@@ -76,7 +76,7 @@ alpilab-ai/
 │   ├── public/
 │   └── src/
 ├── hub/                    # Interfacce Alpilab Hub (mock)
-├── pc_agent/               # PC Agent V0.2 (Windows process, safe tool execution)
+├── pc_agent/               # PC Agent V0.3 (Windows process, safe + Windows app tools)
 ├── tests/                  # Test pytest
 ├── docs/                   # Documentazione
 ├── app.py                  # Entry point CLI
@@ -180,7 +180,7 @@ cd frontend && npm test
 - Mock voice (`SpeechToText`, `TextToSpeech`)
 
 - Configurazione via `.env` (senza segreti nel repo)
-- **115 test pytest** — tutti passing
+- **138 test pytest** — tutti passing
 - Documentazione: `docs/ARCHITECTURE.md` (V2)
 
 ### Realtime V1 (multi-device foundation)
@@ -240,6 +240,21 @@ Test SAFE_TEST (V0.2):
 
 ```bash
 POST /api/v1/sessions/repair-001/agents/{agent_id}/tools/demo.safe_test/execute
+```
+
+### PC Agent V0.3 (WindowsAppTool — 3uTools)
+- **WindowsAppTool** generico — 3uTools è prima istanza registrata (`windows.3utools.open`)
+- Path eseguibile **solo in config locale** PC Agent — server invia solo `tool_id`
+- **DRY_RUN** default (`ALPILAB_WINAPP_3UTOOLS_DRY_RUN=true`) — valida senza aprire
+- **Execution** con `subprocess.Popen([path], shell=False)` — no shell/PowerShell
+- Capability `windows_apps` + app locale abilitata richieste entrambe
+- REST dev: `POST .../tools/windows.3utools.open/execute`
+- **Non implementato:** Borneo, ZXW, process manager, conferma UI, chat → tool
+
+Test 3uTools dry-run (PowerShell):
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:8000/api/v1/sessions/repair-001/agents/{agent_id}/tools/windows.3utools.open/execute"
 ```
 
 ## Cosa è pianificato (prossime fasi)
