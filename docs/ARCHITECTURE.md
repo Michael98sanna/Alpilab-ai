@@ -48,11 +48,13 @@ Alpilab AI è un assistente tecnico cloud/web per un laboratorio di riparazione 
 
 ### Frontend (`frontend/`)
 
-Placeholder per la futura web app responsive e PWA. Non implementato in questa fase.
+Placeholder con shell HTML responsive, client API stub (`AlpilabApiClient`) e stili base.
+Nessun bundler/framework installato. PWA non implementata in questa fase.
 
 ### Backend (`app/`)
 
-- `api/` — futuri endpoint HTTP per client web/mobile
+- `api/` — route registry, health check, stub AI endpoint (no HTTP server yet)
+- `main.py` — future HTTP server entry point
 - `core/` — configurazione e utilità condivise
 - `schemas/` — modelli Pydantic (contratto dati condiviso)
 - `services/` — logica di business (futuro)

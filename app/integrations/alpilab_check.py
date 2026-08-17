@@ -32,7 +32,7 @@ class AlpilabCheckConnector(ABC):
     Future bridge to Alpilab Check without importing its internal code.
 
     Integration may happen via HTTP API, local bridge, files, or another
-  stable contract. This interface defines only the expected capabilities.
+    stable contract. This interface defines only the expected capabilities.
     """
 
     @abstractmethod

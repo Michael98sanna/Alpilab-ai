@@ -50,7 +50,8 @@ Dettagli completi: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 ```text
 alpilab-ai/
 ├── app/                    # Backend application
-│   ├── api/                # Futuri endpoint HTTP
+│   ├── api/                # Route registry + endpoint handlers (no server yet)
+│   ├── main.py             # Future HTTP server entry point
 │   ├── core/               # Configurazione
 │   ├── models/             # Futuro layer persistenza
 │   ├── schemas/            # Modelli dati (contratto condiviso)
@@ -62,7 +63,9 @@ alpilab-ai/
 │   ├── prompts/            # Template di sistema
 │   └── schemas.py          # AIRequest / AIResponse
 ├── knowledge/              # Futura knowledge base / RAG
-├── frontend/               # Futura web app / PWA
+├── frontend/               # Shell HTML + client API stub (no framework yet)
+│   ├── public/
+│   └── src/
 ├── hub/                    # Interfacce Alpilab Hub (mock)
 ├── tests/                  # Test pytest
 ├── docs/                   # Documentazione
@@ -87,14 +90,14 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # CLI interattiva con MockProvider
-python app.py
+python3 app.py
 ```
 
 ## Test
 
 ```bash
 pip install -r requirements.txt
-pytest tests/ -v
+python3 -m pytest tests/ -v
 ```
 
 ## Cosa è implementato
@@ -105,21 +108,24 @@ pytest tests/ -v
 - Schemi Pydantic per entità di riparazione (`Device`, `RepairSession`, `DiagnosticTest`, `Measurement`, ecc.)
 - `AlpilabCheckConnector` (interfaccia + mock)
 - `AlpilabHub` (interfaccia + mock per hardware/software del PC)
+- API foundation: route registry, `GET /health`, stub `POST /api/v1/ai/generate` (senza server HTTP attivo)
+- Frontend foundation: shell HTML responsive, `AlpilabApiClient` stub, stili base
 - Configurazione via `.env` (senza segreti nel repo)
-- Test pytest per i componenti sopra
+- Test pytest (32 test) per i componenti sopra
 - Documentazione architetturale
 
 ## Cosa è pianificato (non in questa fase)
 
+- Server HTTP reale (FastAPI/Starlette) e binding delle route
 - Autenticazione e gestione utenti
 - Deploy cloud e database PostgreSQL
 - Provider AI reali (OpenAI, Gemini, Anthropic, modelli locali)
-- API REST per frontend web/mobile
+- UI completa, framework frontend e PWA installabile
 - Knowledge base, RAG e storico riparazioni
 - Integrazione reale con Alpilab Check e Alpilab Hub
 - Controllo hardware (microscopio, termocamera, multimetro, alimentatore)
 - Integrazione 3uTools, Borneo, ZXW
-- Assistente vocale e PWA installabile
+- Assistente vocale
 
 ## Regole del progetto
 
