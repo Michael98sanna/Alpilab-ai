@@ -6,6 +6,8 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // Consente tunnel (localtunnel, ngrok) per test da smartphone
+    allowedHosts: true,
   },
   test: {
     environment: "jsdom",
