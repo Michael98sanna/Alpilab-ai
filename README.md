@@ -97,19 +97,46 @@ pip install -r requirements.txt
 # Configurazione locale (opzionale)
 cp .env.example .env
 
+# Backend realtime (FastAPI + WebSocket)
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
 # CLI interattiva con MockProvider
 python3 app.py
 ```
 
-## Frontend (UI V0.1)
+## Frontend (UI V0.3.1)
 
 ```bash
 cd frontend
 npm install
+cp .env.example .env
 npm run dev      # http://localhost:5173
 npm run build
 npm test
 ```
+
+### Modalità MOCK vs REALTIME
+
+| Modalità | Config | Comportamento |
+|----------|--------|---------------|
+| **MOCK** (default) | `VITE_APP_MODE=mock` | UI con dati locali, nessun backend |
+| **REALTIME** | `VITE_APP_MODE=realtime` | WebSocket verso backend, sessione condivisa |
+
+Variabili frontend (`.env`):
+
+```bash
+VITE_APP_MODE=realtime
+VITE_API_URL=http://127.0.0.1:8000
+VITE_WS_URL=ws://127.0.0.1:8000
+```
+
+Entrare in una sessione condivisa via URL:
+
+```text
+http://localhost:5173/?session=repair-001
+```
+
+CORS backend: origini default `localhost:5173`. Aggiungere altre con `CORS_ORIGINS=http://192.168.1.10:5173`.
 
 ## Test backend
 
@@ -154,19 +181,25 @@ cd frontend && npm test
 - **46 test pytest** — tutti passing
 - Documentazione: `docs/ARCHITECTURE.md` (V2)
 
-## Cosa è pianificato (non in questa fase)
+### Realtime V1 (multi-device foundation)
+- **FastAPI** server con `GET /health`, `POST /api/v1/sessions`, WebSocket `/ws/sessions/{session_id}`
+- **RealtimeSessionManager** esteso: presence, chat broadcast, session snapshot, reconnect
+- Eventi: `CHAT_MESSAGE`, `ASSISTANT_STATUS`, `DEVICE_*`, `DIAGNOSTIC_*`, `SESSION_SNAPSHOT`
+- Frontend: `RealtimeClient`, `RealtimeProvider`, modalità MOCK/REALTIME
+- Session resume via `localStorage` + `?session=` URL param
+- **57 test pytest** + **35 test frontend** — tutti passing
 
-- Server HTTP reale (FastAPI) + WebSocket realtime
-- Framework UI completo + PWA installabile
+## Cosa è pianificato (prossime fasi)
+
 - Autenticazione e gestione utenti
 - Deploy cloud e database PostgreSQL
 - Provider AI reali (OpenAI, Gemini, Anthropic, modelli locali)
-- UI completa, framework frontend e PWA installabile
 - Knowledge base, RAG e storico riparazioni
 - Integrazione reale con Alpilab Check e Alpilab Hub
 - Controllo hardware (microscopio, termocamera, multimetro, alimentatore)
 - Integrazione 3uTools, Borneo, ZXW
-- Assistente vocale
+- Assistente vocale (STT/TTS reali)
+- QR code / pair device
 
 ## Regole del progetto
 

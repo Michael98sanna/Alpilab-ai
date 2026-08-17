@@ -53,3 +53,9 @@
   color: var(--color-ai);
   background: var(--color-surface);
 }
+
+.connection {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}

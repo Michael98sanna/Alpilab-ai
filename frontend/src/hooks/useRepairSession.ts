@@ -1,5 +1,6 @@
 import { useCallback, useReducer } from "react";
 import type { DiagnosticStatus, RepairState, ToolId } from "../types";
+import { mapDiagnosticStatus } from "../realtime/types";
 import {
   emptySession,
   initialDevices,
@@ -30,6 +31,8 @@ const defaultUiState = {
   diagnosticsExpanded: false,
   contextPanelExpanded: false,
   sessionDevicesExpanded: false,
+  connectionState: "DISCONNECTED" as import("../types").ConnectionState,
+  pendingMessageIds: [] as string[],
 };
 
 function buildInitialState(): RepairState {
@@ -210,6 +213,85 @@ function repairReducer(state: RepairState, action: Action): RepairState {
         tools: state.tools.map((t) => ({ ...t, open: false })),
         coreState: state.coreState === "WORKING" ? "IDLE" : state.coreState,
       };
+
+    case "SET_CONNECTION_STATE":
+      return { ...state, connectionState: action.state };
+
+    case "ADD_PENDING_MESSAGE":
+      return {
+        ...state,
+        pendingMessageIds: [...state.pendingMessageIds, action.clientId],
+      };
+
+    case "REMOVE_PENDING_MESSAGE":
+      return {
+        ...state,
+        pendingMessageIds: state.pendingMessageIds.filter((id) => id !== action.clientId),
+      };
+
+    case "APPLY_SNAPSHOT": {
+      const snap = action.snapshot;
+      return {
+        ...state,
+        session: {
+          id: snap.session.id,
+          label: snap.session.label,
+          device: snap.session.device,
+          issue: snap.session.issue,
+          status: snap.session.status === "paused" ? "paused" : "active",
+          diagnosisLabel: snap.session.diagnosis_label,
+        },
+        messages: snap.conversation.map((m) => ({
+          id: m.message_id,
+          role: m.role,
+          content: m.content,
+          timestamp: m.timestamp,
+        })),
+        tests: snap.diagnostic_state.map((t) => ({
+          id: t.id,
+          name: t.name,
+          value: t.value,
+          status: mapDiagnosticStatus(t.status),
+        })),
+        devices: snap.participants.map((p) => ({
+          id: p.device_id,
+          kind: p.device_type,
+          label: p.device_name,
+          online: p.online,
+        })),
+        coreState: snap.assistant_status,
+        onboardingStep: snap.session.device && snap.session.issue ? "complete" : "idle",
+      };
+    }
+
+    case "APPLY_DEVICE_PRESENCE": {
+      const existing = state.devices.find((d) => d.id === action.deviceId);
+      if (existing) {
+        return {
+          ...state,
+          devices: state.devices.map((d) =>
+            d.id === action.deviceId
+              ? { ...d, online: action.online, label: action.label }
+              : d,
+          ),
+        };
+      }
+      return {
+        ...state,
+        devices: [
+          ...state.devices,
+          {
+            id: action.deviceId,
+            kind: action.deviceType,
+            label: action.label,
+            online: action.online,
+          },
+        ],
+      };
+    }
+
+    case "SYNC_DIAGNOSTICS":
+      return { ...state, tests: action.tests };
 
     default:
       return state;
@@ -423,6 +505,7 @@ export function useRepairSession(loadScenarioOnInit = true) {
 
   return {
     state,
+    dispatch,
     sendMessage,
     simulateVoice,
     submitMeasurement,

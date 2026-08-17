@@ -65,6 +65,13 @@ export interface RepairSession {
 
 export type OnboardingStep = "idle" | "device" | "issue" | "complete";
 
+export type ConnectionState =
+  | "CONNECTING"
+  | "CONNECTED"
+  | "DISCONNECTED"
+  | "RECONNECTING"
+  | "ERROR";
+
 export interface RepairState {
   session: RepairSession;
   messages: ChatMessage[];
@@ -78,6 +85,8 @@ export interface RepairState {
   diagnosticsExpanded: boolean;
   contextPanelExpanded: boolean;
   sessionDevicesExpanded: boolean;
+  connectionState: ConnectionState;
+  pendingMessageIds: string[];
 }
 
 export type RepairAction =
@@ -94,7 +103,13 @@ export type RepairAction =
   | { type: "TOGGLE_DIAGNOSTICS" }
   | { type: "TOGGLE_CONTEXT_PANEL" }
   | { type: "TOGGLE_SESSION_DEVICES" }
-  | { type: "LOAD_SCENARIO" };
+  | { type: "LOAD_SCENARIO" }
+  | { type: "SET_CONNECTION_STATE"; state: ConnectionState }
+  | { type: "ADD_PENDING_MESSAGE"; clientId: string }
+  | { type: "REMOVE_PENDING_MESSAGE"; clientId: string }
+  | { type: "APPLY_SNAPSHOT"; snapshot: import("../realtime/types").SessionSnapshot }
+  | { type: "APPLY_DEVICE_PRESENCE"; deviceId: string; deviceType: DeviceKind; label: string; online: boolean }
+  | { type: "SYNC_DIAGNOSTICS"; tests: DiagnosticTest[] };
 
 /** @deprecated Use CORE_STATUS_CONFIG from config/coreStatus */
 export const STATUS_LABELS: Record<CoreState, string> = {

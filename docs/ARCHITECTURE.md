@@ -85,15 +85,29 @@ Repair Session
 
 ---
 
-## 4. Realtime events
+## 4. Realtime events (V1)
 
-**Layer:** `app/realtime/`
+**Layer:** `app/realtime/` + `app/main.py` (FastAPI)
 
-`RealtimeSessionManager` emette eventi a subscriber in-memory (futuro: WebSocket).
+```text
+Browser (PWA)
+     ↓ WebSocket
+FastAPI /ws/sessions/{session_id}
+     ↓
+RealtimeSessionManager
+     ↓
+RepairSession (in-memory)
+```
+
+`RealtimeSessionManager` gestisce sessioni in-memory, presence dispositivi, broadcast eventi e snapshot iniziale per nuovi partecipanti.
+
+**Authentication and authorization will be implemented before production deployment.**
 
 Eventi supportati (`RealtimeEventType`):
 
-`SESSION_CREATED`, `SESSION_UPDATED`, `MESSAGE_CREATED`, `MESSAGE_UPDATED`, `AI_RESPONSE_STARTED`, `AI_RESPONSE_CHUNK`, `AI_RESPONSE_COMPLETED`, `VOICE_TRANSCRIPT`, `MEASUREMENT_CREATED`, `IMAGE_CREATED`, `IMAGE_UPDATED`, `ANNOTATION_CREATED`, `DIAGNOSTIC_TEST_UPDATED`, `TOOL_STATE_CHANGED`, `DEVICE_CONNECTED`, `DEVICE_DISCONNECTED`, `SESSION_RESUMED`
+`SESSION_SNAPSHOT`, `CHAT_MESSAGE`, `ASSISTANT_STATUS`, `DEVICE_CONNECTED`, `DEVICE_DISCONNECTED`, `DEVICE_HEARTBEAT`, `DIAGNOSTIC_UPDATED`, `DIAGNOSTIC_TEST_STARTED`, `DIAGNOSTIC_TEST_COMPLETED`, `SESSION_CREATED`, `MESSAGE_CREATED`, …
+
+**Frontend realtime:** `frontend/src/realtime/` — `RealtimeClient`, `RealtimeProvider`, modalità `MOCK` | `REALTIME`.
 
 ---
 

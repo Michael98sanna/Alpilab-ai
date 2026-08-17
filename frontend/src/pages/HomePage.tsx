@@ -11,7 +11,7 @@ import { BottomSheet } from "../components/ui/BottomSheet";
 import { Button } from "../components/ui/Button";
 import { GestureFeedback } from "../components/ui/GestureFeedback";
 import { useChatScroll } from "../hooks/useChatScroll";
-import { useRepairSession } from "../hooks/useRepairSession";
+import { useAppSession } from "../realtime/RealtimeProvider";
 import { useSwipeGesture, type PanelMode } from "../hooks/useSwipeGesture";
 import styles from "./HomePage.module.css";
 
@@ -29,9 +29,10 @@ function useLayoutMode() {
   return mode;
 }
 
-export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: boolean }) {
+export function HomePage() {
   const {
     state,
+    mode,
     sendMessage,
     simulateVoice,
     submitMeasurement,
@@ -48,7 +49,7 @@ export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: b
     closeToolPanel,
     nextPendingTest,
     hasActiveRepair,
-  } = useRepairSession(loadScenarioOnInit);
+  } = useAppSession();
 
   const layout = useLayoutMode();
   const isMobile = layout === "mobile";
@@ -81,6 +82,8 @@ export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: b
         sessionDevicesExpanded={state.sessionDevicesExpanded}
         onToggleSessionDevices={toggleSessionDevices}
         onVoiceClick={simulateVoice}
+        connectionState={state.connectionState}
+        showConnection={mode === "realtime"}
       />
 
       {showContext && <RepairContextBanner session={state.session} />}

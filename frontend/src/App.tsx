@@ -1,5 +1,10 @@
+import { RealtimeProvider } from "./realtime/RealtimeProvider";
 import { HomePage } from "./pages/HomePage";
 
 export function App() {
-  return <HomePage />;
+  return (
+    <RealtimeProvider>
+      <HomePage />
+    </RealtimeProvider>
+  );
 }
