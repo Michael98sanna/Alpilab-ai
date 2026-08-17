@@ -1,1 +1,1 @@
-"""AI layer for Alpilab AI."""
+"""AI layer: provider-agnostic generation and routing."""

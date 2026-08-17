@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Alpilab AI</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div>
+        <p class="eyebrow">Laboratorio · cloud-first</p>
+        <h1>Alpilab AI</h1>
+      </div>
+      <div id="status" class="status" data-state="loading">caricamento…</div>
+    </header>
+
+    <main>
+      <section class="panel intro">
+        <p>
+          Assistente tecnico per la riparazione smartphone. Questa interfaccia
+          parla con l’API web: funziona da PC, tablet e smartphone.
+        </p>
+        <p class="note">
+          Fase foundation: il provider attivo è un <strong>mock</strong>.
+          Nessun modello cloud è collegato e non viene analizzato hardware.
+        </p>
+      </section>
+
+      <section class="panel chat">
+        <label for="question">Domanda tecnica</label>
+        <textarea
+          id="question"
+          rows="4"
+          placeholder="Es. Il telefono non si accende dopo un danno da liquido. Da dove parto?"
+        ></textarea>
+        <div class="actions">
+          <button id="ask" type="button">Chiedi al mock</button>
+        </div>
+        <pre id="answer" class="answer" hidden></pre>
+      </section>
+    </main>
+
+    <footer>
+      Alpilab AI è un progetto separato da Alpilab Check. In futuro parleranno
+      tramite un contratto dati, non condividendo il codice interno.
+    </footer>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

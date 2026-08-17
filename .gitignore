@@ -2,25 +2,31 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
 
 # Virtual environments
 .venv/
 venv/
 env/
 
-# Environment / secrets
+# Environment / secrets — never commit real keys
 .env
 .env.*
 !.env.example
 
 # Local AI models / large artifacts
-models/
 *.gguf
 *.safetensors
 *.bin
 
-# Local data
+# Local data / storage
 runtime_data/
+uploads/
 *.db
 *.sqlite
 *.sqlite3
@@ -32,3 +38,6 @@ runtime_data/
 # OS
 .DS_Store
 Thumbs.db
+
+# Frontend (future npm toolchain)
+frontend/node_modules/

@@ -1,28 +1,17 @@
-"""Alpilab AI - minimal application entry point."""
+"""Alpilab AI entry point: start the HTTP API (cloud-first web backend)."""
 
-from ai.router import AIRouter
+import uvicorn
+
+from app.core.config import settings
 
 
 def main() -> None:
-    router = AIRouter()
-    print("Alpilab AI - base architecture")
-    print("Provider attivo:", router.provider_name)
-    print("Scrivi una domanda tecnica (exit per uscire).")
-
-    while True:
-        try:
-            question = input("\nTu > ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print()
-            break
-
-        if question.lower() in {"exit", "quit", "esci"}:
-            break
-        if not question:
-            continue
-
-        response = router.ask(question)
-        print("\nAlpilab AI >", response)
+    uvicorn.run(
+        "app.main:app",
+        host=settings.api_host,
+        port=settings.api_port,
+        reload=settings.is_development,
+    )
 
 
 if __name__ == "__main__":
