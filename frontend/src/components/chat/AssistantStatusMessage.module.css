@@ -1,0 +1,178 @@
+.wrapper {
+  align-self: center;
+  width: 100%;
+  max-width: 20rem;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.8rem;
+}
+
+.subtle {
+  max-width: 14rem;
+  padding: var(--space-xs) var(--space-sm);
+  opacity: 0.85;
+}
+
+.subtle .coreMini {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.subtle .inner {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.normal {
+  border-color: var(--color-border-strong);
+}
+
+.prominent {
+  max-width: 100%;
+  border-color: var(--color-warning);
+  background: rgba(234, 179, 8, 0.08);
+}
+
+.error.prominent {
+  border-color: var(--color-error);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.coreMini {
+  position: relative;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-strong);
+}
+
+.inner {
+  position: absolute;
+  inset: 50%;
+  width: 1rem;
+  height: 1rem;
+  margin: -0.5rem 0 0 -0.5rem;
+  border-radius: var(--radius-full);
+  background: radial-gradient(circle at 30% 30%, var(--color-ai), #0e7490);
+  box-shadow: 0 0 8px var(--color-ai-glow);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+}
+
+.label {
+  color: var(--color-text-secondary);
+  line-height: 1.3;
+}
+
+.stateTag {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--color-ai);
+}
+
+.time {
+  display: block;
+  margin-top: var(--space-xs);
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+/* State animations (scaled down from AlpilabCore) */
+.listening .ring {
+  border-color: var(--color-ai);
+  animation: listenRing 1.2s var(--ease-out) infinite;
+}
+
+.thinking .inner {
+  animation: thinkSpin 2s linear infinite;
+}
+
+.speaking .inner {
+  animation: speakPulse 0.8s var(--ease-out) infinite;
+}
+
+.working .inner {
+  animation: workPulse 1.5s var(--ease-out) infinite;
+}
+
+.idle .inner {
+  animation: idlePulse 4s var(--ease-out) infinite;
+}
+
+.warning .inner {
+  background: radial-gradient(circle at 30% 30%, var(--color-warning), #854d0e);
+}
+
+.error .inner {
+  background: radial-gradient(circle at 30% 30%, var(--color-error), #7f1d1d);
+  animation: errorPulse 1s var(--ease-out) infinite;
+}
+
+@keyframes idlePulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+@keyframes listenRing {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.06); opacity: 0.75; }
+}
+
+@keyframes thinkSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes speakPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes workPulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+@keyframes errorPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .listening .ring,
+  .thinking .inner,
+  .speaking .inner,
+  .working .inner,
+  .idle .inner,
+  .error .inner {
+    animation: none;
+  }
+}

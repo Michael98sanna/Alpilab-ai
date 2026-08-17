@@ -1,10 +1,12 @@
 import type {
   ChatMessage,
+  CoreState,
   DiagnosticTest,
   RepairSession,
   SessionDevice,
   ToolItem,
 } from "../types";
+import { STATUS_LABELS } from "../types";
 
 export const MOCK_SESSION_LABEL = "Repair #001";
 
@@ -17,38 +19,76 @@ export const initialSession: RepairSession = {
   diagnosisLabel: "Diagnosis in progress",
 };
 
+function statusMsg(state: CoreState, id: string, time: string): ChatMessage {
+  return {
+    id,
+    role: "status",
+    content: STATUS_LABELS[state],
+    timestamp: time,
+    coreState: state,
+  };
+}
+
 export const initialMessages: ChatMessage[] = [
   {
     id: "m1",
     role: "assistant",
-    content: "Sessione attiva. iPhone 13 Pro — problema: non si accende.",
-    timestamp: "09:12",
+    content: "Dimmi cosa dobbiamo riparare.",
+    timestamp: "09:10",
   },
   {
     id: "m2",
-    role: "assistant",
-    content: "Ho registrato Battery voltage: 3.81 V — PASSED.",
-    timestamp: "09:14",
+    role: "user",
+    content: "iPhone 13 Pro che non si accende.",
+    timestamp: "09:11",
   },
   {
     id: "m3",
-    role: "user",
-    content: "USB communication risulta KO.",
-    timestamp: "09:15",
+    role: "assistant",
+    content: "Ricevuto. Iniziamo la diagnosi.",
+    timestamp: "09:11",
   },
+  statusMsg("WORKING", "s1", "09:12"),
   {
     id: "m4",
     role: "assistant",
-    content:
-      "Confermato. USB communication FAILED. Il prossimo passo consigliato è misurare PP_VDD_MAIN.",
-    timestamp: "09:15",
+    content: "Misura la tensione della batteria.",
+    timestamp: "09:12",
   },
   {
     id: "m5",
+    role: "user",
+    content: "3.81 V",
+    timestamp: "09:14",
+  },
+  {
+    id: "m6",
     role: "assistant",
-    content: "Inserisci la misura quando sei pronto, oppure chiedi se serve assistenza.",
+    content:
+      "Valore corretto. La batteria non sembra essere il problema principale.",
+    timestamp: "09:14",
+  },
+  statusMsg("THINKING", "s2", "09:15"),
+  {
+    id: "m7",
+    role: "assistant",
+    content: "Controlliamo ora la comunicazione USB.",
+    timestamp: "09:15",
+  },
+  {
+    id: "m8",
+    role: "user",
+    content: "USB communication risulta KO.",
     timestamp: "09:16",
   },
+  {
+    id: "m9",
+    role: "assistant",
+    content:
+      "Confermato. USB FAILED. Il prossimo passo è misurare PP_VDD_MAIN.",
+    timestamp: "09:16",
+  },
+  statusMsg("IDLE", "s3", "09:16"),
 ];
 
 export const initialTests: DiagnosticTest[] = [
@@ -101,4 +141,17 @@ export function mockAiResponse(userText: string): string {
 
 export function mockVoiceTranscript(): string {
   return "Controlla la linea PP_VDD_MAIN sul multimetro.";
+}
+
+export function createStatusMessage(state: CoreState, id: string): ChatMessage {
+  return {
+    id,
+    role: "status",
+    content: STATUS_LABELS[state],
+    timestamp: new Date().toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    coreState: state,
+  };
 }

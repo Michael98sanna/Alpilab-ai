@@ -7,13 +7,15 @@ export type CoreState =
   | "WARNING"
   | "ERROR";
 
-export type MessageRole = "user" | "assistant" | "system";
+export type MessageRole = "user" | "assistant" | "system" | "status";
 
 export interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string;
   timestamp: string;
+  /** Present when role is "status" — assistant state in timeline */
+  coreState?: CoreState;
 }
 
 export type DiagnosticStatus =
@@ -73,6 +75,9 @@ export interface RepairState {
   onboardingStep: OnboardingStep;
   toolsExpanded: boolean;
   activeToolPanel: ToolId | null;
+  diagnosticsExpanded: boolean;
+  contextPanelExpanded: boolean;
+  sessionDevicesExpanded: boolean;
 }
 
 export type RepairAction =
@@ -86,4 +91,17 @@ export type RepairAction =
   | { type: "TOGGLE_TOOLS" }
   | { type: "OPEN_TOOL"; toolId: ToolId }
   | { type: "CLOSE_TOOL_PANEL" }
+  | { type: "TOGGLE_DIAGNOSTICS" }
+  | { type: "TOGGLE_CONTEXT_PANEL" }
+  | { type: "TOGGLE_SESSION_DEVICES" }
   | { type: "LOAD_SCENARIO" };
+
+export const STATUS_LABELS: Record<CoreState, string> = {
+  IDLE: "Pronto ad aiutarti",
+  LISTENING: "In ascolto…",
+  THINKING: "Elaborazione in corso…",
+  SPEAKING: "Risposta in corso…",
+  WORKING: "Esecuzione azione…",
+  WARNING: "Attenzione richiesta",
+  ERROR: "Errore — verifica richiesta",
+};

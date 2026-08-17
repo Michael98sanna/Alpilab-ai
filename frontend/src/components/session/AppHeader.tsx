@@ -1,14 +1,31 @@
+import type { SessionDevice } from "../../types";
+import { SessionDevicesCompact } from "./SessionDevicesCompact";
 import styles from "./AppHeader.module.css";
 
 interface AppHeaderProps {
+  devices?: SessionDevice[];
+  sessionDevicesExpanded?: boolean;
+  onToggleSessionDevices?: () => void;
   onVoiceClick?: () => void;
 }
 
-export function AppHeader({ onVoiceClick }: AppHeaderProps) {
+export function AppHeader({
+  devices = [],
+  sessionDevicesExpanded = false,
+  onToggleSessionDevices,
+  onVoiceClick,
+}: AppHeaderProps) {
   return (
-    <header className={styles.header}>
+    <header className={styles.header} role="banner">
       <div className={styles.brand}>ALPILAB AI</div>
       <div className={styles.right}>
+        {devices.length > 0 && onToggleSessionDevices && (
+          <SessionDevicesCompact
+            devices={devices}
+            expanded={sessionDevicesExpanded}
+            onToggle={onToggleSessionDevices}
+          />
+        )}
         <button
           type="button"
           className={styles.micBtn}
