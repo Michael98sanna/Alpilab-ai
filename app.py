@@ -1,9 +1,13 @@
-"""Alpilab AI - minimal application entry point."""
+"""Alpilab AI - application entry points."""
+
+from __future__ import annotations
+
+import argparse
 
 from ai.router import AIRouter
 
 
-def main() -> None:
+def run_cli() -> None:
     router = AIRouter()
     print("Alpilab AI - base architecture")
     print("Provider attivo:", router.provider_name)
@@ -23,6 +27,26 @@ def main() -> None:
 
         response = router.ask(question)
         print("\nAlpilab AI >", response)
+
+
+def run_api() -> None:
+    import uvicorn
+
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=False)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Alpilab AI")
+    parser.add_argument(
+        "--api",
+        action="store_true",
+        help="Avvia il server HTTP FastAPI invece della CLI.",
+    )
+    args = parser.parse_args()
+    if args.api:
+        run_api()
+    else:
+        run_cli()
 
 
 if __name__ == "__main__":
