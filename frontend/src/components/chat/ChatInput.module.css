@@ -1,0 +1,62 @@
+.form {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  align-items: flex-end;
+}
+
+.input {
+  flex: 1;
+  min-height: var(--touch-min);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 1rem;
+  resize: none;
+  font-family: var(--font-sans);
+  line-height: 1.4;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.mic {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.mic:hover {
+  border-color: var(--color-ai);
+}
+
+.micActive {
+  border-color: var(--color-ai);
+  box-shadow: 0 0 12px var(--color-ai-glow);
+}
+
+.send {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-info);
+  color: var(--color-bg);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

@@ -1,32 +1,59 @@
-# Frontend Alpilab AI
+# Frontend Alpilab AI — UI V0.1
 
-Placeholder per la futura web application responsive e PWA.
+Web application React + TypeScript + Vite per Alpilab AI.
+
+## Stack
+
+- React 18
+- TypeScript
+- Vite 6
+- CSS Modules + design tokens
+- Vitest + Testing Library
+
+## Avvio
+
+```bash
+npm install
+npm run dev
+```
+
+Apri http://localhost:5173
+
+## Script
+
+| Comando | Descrizione |
+|---------|-------------|
+| `npm run dev` | Dev server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview build |
+| `npm test` | Vitest |
 
 ## Struttura
 
 ```text
-frontend/
-├── public/
-│   └── index.html          # Shell HTML (responsive, mobile/tablet/PC)
-├── src/
-│   ├── api/
-│   │   └── client.js       # Client API stub
-│   ├── styles/
-│   │   └── base.css        # Stili base responsive
-│   └── main.js             # Entry point
-└── README.md
+frontend/src/
+├── components/
+│   ├── core/       # AlpilabCore
+│   ├── chat/       # MessageList, ChatInput
+│   ├── repair/     # RepairBanner, DiagnosticPanel
+│   ├── tools/      # ContextualToolBar
+│   ├── session/    # AppHeader, SessionDevices
+│   └── ui/         # Button
+├── pages/          # HomePage
+├── hooks/          # useRepairSession
+├── mock/           # scenario + mock AI
+├── api/            # future API client (not used in V0.1)
+├── styles/         # tokens + global
+└── types/
 ```
 
-## Stato attuale
+## Stato V0.1
 
-- Nessun bundler o framework installato (Vite/React/Vue in fase successiva)
-- `AlpilabApiClient` predisposto per `/health` e `/api/v1/ai/generate`
-- Layout responsive con viewport mobile-first
-- PWA manifest e service worker: non implementati
+- Mock data only — no real API, auth, WebSocket, voice, or hardware
+- Navigabile: nuova riparazione, chat, diagnostica, strumenti, pausa/resume
+- Responsive: mobile bottom sheet, desktop sidebar
+- PWA-ready structure (no service worker yet)
 
-## Prossimi passi
+## Design
 
-- Scelta stack UI (es. Vite + framework)
-- Routing, autenticazione, stato applicazione
-- PWA installabile su smartphone e tablet
-- Integrazione con backend HTTP reale
+Dark-first, minimal, functional colors. See `src/styles/tokens.css`.

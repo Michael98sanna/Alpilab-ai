@@ -1,0 +1,117 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+
+.toggle {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  padding: var(--space-xs);
+  min-height: var(--touch-min);
+}
+
+.toolBtn {
+  min-height: var(--touch-min);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.toolBtn:hover {
+  border-color: var(--color-info);
+}
+
+.toolBtnActive {
+  border-color: var(--color-ai);
+  box-shadow: 0 0 8px var(--color-ai-glow);
+}
+
+.sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-md);
+  padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+  background: var(--color-bg-elevated);
+  border-top: 1px solid var(--color-border-strong);
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  animation: slideUp var(--duration-normal) var(--ease-out);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  padding: var(--space-md);
+  border-left: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.panelOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+}
+
+.panel {
+  max-width: 24rem;
+  width: 100%;
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.panelTitle {
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.panelMock {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+@media (min-width: 1024px) {
+  .sheet {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .sidebar {
+    display: none;
+  }
+}

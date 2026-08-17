@@ -206,16 +206,41 @@ ALPILAB AI CLOUD → ALPILAB HUB → Windows + strumenti/software
 
 ## 13. Future web/PWA architecture
 
-**Frontend** (`frontend/`): shell HTML responsive, `AlpilabApiClient` stub, CSS base.
+**Frontend** (`frontend/`): React + TypeScript + Vite UI V0.1 (mock data only).
 
-**Backend API** (`app/api/`): route registry, health, AI generate stub — **server HTTP non attivo**.
+**Backend API** (`app/api/`): route registry — server HTTP non attivo.
 
-**Prossima fase:**
+**Prossima fase:** FastAPI + WebSocket, PWA manifest/service worker, PostgreSQL, auth.
 
-- FastAPI/Starlette + WebSocket per `RealtimeSessionManager`
-- Framework UI + PWA manifest/service worker
-- PostgreSQL per session store
-- Auth reale
+---
+
+## Frontend UI Architecture (V0.1)
+
+**Stack:** React 18, TypeScript, Vite, CSS Modules, Vitest.
+
+### Responsive strategy
+
+Mobile-first; desktop breakpoint 1024px; safe-area per tastiera; `prefers-reduced-motion`.
+
+### Component architecture
+
+`components/` (core, chat, repair, tools, session, ui), `pages/`, `hooks/useRepairSession`, `mock/`, `api/` (future).
+
+### Design tokens
+
+`frontend/src/styles/tokens.css` — CSS variables per tema dark-first.
+
+### Mock / API separation
+
+UI V0.1 non chiama il backend; stato locale via hook + `mock/scenario.ts`.
+
+### Multi-device UI mock
+
+`SessionDevices` mostra PC/Phone/Tablet online/offline.
+
+### PWA-ready
+
+Viewport, theme-color; service worker non implementato.
 
 ---
 
@@ -233,7 +258,8 @@ ALPILAB AI CLOUD → ALPILAB HUB → Windows + strumenti/software
 | Security classification | ✅ |
 | Hub / Check connectors | ✅ Mock |
 | AI providers | ✅ Mock only |
-| HTTP server / PWA / DB cloud | ❌ Pianificato |
+| HTTP server / DB cloud | ❌ Pianificato |
+| Frontend UI V0.1 | ✅ React mock UI |
 
 ## Evoluzione documentata
 

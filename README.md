@@ -101,11 +101,27 @@ cp .env.example .env
 python3 app.py
 ```
 
-## Test
+## Frontend (UI V0.1)
+
+```bash
+cd frontend
+npm install
+npm run dev      # http://localhost:5173
+npm run build
+npm test
+```
+
+## Test backend
 
 ```bash
 pip install -r requirements.txt
 python3 -m pytest tests/ -v
+```
+
+## Test frontend
+
+```bash
+cd frontend && npm test
 ```
 
 ## Cosa è implementato
@@ -116,6 +132,12 @@ python3 -m pytest tests/ -v
 - `AlpilabCheckConnector` e `AlpilabHub` (interfaccia + mock)
 - API route registry (`GET /health`, stub `POST /api/v1/ai/generate`) — senza server HTTP
 - Frontend shell responsive + `AlpilabApiClient` stub
+
+### UI V0.1 (React + TypeScript + Vite)
+- Web app dark-first responsive (PC, tablet, smartphone)
+- Alpilab Core, chat mock, diagnostica mock, strumenti contestuali
+- Dati mock locali — nessuna API/backend integration
+- Vitest per componenti principali
 
 ### Architecture V2 (session-centric)
 - **Repair Session** come entità centrale multi-device (`User`, `ClientDevice`, `SessionParticipant`, `RepairSessionContext`)

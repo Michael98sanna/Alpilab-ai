@@ -1,16 +1,17 @@
 /**
- * API client stub for future Alpilab AI backend.
- * Designed for web, tablet, and mobile clients (future PWA).
+ * Future API client — not used by UI V0.1 (mock data only).
  */
 
 const DEFAULT_BASE_URL = "";
 
 export class AlpilabApiClient {
+  private baseUrl: string;
+
   constructor(baseUrl = DEFAULT_BASE_URL) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
   }
 
-  async getHealth() {
+  async getHealth(): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/health`);
     if (!response.ok) {
       throw new Error(`Health check failed: ${response.status}`);
@@ -18,7 +19,7 @@ export class AlpilabApiClient {
     return response.json();
   }
 
-  async generateText(prompt) {
+  async generateText(prompt: string): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/api/v1/ai/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

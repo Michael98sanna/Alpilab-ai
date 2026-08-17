@@ -1,0 +1,61 @@
+:root {
+  /* Background & surfaces */
+  --color-bg: #0a0e17;
+  --color-bg-elevated: #111827;
+  --color-surface: #151c2c;
+  --color-surface-hover: #1a2336;
+  --color-border: rgba(148, 163, 184, 0.12);
+  --color-border-strong: rgba(148, 163, 184, 0.22);
+
+  /* Text */
+  --color-text: #e8edf5;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  /* Functional */
+  --color-ok: #22c55e;
+  --color-warning: #eab308;
+  --color-error: #ef4444;
+  --color-info: #38bdf8;
+  --color-ai: #22d3ee;
+  --color-ai-glow: rgba(34, 211, 238, 0.35);
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-full: 9999px;
+
+  /* Layout */
+  --header-height: 3.5rem;
+  --input-area-min: 4.5rem;
+  --touch-min: 44px;
+  --max-chat-width: 42rem;
+  --sidebar-width: 16rem;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
