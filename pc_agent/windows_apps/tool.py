@@ -46,7 +46,11 @@ class WindowsAppTool:
                 "would_execute": True,
             }
 
-        launch = self._launcher.start_executable(validated_path)
+        try:
+            launch = self._launcher.start_executable(validated_path)
+        except (OSError, RuntimeError) as exc:
+            raise WindowsAppToolError("PROCESS_START_FAILED", str(exc)) from exc
+
         return {
             "mode": "execution",
             "app_id": app.app_id,

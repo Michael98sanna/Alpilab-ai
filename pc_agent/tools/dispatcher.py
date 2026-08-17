@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from pc_agent.tools.registry import LocalToolRegistry, local_tool_registry
 from pc_agent.windows_apps.tool import WindowsAppToolError
+
+logger = logging.getLogger(__name__)
 
 
 class LocalToolDispatcher:
@@ -89,6 +92,7 @@ class LocalToolDispatcher:
                 error=exc.code,
             )
         except Exception:
+            logger.exception("Tool handler failed tool_id=%s", tool_id)
             return self._result(
                 request_id=request_id,
                 command_id=command_id,
