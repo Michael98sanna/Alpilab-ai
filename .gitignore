@@ -2,6 +2,11 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
 # Virtual environments
 .venv/
@@ -14,12 +19,11 @@ env/
 !.env.example
 
 # Local AI models / large artifacts
-models/
+# (do not confuse with the Python package `ai/`)
 *.gguf
 *.safetensors
-*.bin
 
-# Local data
+# Local data / uploads
 runtime_data/
 *.db
 *.sqlite
@@ -32,3 +36,8 @@ runtime_data/
 # OS
 .DS_Store
 Thumbs.db
+
+# Build / dist
+dist/
+build/
+*.egg-info/

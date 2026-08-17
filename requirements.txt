@@ -1,0 +1,10 @@
+# Alpilab AI - foundation dependencies
+# Keep this list minimal; add providers/clients only when integrating them.
+
+pydantic>=2.0,<3
+pydantic-settings>=2.0,<3
+python-dotenv>=1.0,<2
+fastapi>=0.110,<1
+uvicorn[standard]>=0.27,<1
+pytest>=8.0,<9
+httpx>=0.27,<1
