@@ -2,6 +2,14 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
 
 # Virtual environments
 .venv/
@@ -14,7 +22,7 @@ env/
 !.env.example
 
 # Local AI models / large artifacts
-models/
+# (do not ignore the ai/ Python package — only large weight files)
 *.gguf
 *.safetensors
 *.bin
