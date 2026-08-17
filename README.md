@@ -51,8 +51,8 @@ Dettagli completi: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 alpilab-ai/
 ├── app/                    # Backend application
 │   ├── api/                # Route registry + endpoint handlers (no HTTP server yet)
-│   ├── conversation/       # ConversationCommandEngine (text + voice)
-│   ├── commands/           # CommandEngine + MockCommandParser
+│   ├── conversation/       # ConversationCommandEngine + NL command service (V0.4)
+│   ├── commands/           # CommandEngine + NaturalLanguageCommandParser (V0.4)
 │   ├── diagnostics/        # DiagnosticStateManager + anti-loop
 │   ├── realtime/           # RealtimeSessionManager + events
 │   ├── agent/              # PC Agent gateway, registry, WS handler
@@ -76,7 +76,7 @@ alpilab-ai/
 │   ├── public/
 │   └── src/
 ├── hub/                    # Interfacce Alpilab Hub (mock)
-├── pc_agent/               # PC Agent V0.3 (Windows process, safe + Windows app tools)
+├── pc_agent/               # PC Agent V0.4 (Windows process, safe + Windows app tools)
 ├── tests/                  # Test pytest
 ├── docs/                   # Documentazione
 ├── app.py                  # Entry point CLI
@@ -180,7 +180,7 @@ cd frontend && npm test
 - Mock voice (`SpeechToText`, `TextToSpeech`)
 
 - Configurazione via `.env` (senza segreti nel repo)
-- **138 test pytest** — tutti passing
+- **163 test pytest** — tutti passing
 - Documentazione: `docs/ARCHITECTURE.md` (V2)
 
 ### Realtime V1 (multi-device foundation)
@@ -249,13 +249,32 @@ POST /api/v1/sessions/repair-001/agents/{agent_id}/tools/demo.safe_test/execute
 - **Execution** con `subprocess.Popen([path], shell=False)` — no shell/PowerShell
 - Capability `windows_apps` + app locale abilitata richieste entrambe
 - REST dev: `POST .../tools/windows.3utools.open/execute`
-- **Non implementato:** Borneo, ZXW, process manager, conferma UI, chat → tool
+- **Non implementato:** Borneo, ZXW, process manager, conferma UI
 
 Test 3uTools dry-run (PowerShell):
 
 ```powershell
 Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:8000/api/v1/sessions/repair-001/agents/{agent_id}/tools/windows.3utools.open/execute"
 ```
+
+### PC Agent V0.4 (Natural Language Commands — 3uTools)
+- **Parser rule-based deterministico** — nessun LLM, nessun shell/path da testo utente
+- Flusso chat: testo/voce → `NaturalLanguageCommandParser` → `Intent` → Authorization → ToolRegistry → AgentGateway → PC Agent
+- Primo comando supportato: **"Aprimi 3uTools"** (e varianti) → `OPEN_APPLICATION` → `windows.3utools.open`
+- Distinzione esplicita **CONVERSATION** vs **ACTION_COMMAND** — diagnostica conversazionale non apre app
+- Ambiguità (`"Apri il programma"`) → chiarimento, nessuna esecuzione
+- Comandi non supportati (`"Apri Borneo"`, `"Chiudi 3uTools"`, path `.exe`, PowerShell) → rifiuto strutturato
+- Integrazione **RepairSession** realtime: stati assistant THINKING → WORKING → SPEAKING
+- **163 test pytest** — tutti passing
+- Documentazione: [docs/PC_AGENT.md](docs/PC_AGENT.md) (sezione V0.4)
+
+Test manuale chat (smartphone o frontend REALTIME su `?session=repair-001`):
+
+```text
+Aprimi 3uTools
+```
+
+Atteso: THINKING → WORKING → "Ho aperto 3uTools." (o messaggio dry-run se configurato).
 
 ## Cosa è pianificato (prossime fasi)
 

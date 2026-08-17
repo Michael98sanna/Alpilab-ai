@@ -52,6 +52,7 @@ _NO_CONFIRM_INTENTS = {
 
 _RISK_BY_INTENT: dict[IntentType, ActionRiskLevel] = {
     IntentType.OPEN_TOOL: ActionRiskLevel.CONFIRM_REQUIRED,
+    IntentType.OPEN_APPLICATION: ActionRiskLevel.CONFIRM_REQUIRED,
     IntentType.CLOSE_TOOL: ActionRiskLevel.SAFE,
     IntentType.CAPTURE_IMAGE: ActionRiskLevel.CONFIRM_REQUIRED,
     IntentType.SAVE_MEASUREMENT: ActionRiskLevel.SAFE,

@@ -529,6 +529,16 @@ class RealtimeSessionManager:
                 message.content,
                 role=message.role,
             )
+            if message.role == "user":
+                from app.conversation.natural_language_service import (
+                    natural_language_service,
+                )
+
+                await natural_language_service.handle_user_message(
+                    session_id,
+                    device_id,
+                    message.content,
+                )
             return "ack"
         if message.type == "diagnostic_update":
             if not message.test_id or not message.value:

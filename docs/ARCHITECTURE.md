@@ -226,11 +226,37 @@ Full details: [PC_AGENT.md](PC_AGENT.md)
 | Flusso | Engine | Esempio |
 |--------|--------|---------|
 | Conversazione | `ConversationCommandEngine` → `AIRouter` | "Cosa può causare un boot loop?" |
-| Comando | `ConversationCommandEngine` → `CommandEngine` | "Apri termocamera" |
+| Comando | `NaturalLanguageCommandParser` → `CommandEngine` → Tool pipeline | "Aprimi 3uTools" |
 
 Modelli: `Intent`, `Command`, `Action`, `ActionResult` in `app/schemas/commands.py`
 
-Parser foundation: `MockCommandParser` (rule-based, non NLP production).
+Parser foundation: `MockCommandParser` (rule-based, non NLP production) per test legacy.
+
+### Natural Language Commands (V0.4)
+
+```text
+USER (text / voice transcript)
+    ↓
+NaturalLanguageCommandParser (rule-based, deterministic)
+    ↓
+ParseOutcome: CONVERSATION | ACTION_COMMAND | AMBIGUOUS | …
+    ↓
+Intent (OPEN_APPLICATION, target=3utools, confidence)
+    ↓
+APPLICATION_TOOL_MAP → windows.3utools.open
+    ↓
+authorize_command + authorize_tool_execution
+    ↓
+ToolExecutionService → AgentGateway → PC Agent → WindowsAppTool
+    ↓
+RepairSession (CHAT_MESSAGE + ASSISTANT_STATUS)
+```
+
+**Sicurezza:** il testo utente non diventa mai path, shell, PowerShell o subprocess. Solo valori da registry controllati (`APPLICATION_TOOL_MAP`).
+
+**Confidence:** soglia `CONFIDENCE_THRESHOLD = 0.8`. Match rule-based esatti usano `MATCH_CONFIDENCE = 1.0`.
+
+**Voice-ready:** STT mock produce lo stesso testo → stesso parser (nessuna logica NL nel frontend).
 
 ---
 
@@ -398,7 +424,8 @@ Viewport, theme-color; service worker non implementato.
 | PC Agent V0.1 | ✅ Connected but idle (AGENT_TEST only) |
 | PC Agent V0.2 | ✅ Safe tool execution (`demo.safe_test` pipeline) |
 | PC Agent V0.3 | ✅ WindowsAppTool + `windows.3utools.open` (dry-run + execution) |
-| Conversation/Command engine | ✅ Mock parser |
+| PC Agent V0.4 | ✅ Natural language → `OPEN_APPLICATION` → `windows.3utools.open` |
+| Conversation/Command engine | ✅ Mock parser + NL parser (V0.4) |
 | Voice interfaces | ✅ Mock STT/TTS |
 | Diagnostic state + anti-loop | ✅ |
 | Tool registry | ✅ Mock |

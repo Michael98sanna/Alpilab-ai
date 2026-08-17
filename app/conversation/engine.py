@@ -187,6 +187,7 @@ class ConversationCommandEngine:
             IntentType.CONTINUE_DIAGNOSIS: SessionEventType.SESSION_RESUMED,
             IntentType.RESET_DIAGNOSTIC_FLOW: SessionEventType.FLOW_RESET,
             IntentType.OPEN_TOOL: SessionEventType.TOOL_OPENED,
+            IntentType.OPEN_APPLICATION: SessionEventType.TOOL_OPENED,
             IntentType.CLOSE_TOOL: SessionEventType.TOOL_CLOSED,
         }
         event_type = event_map.get(intent)

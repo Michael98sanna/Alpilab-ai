@@ -27,7 +27,11 @@ class CommandEngine:
 
     def build_command(self, repair_session_id: str, intent: Intent) -> Command:
         risk = ActionRiskLevel.SAFE
-        if intent.type in {IntentType.OPEN_TOOL, IntentType.CAPTURE_IMAGE}:
+        if intent.type in {
+            IntentType.OPEN_TOOL,
+            IntentType.OPEN_APPLICATION,
+            IntentType.CAPTURE_IMAGE,
+        }:
             risk = ActionRiskLevel.CONFIRM_REQUIRED
         if intent.type == IntentType.RESET_DIAGNOSTIC_FLOW:
             risk = ActionRiskLevel.DANGEROUS

@@ -73,6 +73,7 @@ class IntentType(str, Enum):
 
     CONVERSATION = "conversation"
     OPEN_TOOL = "open_tool"
+    OPEN_APPLICATION = "open_application"
     CLOSE_TOOL = "close_tool"
     CAPTURE_IMAGE = "capture_image"
     SAVE_MEASUREMENT = "save_measurement"

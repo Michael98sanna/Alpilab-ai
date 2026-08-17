@@ -1,4 +1,4 @@
-# Alpilab PC Agent (V0.1 + V0.2 + V0.3)
+# Alpilab PC Agent (V0.1 + V0.2 + V0.3 + V0.4)
 
 The PC Agent is a local Windows process that connects Alpilab AI to the laboratory PC.
 
@@ -11,7 +11,9 @@ The PC Agent is a local Windows process that connects Alpilab AI to the laborato
 ```text
                     ALPILAB AI
                          │
-                    INTENT (future)
+              Natural Language (V0.4)
+                         │
+                     INTENT
                          │
                      COMMAND
                          │
@@ -374,8 +376,131 @@ Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:8000/api/v1/sessions/repai
 - No process lifecycle / PID management / close app
 - No duplicate-instance detection (may start second 3uTools window)
 - Borneo and ZXW not implemented yet
-- No conversation text → tool mapping yet
 - No remote path or arbitrary executable from server/client payload
+
+## PC Agent V0.4 — Natural Language Commands
+
+### Architecture
+
+```text
+USER (smartphone / PC / tablet)
+    ↓
+TEXT / VOICE MESSAGE (chat_message)
+    ↓
+NaturalLanguageCommandParser (rule-based)
+    ↓
+ParseOutcome + Intent (OPEN_APPLICATION, target=3utools)
+    ↓
+APPLICATION_TOOL_MAP → windows.3utools.open
+    ↓
+Authorization
+    ↓
+ToolRegistry
+    ↓
+AgentGateway
+    ↓
+PC Agent
+    ↓
+WindowsAppTool
+    ↓
+3uTools
+    ↓
+Result → RepairSession → USER
+```
+
+**Principle:** intelligence (intent) and execution (tool) remain strictly separate. User text never becomes path, executable, shell, PowerShell, or subprocess arguments.
+
+### Supported phrases (V0.4)
+
+| User text | Intent | Tool |
+|-----------|--------|------|
+| "Apri 3uTools", "Aprimi 3uTools", "Avvia 3uTools", "Lancia 3uTools" | `OPEN_APPLICATION` | `windows.3utools.open` |
+| "Puoi aprire 3uTools?", "Apri 3u Tools", bare "3uTools" | same | same |
+
+### Not supported (V0.4)
+
+| User text | Outcome |
+|-----------|---------|
+| "Apri Borneo", "Apri ZXW", "Apri Chrome" | `COMMAND_NOT_SUPPORTED` / `UNKNOWN_APPLICATION` |
+| "Chiudi 3uTools" | `COMMAND_NOT_SUPPORTED` |
+| "Apri il programma", "Apri quello per iPhone" | `AMBIGUOUS_COMMAND` + clarification |
+| "esegui C:\\...exe", "powershell ...", "cmd /c ..." | `INVALID_COMMAND` |
+| "Ho un iPhone 13 Pro che non si accende" | `CONVERSATION` — no tool dispatch |
+
+### Components
+
+| Component | Location | Role |
+|-----------|----------|------|
+| `NaturalLanguageCommandParser` | `app/commands/natural_language_parser.py` | Rule-based NL → structured intent |
+| `resolve_tool_id` | `app/commands/tool_resolution.py` | Explicit map `3utools` → `windows.3utools.open` |
+| `NaturalLanguageCommandService` | `app/conversation/natural_language_service.py` | Parse → auth → execute → user message |
+| `user_messages` | `app/conversation/user_messages.py` | Italian success/error strings |
+| Realtime hook | `app/realtime/session_manager.py` | `chat_message` (role=user) triggers NL service |
+
+### Confidence threshold
+
+- `CONFIDENCE_THRESHOLD = 0.8` — below this, no execution (clarification)
+- Rule-based exact matches: `MATCH_CONFIDENCE = 1.0`
+
+### User-facing messages
+
+| Case | Message |
+|------|---------|
+| Success | "Ho aperto 3uTools." |
+| Dry-run | "3uTools è configurato correttamente e verrebbe avviato." |
+| Ambiguous | "Quale programma vuoi aprire?" |
+| Unsupported | "Questo comando non è ancora supportato." |
+| Security reject | "Non posso eseguire comandi di sistema o percorsi arbitrari." |
+| Agent offline | "Non riesco ad aprire 3uTools: il PC Agent non è online." |
+
+### Assistant status flow
+
+For `"Aprimi 3uTools"`:
+
+```text
+USER message
+    → STO PENSANDO... (THINKING)
+    → STO LAVORANDO... (WORKING)
+    → ✓ Ho aperto 3uTools. (SPEAKING → IDLE)
+```
+
+### Structured logging
+
+```text
+[COMMAND] Received natural language command
+[INTENT] OPEN_APPLICATION target=3utools
+[COMMAND] Resolved tool=windows.3utools.open
+[AUTH] Authorized
+[AGENT] Dispatching tool
+[TOOL] windows.3utools.open
+[RESULT] success=true
+```
+
+### Manual test (V0.4 — chat)
+
+**Prerequisites:** V0.3 setup (backend, PC Agent with `windows_apps`, 3uTools config).
+
+1. Connect smartphone or frontend REALTIME to `?session=repair-001`
+2. Ensure PC Agent ● ONLINE
+3. Send chat: `Aprimi 3uTools`
+4. Expect THINKING → WORKING → assistant reply
+5. With `DRY_RUN=true`: 3uTools does **not** open; message mentions "verrebbe avviato"
+6. With `DRY_RUN=false`: 3uTools opens; message "Ho aperto 3uTools."
+7. Send `"Ho un iPhone 13 Pro che non si accende"` — no app opens, no tool dispatch
+
+### Tests
+
+```bash
+python3 -m pytest tests/test_natural_language_commands.py -v
+```
+
+### Limitations (V0.4)
+
+- Single action: open 3uTools only
+- No LLM intent classifier (rule-based only)
+- No STT/TTS real integration
+- No close/restart/other apps
+- No Borneo, ZXW, Chrome
 
 ## What V0.1 cannot do
 
@@ -388,5 +513,5 @@ Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:8000/api/v1/sessions/repai
 ## Tests
 
 ```bash
-python3 -m pytest tests/test_tool_execution.py tests/test_windows_app_tool.py tests/test_agent_ws.py tests/test_pc_agent.py -v
+python3 -m pytest tests/test_tool_execution.py tests/test_windows_app_tool.py tests/test_natural_language_commands.py tests/test_agent_ws.py tests/test_pc_agent.py -v
 ```
