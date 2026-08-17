@@ -13,8 +13,8 @@ env/
 .env.*
 !.env.example
 
-# Local AI models / large artifacts
-models/
+# Local AI models / large artifacts (root only — not app/models/)
+/models/
 *.gguf
 *.safetensors
 *.bin
