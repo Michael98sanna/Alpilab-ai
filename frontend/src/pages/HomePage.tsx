@@ -12,7 +12,7 @@ import { Button } from "../components/ui/Button";
 import { GestureFeedback } from "../components/ui/GestureFeedback";
 import { useChatScroll } from "../hooks/useChatScroll";
 import { useRepairSession } from "../hooks/useRepairSession";
-import { useSwipeGesture } from "../hooks/useSwipeGesture";
+import { useSwipeGesture, type PanelMode } from "../hooks/useSwipeGesture";
 import styles from "./HomePage.module.css";
 
 function useLayoutMode() {
@@ -53,17 +53,26 @@ export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: b
   const layout = useLayoutMode();
   const isMobile = layout === "mobile";
   const showContext = hasActiveRepair && state.onboardingStep === "complete";
-  const sheetsOpen = state.diagnosticsExpanded || state.toolsExpanded;
+
+  const panelMode: PanelMode = state.diagnosticsExpanded
+    ? "diagnostics"
+    : state.toolsExpanded
+      ? "tools"
+      : "none";
 
   const { containerRef, showNewMessages, scrollToBottom, onScroll } =
     useChatScroll(state.messages.length);
 
   const { feedback, handlers: swipeHandlers } = useSwipeGesture({
     enabled: isMobile && showContext,
-    blocked: sheetsOpen,
-    onSwipeDiagnostics: openDiagnostics,
-    onSwipeTools: openTools,
+    panelMode,
+    onOpenDiagnostics: openDiagnostics,
+    onOpenTools: openTools,
+    onCloseDiagnostics: closeDiagnostics,
+    onCloseTools: closeTools,
   });
+
+  const gestureEnabled = isMobile && showContext;
 
   return (
     <div className={styles.layout}>
@@ -80,7 +89,7 @@ export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: b
         <main
           className={styles.main}
           data-testid="chat-swipe-zone"
-          {...(isMobile && showContext ? swipeHandlers : {})}
+          {...(gestureEnabled ? swipeHandlers : {})}
         >
           <div className={styles.chatColumn}>
             {!showContext && (
@@ -154,10 +163,15 @@ export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: b
         )}
       </div>
 
-      {isMobile && showContext && <GestureFeedback direction={feedback} />}
+      {gestureEnabled && <GestureFeedback feedback={feedback} />}
 
       {showContext && isMobile && state.diagnosticsExpanded && (
-        <BottomSheet title="Diagnosi" onClose={closeDiagnostics} testId="diagnostics-sheet">
+        <BottomSheet
+          title="Diagnosi"
+          onClose={closeDiagnostics}
+          testId="diagnostics-sheet"
+          swipeHandlers={swipeHandlers}
+        >
           <DiagnosticPanel
             tests={state.tests}
             nextTest={nextPendingTest}
@@ -172,7 +186,12 @@ export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: b
       )}
 
       {showContext && isMobile && state.toolsExpanded && (
-        <BottomSheet title="Strumenti" onClose={closeTools} testId="tools-sheet">
+        <BottomSheet
+          title="Strumenti"
+          onClose={closeTools}
+          testId="tools-sheet"
+          swipeHandlers={swipeHandlers}
+        >
           <ContextualToolBar
             tools={state.tools}
             activeToolId={state.activeToolPanel}

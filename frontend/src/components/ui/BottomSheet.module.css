@@ -21,6 +21,17 @@
   padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
   animation: slideUp var(--duration-normal) var(--ease-out);
   touch-action: pan-y;
+  will-change: transform;
+}
+
+.dragZone {
+  flex-shrink: 0;
+  touch-action: none;
+  cursor: grab;
+}
+
+.dragZone:active {
+  cursor: grabbing;
 }
 
 .handle {
@@ -30,7 +41,6 @@
   border-radius: var(--radius-full);
   background: var(--color-border-strong);
   flex-shrink: 0;
-  cursor: grab;
 }
 
 .header {

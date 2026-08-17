@@ -96,12 +96,13 @@ export type RepairAction =
   | { type: "TOGGLE_SESSION_DEVICES" }
   | { type: "LOAD_SCENARIO" };
 
+/** @deprecated Use CORE_STATUS_CONFIG from config/coreStatus */
 export const STATUS_LABELS: Record<CoreState, string> = {
-  IDLE: "Alpilab pronto",
-  LISTENING: "Alpilab sta ascoltando",
-  THINKING: "Alpilab sta elaborando…",
-  SPEAKING: "Alpilab sta parlando",
-  WORKING: "Alpilab sta eseguendo…",
-  WARNING: "Alpilab — attenzione",
-  ERROR: "Alpilab — errore",
+  IDLE: "ALPILAB AI",
+  LISTENING: "STO ASCOLTANDO...",
+  THINKING: "STO PENSANDO...",
+  SPEAKING: "STO PARLANDO...",
+  WORKING: "STO LAVORANDO...",
+  WARNING: "ATTENZIONE",
+  ERROR: "SI È VERIFICATO UN ERRORE",
 };
