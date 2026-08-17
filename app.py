@@ -1,12 +1,21 @@
-"""Alpilab AI - minimal application entry point."""
+"""Alpilab AI - minimal CLI entry point for the foundation phase."""
+
+from __future__ import annotations
 
 from ai.router import AIRouter
+from app.api.health import health_payload
+from app.core.config import get_settings
 
 
 def main() -> None:
+    settings = get_settings()
     router = AIRouter()
-    print("Alpilab AI - base architecture")
-    print("Provider attivo:", router.provider_name)
+    health = health_payload()
+
+    print(f"{settings.app_name} — foundation phase")
+    print(f"Environment: {settings.environment}")
+    print(f"Provider attivo: {router.provider_name}")
+    print(f"Health: {health['status']} (phase={health['phase']})")
     print("Scrivi una domanda tecnica (exit per uscire).")
 
     while True:

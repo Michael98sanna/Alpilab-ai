@@ -1,0 +1,4 @@
+# Alpilab AI — Python dependencies (foundation phase)
+# Keep this list minimal. Real AI SDKs are intentionally omitted.
+
+pytest>=8.0,<9

@@ -2,6 +2,12 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
 
 # Virtual environments
 .venv/
@@ -13,8 +19,8 @@ env/
 .env.*
 !.env.example
 
-# Local AI models / large artifacts
-models/
+# Local AI models / large artifacts (root-level only)
+/models/
 *.gguf
 *.safetensors
 *.bin
@@ -32,3 +38,8 @@ runtime_data/
 # OS
 .DS_Store
 Thumbs.db
+
+# Frontend build artifacts (future)
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
