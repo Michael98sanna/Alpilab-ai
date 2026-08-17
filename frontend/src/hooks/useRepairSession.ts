@@ -290,8 +290,13 @@ function repairReducer(state: RepairState, action: Action): RepairState {
         return state;
       }
       const updated = applySessionChanges(state, action.changes);
+      const onboardingStep =
+        updated.session.device && updated.session.issue
+          ? "complete"
+          : updated.onboardingStep;
       return {
         ...updated,
+        onboardingStep,
         stateVersion: action.stateVersion,
       };
     }

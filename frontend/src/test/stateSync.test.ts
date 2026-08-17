@@ -8,7 +8,11 @@ function reduceState(state: RepairState, action: ReturnType<typeof mapRealtimeEv
   if (action.type === "APPLY_STATE_UPDATE") {
     if (action.stateVersion <= state.stateVersion) return state;
     const updated = applySessionChanges(state, action.changes);
-    return { ...updated, stateVersion: action.stateVersion };
+    const onboardingStep =
+      updated.session.device && updated.session.issue
+        ? "complete"
+        : updated.onboardingStep;
+    return { ...updated, onboardingStep, stateVersion: action.stateVersion };
   }
   if (action.type === "STATE_UPDATE_REJECTED") {
     return {
@@ -154,6 +158,32 @@ describe("applySessionChanges", () => {
     const next = reduceState(baseState, action!);
     expect(next.stateVersion).toBe(1);
     expect(next.tests[0]?.value).toBeUndefined();
+  });
+
+  it("promotes onboardingStep when repair context becomes complete", () => {
+    const idleState: RepairState = {
+      ...baseState,
+      onboardingStep: "idle",
+      session: { ...baseState.session, device: null, issue: null },
+    };
+    const action = mapRealtimeEventToActions({
+      id: "e-ctx",
+      repair_session_id: "repair-1",
+      event_type: "SESSION_STATE_UPDATED",
+      payload: {
+        state_version: 2,
+        changes: {
+          repair_context: {
+            device: "iPhone 13 Pro",
+            issue: "No Power",
+          },
+        },
+      },
+    })[0];
+    const next = reduceState(idleState, action!);
+    expect(next.onboardingStep).toBe("complete");
+    expect(next.session.device).toBe("iPhone 13 Pro");
+    expect(next.session.issue).toBe("No Power");
   });
 
   it("handles rejected update", () => {

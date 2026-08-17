@@ -105,6 +105,24 @@ def test_agents_status_endpoint(client: TestClient) -> None:
         assert data["agents"][0]["agent_id"] == "agent-test-01"
 
 
+def test_mobile_seeds_empty_session_after_agent(client: TestClient) -> None:
+    """PC Agent may create an empty session before mobile connects with seed_demo."""
+    session_id = "repair-agent-seed"
+    with _agent_connect(client, session_id) as ws:
+        _register(ws)
+
+    with client.websocket_connect(
+        f"/ws/sessions/{session_id}"
+        "?device_id=phone-01&device_type=phone&device_name=Phone&seed_demo=true"
+    ) as ws_phone:
+        snap = ws_phone.receive_json()
+        assert snap["type"] == "snapshot"
+        session = snap["payload"]["session"]
+        assert session["device"] == "iPhone 13 Pro"
+        assert session["issue"] == "No Power"
+        assert len(snap["payload"]["diagnostic_state"]) >= 1
+
+
 def test_agent_test_command(client: TestClient) -> None:
     session_id = "repair-agent-test"
     with _agent_connect(client, session_id) as ws:

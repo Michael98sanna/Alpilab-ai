@@ -23,8 +23,10 @@ from app.realtime.payloads import (
 from app.realtime.session_state import (
     ConnectedDevice,
     RealtimeSessionData,
+    apply_demo_seed,
     default_demo_session,
     new_session,
+    session_is_unseeded,
     utc_now,
 )
 from app.realtime.state_sync import (
@@ -110,6 +112,8 @@ class RealtimeSessionManager:
     ) -> RealtimeSessionData:
         existing = self.get_session(session_id)
         if existing:
+            if seed_demo and session_is_unseeded(existing):
+                apply_demo_seed(existing)
             return existing
         return self.create_session(session_id, seed_demo=seed_demo)
 

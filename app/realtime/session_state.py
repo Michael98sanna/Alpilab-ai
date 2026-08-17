@@ -140,3 +140,26 @@ def default_demo_session(session_id: str) -> RealtimeSessionData:
 def new_session(session_id: str | None = None) -> RealtimeSessionData:
     sid = session_id or str(uuid4())
     return RealtimeSessionData(session_id=sid, label=f"Repair {sid[:8]}")
+
+
+def session_is_unseeded(session: RealtimeSessionData) -> bool:
+    """True when the session has no repair context or demo content yet."""
+    return (
+        session.device is None
+        and session.issue is None
+        and not session.messages
+        and not session.diagnostics
+    )
+
+
+def apply_demo_seed(session: RealtimeSessionData) -> None:
+    """Fill an empty session with the approved demo scenario (preserves devices/agent)."""
+    demo = default_demo_session(session.session_id)
+    session.label = demo.label
+    session.device = demo.device
+    session.issue = demo.issue
+    session.status = demo.status
+    session.diagnosis_label = demo.diagnosis_label
+    session.messages = list(demo.messages)
+    session.diagnostics = list(demo.diagnostics)
+    session.state_version += 1

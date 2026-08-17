@@ -53,7 +53,10 @@ export function HomePage() {
 
   const layout = useLayoutMode();
   const isMobile = layout === "mobile";
-  const showContext = hasActiveRepair && state.onboardingStep === "complete";
+  const repairContextReady = Boolean(state.session.device && state.session.issue);
+  const showContext =
+    hasActiveRepair &&
+    (state.onboardingStep === "complete" || repairContextReady);
 
   const panelMode: PanelMode = state.diagnosticsExpanded
     ? "diagnostics"
