@@ -1,138 +1,240 @@
-# Architettura Alpilab AI
+# Architettura Alpilab AI (V2)
 
-Questo documento descrive l'architettura prevista di Alpilab AI e lo stato attuale della fondazione.
+Questo documento descrive l'architettura prevista di Alpilab AI e lo stato attuale del software foundation.
 
-## Visione
+Alpilab AI è un **ambiente di lavoro condiviso** per il laboratorio, non una semplice chat AI. L'entità centrale è la **Repair Session**, indipendente dal dispositivo client.
 
-Alpilab AI è un assistente tecnico cloud/web per un laboratorio di riparazione smartphone. È un progetto **separato** da Alpilab Check: non importa il codice interno di Alpilab Check e comunica con esso solo tramite contratti dati/API futuri.
+---
 
-## Contesto nel laboratorio
+## 1. System architecture
 
 ```text
                     ALPILAB AI CLOUD
                            |
-             +-------------+-------------+
-             |             |             |
-          AI Router    Knowledge Base   Database
-             |             |             |
-             +-------------+-------------+
+        +------------------+------------------+
+        |                  |                  |
+   AI Router      Conversation/Command    Session Store
+        |                  Engine                  |
+        +------------------+----------------------+
                            |
-                      Web / PWA
+              RealtimeSessionManager
+                           |
+                    Web / PWA (future)
                            |
               +------------+------------+
               |            |            |
-             PC         Tablet      Smartphone
+             PC       Smartphone     Tablet
                            |
+                    ALPILAB HUB (future)
                            |
-                    ALPILAB HUB (futuro)
-                    Windows PC
-                           |
-          +----------------+----------------+
-          |                |                |
-    Alpilab Check      Software          Hardware
-                       3uTools            Microscopio
-                       Borneo             Termocamera
-                       ZXW                 Multimetro
-                                           Alimentatore
+        +------------------+------------------+
+        |                  |                  |
+   Alpilab Check      Software           Hardware
+                     3uTools            Microscopio
+                     Borneo             Termocamera
+                     ZXW                 Multimetro
+                                         Alimentatore
 ```
 
-## Principi architetturali
+**Principi:**
 
-1. **Cloud-first**: web application responsive, futura PWA installabile su PC, tablet e smartphone.
-2. **Provider AI intercambiabili**: tutti i provider implementano la stessa interfaccia astratta; l'applicazione non deve sapere se la risposta arriva da un modello locale o cloud.
-3. **Separazione da Alpilab Check**: integrazione solo tramite `AlpilabCheckConnector` (API, file, bridge locale).
-4. **Hub locale opaco**: `AlpilabHub` è il futuro ponte Windows tra cloud e hardware/software del banco, senza remote shell o esecuzione arbitraria di comandi.
-5. **Sicurezza**: nessuna credenziale nel repository; configurazione via `.env`; azioni hardware future con permessi e conferma esplicita.
+- Cloud-first, responsive web + futura PWA (no app native separate in questa fase)
+- Provider AI intercambiabili (`AIProvider` + `AIRouter`)
+- Separazione netta da Alpilab Check (solo `AlpilabCheckConnector`)
+- Hub Windows separato (`AlpilabHub`) — mock in questa fase
+- Nessuna esecuzione shell arbitraria
 
-## Layer dell'applicazione
+---
 
-### Frontend (`frontend/`)
+## 2. Repair Session
 
-Placeholder con shell HTML responsive, client API stub (`AlpilabApiClient`) e stili base.
-Nessun bundler/framework installato. PWA non implementata in questa fase.
+La sessione appartiene alla **riparazione**, non al dispositivo.
 
-### Backend (`app/`)
+```text
+Repair Session
+    |
+    +-- PC / Smartphone / Tablet (SessionParticipant)
+    |
+    +-- Chat (ConversationMessage)
+    +-- Voice (stesso engine, post-STT)
+    +-- Measurements
+    +-- Images
+    +-- Diagnostics (DiagnosticStateManager)
+    +-- AI context
+    +-- Tool state (ToolRegistry)
+```
 
-- `api/` — route registry, health check, stub AI endpoint (no HTTP server yet)
-- `main.py` — future HTTP server entry point
-- `core/` — configurazione e utilità condivise
-- `schemas/` — modelli Pydantic (contratto dati condiviso)
-- `services/` — logica di business (futuro)
-- `integrations/` — connettori esterni (es. Alpilab Check)
+**Modelli:**
 
-### AI Layer (`ai/`)
+| Modello | File | Ruolo |
+|---------|------|--------|
+| `RepairSession` | `app/schemas/repair.py` | Entità riparazione (contratto dati) |
+| `RepairSessionContext` | `app/schemas/session.py` | Stato runtime multi-device, mode, flow |
+| `SessionParticipant` | `app/schemas/session.py` | Collegamento device ↔ sessione |
+| `User`, `ClientDevice` | `app/schemas/session.py` | Utente e client connessi |
 
-- `providers/` — implementazioni provider (`MockProvider` attivo)
-- `router.py` — selezione del provider (logica semplice, estendibile)
-- `schemas.py` — `AIRequest`, `AIResponse`, capabilities
-- `prompts/` — template di sistema
+---
 
-### Knowledge (`knowledge/`)
+## 3. Multi-device synchronization
 
-Placeholder per knowledge base tecnica, RAG e memoria delle soluzioni del laboratorio.
+- Un utente può avere più `ClientDevice` (PC, Android, iOS, tablet)
+- Più partecipanti possono aprire la **stessa** `RepairSession`
+- Il cambio dispositivo **non** crea una nuova sessione
+- `SessionResumeManager` + `InMemorySessionStore` (mock persistence)
+- Resume automatico se una sola sessione attiva rilevante; altrimenti lista recenti
 
-### Hub (`hub/`)
+---
 
-Interfacce per Alpilab Hub (Windows):
+## 4. Realtime events
 
-- `open_application` / `close_application`
-- `capture_microscope` / `capture_thermal_camera`
-- `read_multimeter` / `read_power_supply`
-- `get_pc_status`
+**Layer:** `app/realtime/`
 
-Solo mock in questa fase.
+`RealtimeSessionManager` emette eventi a subscriber in-memory (futuro: WebSocket).
 
-## Modello dati di riparazione
+Eventi supportati (`RealtimeEventType`):
 
-Entità definite in `app/schemas/repair.py`:
+`SESSION_CREATED`, `SESSION_UPDATED`, `MESSAGE_CREATED`, `MESSAGE_UPDATED`, `AI_RESPONSE_STARTED`, `AI_RESPONSE_CHUNK`, `AI_RESPONSE_COMPLETED`, `VOICE_TRANSCRIPT`, `MEASUREMENT_CREATED`, `IMAGE_CREATED`, `IMAGE_UPDATED`, `ANNOTATION_CREATED`, `DIAGNOSTIC_TEST_UPDATED`, `TOOL_STATE_CHANGED`, `DEVICE_CONNECTED`, `DEVICE_DISCONNECTED`, `SESSION_RESUMED`
 
-| Entità | Ruolo |
-|--------|--------|
-| `Device` | Dispositivo in riparazione |
-| `RepairSession` | Sessione di riparazione (contenitore) |
-| `CustomerIssue` | Problema segnalato dal cliente |
-| `DiagnosticTest` | Test diagnostico verificabile |
-| `Measurement` | Misura (multimetro, alimentatore, termocamera, ecc.) |
-| `Diagnosis` | Ipotesi o conclusione tecnica |
-| `RepairAction` | Azione di riparazione eseguita o pianificata |
-| `RepairResult` | Esito finale |
-| `ImageAttachment` | Foto o scansione collegata |
-| `Note` | Annotazione libera del tecnico |
+---
 
-Questi schemi sono il contratto futuro tra Alpilab AI, Alpilab Check e Alpilab Hub.
+## 5. Conversation vs Command
 
-## AI Router (stato attuale)
+**Separazione esplicita:**
 
-Il router riceve un `AIRequest` e seleziona un provider disponibile. Oggi:
+| Flusso | Engine | Esempio |
+|--------|--------|---------|
+| Conversazione | `ConversationCommandEngine` → `AIRouter` | "Cosa può causare un boot loop?" |
+| Comando | `ConversationCommandEngine` → `CommandEngine` | "Apri termocamera" |
 
-- usa sempre `MockProvider` se disponibile
-- se la richiesta contiene immagini, preferisce provider con capability `IMAGE_INPUT`
+Modelli: `Intent`, `Command`, `Action`, `ActionResult` in `app/schemas/commands.py`
 
-Dimensioni di routing **pianificate** (non implementate):
+Parser foundation: `MockCommandParser` (rule-based, non NLP production).
 
-- provider locale vs cloud
-- fallback su errore o timeout
-- scelta per tipo di richiesta, costo, capacità, presenza di immagini
+---
 
-## Integrazioni future
+## 6. Voice/Text parity
 
-| Componente | Interfaccia | Stato |
-|------------|-------------|-------|
-| Alpilab Check | `AlpilabCheckConnector` | Mock |
-| Alpilab Hub | `AlpilabHub` | Mock |
-| OpenAI / Gemini / Anthropic / locale | `AIProvider` | Mock |
-| PostgreSQL | `DATABASE_URL` | Non implementato |
-| Object storage | configurazione `.env` | Non implementato |
-| RAG / Knowledge Base | `knowledge/` | Non implementato |
-| Voce / visione avanzata | — | Non implementato |
+Voce e testo condividono **un solo** `ConversationCommandEngine`:
 
-## Sicurezza
+```text
+TEXT ──► Parser ──► Conversation / Command
+                         ▲
+VOICE ──► Mock STT ──────┘
+```
 
-- `.env` ignorato da git; `.env.example` senza segreti reali
-- Nessuna API key nel codice
-- Hub: nessuna esecuzione shell arbitraria; azioni pericolose richiederanno conferma
-- Permessi granulari per azioni sul PC (futuro)
+Interfacce mock: `SpeechToText`, `TextToSpeech`, `VoiceInput` in `app/voice/`.
+
+La trascrizione vocale diventa un `ConversationMessage` con `channel=voice`.
+
+---
+
+## 7. Diagnostic state machine
+
+**Layer:** `app/diagnostics/`
+
+`DiagnosticStateManager` gestisce test fuori dai prompt AI.
+
+Stati (`DiagnosticTestStatus`):
+
+`PENDING` → `IN_PROGRESS` → `PASSED` / `FAILED` / `SKIPPED` / `INVALID`
+
+Evidenze (`RecordedEvidence`): valore, unità, fonte, strumento, timestamp, note, confidence.
+
+Tipi evidenza (`EvidenceKind`): `observation`, `measurement`, `hypothesis`, `diagnosis`.
+
+---
+
+## 8. Anti-loop strategy
+
+Requisito critico: **non riproporre test già validati**.
+
+Implementazione (non solo prompt):
+
+- `should_recommend_test()` — blocca re-proposta se test PASSED/FAILED con evidenza
+- `RepeatedRecommendationDetector` — max ripetizioni nella finestra temporale
+- `max_retries` per test INVALID
+- `SessionEvent` log per audit
+
+---
+
+## 9. Guided/Free mode
+
+`SessionMode`: `GUIDED` | `FREE` — in `RepairSessionContext`.
+
+`SessionFlowState`: `ACTIVE`, `PAUSED`, `STOPPED`, `RESUMED`.
+
+L'utente può passare da guided a free in qualsiasi momento. La diagnosi guidata non è un wizard rigido.
+
+Comandi: `STOP`, `PAUSE`, `RESUME`, `RESET_DIAGNOSTIC_FLOW`, `CONTINUE_DIAGNOSIS`.
+
+---
+
+## 10. Tool architecture
+
+**Layer:** `app/tools/`
+
+`Tool` generico: id, name, type, status, capabilities.
+
+Tipi futuri: microscope, thermal_camera, multimeter, power_supply, 3utools, borneo, zxw, alpilab_check.
+
+`ToolRegistry` — in-memory, no controllo reale.
+
+---
+
+## 11. Alpilab Hub
+
+Mantenuto separato in `hub/`. Cloud non controlla hardware direttamente.
+
+```text
+ALPILAB AI CLOUD → ALPILAB HUB → Windows + strumenti/software
+```
+
+`AlpilabHub` + `MockAlpilabHub` — interfaccia esistente, usata da `CommandEngine` in mock.
+
+---
+
+## 12. Security model
+
+**Layer:** `app/security/`
+
+- `Permission`, `Capability`
+- `ActionAuthorization` con `ActionRiskLevel`: `READ_ONLY`, `SAFE`, `CONFIRM_REQUIRED`, `DANGEROUS`
+- Cambio dispositivo/sessione: **no conferma**
+- Azioni hardware/software pericolose: **conferma richiesta** (classificazione, non esecuzione reale)
+
+---
+
+## 13. Future web/PWA architecture
+
+**Frontend** (`frontend/`): shell HTML responsive, `AlpilabApiClient` stub, CSS base.
+
+**Backend API** (`app/api/`): route registry, health, AI generate stub — **server HTTP non attivo**.
+
+**Prossima fase:**
+
+- FastAPI/Starlette + WebSocket per `RealtimeSessionManager`
+- Framework UI + PWA manifest/service worker
+- PostgreSQL per session store
+- Auth reale
+
+---
+
+## Stato implementazione (foundation)
+
+| Componente | Stato |
+|------------|--------|
+| Repair schemas | ✅ Pydantic |
+| Session multi-device | ✅ Mock store |
+| Realtime events | ✅ In-memory manager |
+| Conversation/Command engine | ✅ Mock parser |
+| Voice interfaces | ✅ Mock STT/TTS |
+| Diagnostic state + anti-loop | ✅ |
+| Tool registry | ✅ Mock |
+| Security classification | ✅ |
+| Hub / Check connectors | ✅ Mock |
+| AI providers | ✅ Mock only |
+| HTTP server / PWA / DB cloud | ❌ Pianificato |
 
 ## Evoluzione documentata
 
-Modifiche all'architettura devono essere motivate in questo file o in commit/PR dedicati prima di introdurre cambi strutturali significativi.
+Modifiche strutturali significative devono essere motivate qui o in PR dedicati prima dell'implementazione.

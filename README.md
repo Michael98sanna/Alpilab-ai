@@ -50,12 +50,20 @@ Dettagli completi: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 ```text
 alpilab-ai/
 ├── app/                    # Backend application
-│   ├── api/                # Route registry + endpoint handlers (no server yet)
+│   ├── api/                # Route registry + endpoint handlers (no HTTP server yet)
+│   ├── conversation/       # ConversationCommandEngine (text + voice)
+│   ├── commands/           # CommandEngine + MockCommandParser
+│   ├── diagnostics/        # DiagnosticStateManager + anti-loop
+│   ├── realtime/           # RealtimeSessionManager + events
+│   ├── session/            # InMemorySessionStore + SessionResumeManager
+│   ├── security/           # Permission / authorization model
+│   ├── tools/              # Tool abstraction + registry
+│   ├── voice/              # STT/TTS interfaces (mock)
 │   ├── main.py             # Future HTTP server entry point
 │   ├── core/               # Configurazione
 │   ├── models/             # Futuro layer persistenza
-│   ├── schemas/            # Modelli dati (contratto condiviso)
-│   ├── services/           # Logica di business
+│   ├── schemas/            # Modelli dati (repair + session + commands)
+│   ├── services/           # Logica di business (futuro)
 │   └── integrations/       # Alpilab Check bridge
 ├── ai/                     # AI layer
 │   ├── providers/          # MockProvider (+ futuri provider)
@@ -102,21 +110,32 @@ python3 -m pytest tests/ -v
 
 ## Cosa è implementato
 
-- Interfaccia astratta `AIProvider` (`generate`, `generate_with_image`, `generate_stream`, `is_available`)
-- `MockProvider` per sviluppo e test senza API esterne
-- `AIRouter` con selezione base del provider (testo vs immagini)
-- Schemi Pydantic per entità di riparazione (`Device`, `RepairSession`, `DiagnosticTest`, `Measurement`, ecc.)
-- `AlpilabCheckConnector` (interfaccia + mock)
-- `AlpilabHub` (interfaccia + mock per hardware/software del PC)
-- API foundation: route registry, `GET /health`, stub `POST /api/v1/ai/generate` (senza server HTTP attivo)
-- Frontend foundation: shell HTML responsive, `AlpilabApiClient` stub, stili base
+### Foundation (V1)
+- Interfaccia astratta `AIProvider` + `MockProvider` + `AIRouter`
+- Schemi Pydantic riparazione (`Device`, `RepairSession`, `DiagnosticTest`, …)
+- `AlpilabCheckConnector` e `AlpilabHub` (interfaccia + mock)
+- API route registry (`GET /health`, stub `POST /api/v1/ai/generate`) — senza server HTTP
+- Frontend shell responsive + `AlpilabApiClient` stub
+
+### Architecture V2 (session-centric)
+- **Repair Session** come entità centrale multi-device (`User`, `ClientDevice`, `SessionParticipant`, `RepairSessionContext`)
+- **RealtimeSessionManager** con eventi tipizzati (in-memory, futuro WebSocket)
+- **ConversationCommandEngine** — testo e voce sullo stesso engine
+- **CommandEngine** — separazione conversazione vs comando (`Intent`, `Command`, `Action`)
+- **DiagnosticStateManager** + anti-loop (no ripetizione test validati)
+- **Session event log** + `InMemorySessionStore` + `SessionResumeManager`
+- **ToolRegistry** + modello `Tool`
+- **Security model** — `ActionRiskLevel`, `ActionAuthorization`
+- Mock voice (`SpeechToText`, `TextToSpeech`)
+
 - Configurazione via `.env` (senza segreti nel repo)
-- Test pytest (32 test) per i componenti sopra
-- Documentazione architetturale
+- **46 test pytest** — tutti passing
+- Documentazione: `docs/ARCHITECTURE.md` (V2)
 
 ## Cosa è pianificato (non in questa fase)
 
-- Server HTTP reale (FastAPI/Starlette) e binding delle route
+- Server HTTP reale (FastAPI) + WebSocket realtime
+- Framework UI completo + PWA installabile
 - Autenticazione e gestione utenti
 - Deploy cloud e database PostgreSQL
 - Provider AI reali (OpenAI, Gemini, Anthropic, modelli locali)
