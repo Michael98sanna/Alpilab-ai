@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
+import { AlpilabStatusBar } from "../components/core/AlpilabStatusBar";
 import { ChatInput } from "../components/chat/ChatInput";
 import { ChatTimeline } from "../components/chat/ChatTimeline";
 import { DiagnosticPanel } from "../components/repair/DiagnosticPanel";
 import { RepairContextBanner } from "../components/repair/RepairContextBanner";
 import { AppHeader } from "../components/session/AppHeader";
-import { ContextPanel } from "../components/session/ContextPanel";
 import { MobileContextBar } from "../components/session/MobileContextBar";
 import { ContextualToolBar } from "../components/tools/ContextualToolBar";
+import { BottomSheet } from "../components/ui/BottomSheet";
 import { Button } from "../components/ui/Button";
+import { GestureFeedback } from "../components/ui/GestureFeedback";
 import { useChatScroll } from "../hooks/useChatScroll";
 import { useRepairSession } from "../hooks/useRepairSession";
+import { useSwipeGesture } from "../hooks/useSwipeGesture";
 import styles from "./HomePage.module.css";
 
 function useLayoutMode() {
@@ -36,9 +39,10 @@ export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: b
     loadScenario,
     pauseDiagnosis,
     resumeDiagnosis,
-    toggleTools,
-    toggleDiagnostics,
-    toggleContextPanel,
+    openDiagnostics,
+    openTools,
+    closeDiagnostics,
+    closeTools,
     toggleSessionDevices,
     openTool,
     closeToolPanel,
@@ -49,17 +53,17 @@ export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: b
   const layout = useLayoutMode();
   const isMobile = layout === "mobile";
   const showContext = hasActiveRepair && state.onboardingStep === "complete";
+  const sheetsOpen = state.diagnosticsExpanded || state.toolsExpanded;
 
   const { containerRef, showNewMessages, scrollToBottom, onScroll } =
     useChatScroll(state.messages.length);
 
-  const openMobileDiagnostics = () => {
-    if (!state.diagnosticsExpanded) toggleDiagnostics();
-  };
-
-  const openMobileTools = () => {
-    if (!state.toolsExpanded) toggleTools();
-  };
+  const { feedback, handlers: swipeHandlers } = useSwipeGesture({
+    enabled: isMobile && showContext,
+    blocked: sheetsOpen,
+    onSwipeDiagnostics: openDiagnostics,
+    onSwipeTools: openTools,
+  });
 
   return (
     <div className={styles.layout}>
@@ -73,7 +77,11 @@ export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: b
       {showContext && <RepairContextBanner session={state.session} />}
 
       <div className={styles.body}>
-        <main className={styles.main}>
+        <main
+          className={styles.main}
+          data-testid="chat-swipe-zone"
+          {...(isMobile && showContext ? swipeHandlers : {})}
+        >
           <div className={styles.chatColumn}>
             {!showContext && (
               <div className={styles.chatActions}>
@@ -94,26 +102,16 @@ export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: b
               onJumpToLatest={() => scrollToBottom("smooth")}
             />
 
-            {showContext && isMobile && !state.diagnosticsExpanded && (
-              <DiagnosticPanel
-                tests={state.tests}
-                nextTest={nextPendingTest}
-                expanded={false}
-                onToggle={toggleDiagnostics}
-                onSubmitMeasurement={submitMeasurement}
-                onPause={pauseDiagnosis}
-                onResume={resumeDiagnosis}
-                isPaused={state.session.status === "paused"}
+            {showContext && (
+              <MobileContextBar
+                onOpenDiagnostics={openDiagnostics}
+                onOpenTools={openTools}
+                diagnosticsActive={state.diagnosticsExpanded}
+                toolsActive={state.toolsExpanded}
               />
             )}
 
-            {showContext && isMobile && (
-              <MobileContextBar
-                onOpenDiagnostics={openMobileDiagnostics}
-                onOpenTools={openMobileTools}
-                diagnosticsActive={state.diagnosticsExpanded}
-              />
-            )}
+            <AlpilabStatusBar state={state.coreState} />
 
             <div className={styles.inputArea}>
               <ChatInput
@@ -131,61 +129,58 @@ export function HomePage({ loadScenarioOnInit = true }: { loadScenarioOnInit?: b
           </div>
         </main>
 
-        {showContext && !isMobile && (
-          <ContextPanel
-            session={state.session}
+        {showContext && !isMobile && state.diagnosticsExpanded && (
+          <DiagnosticPanel
             tests={state.tests}
             nextTest={nextPendingTest}
-            devices={state.devices}
-            tools={state.tools}
-            expanded={state.contextPanelExpanded}
-            diagnosticsExpanded={state.diagnosticsExpanded}
-            toolsExpanded={state.toolsExpanded}
-            activeToolId={state.activeToolPanel}
-            onTogglePanel={toggleContextPanel}
-            onToggleDiagnostics={toggleDiagnostics}
-            onToggleTools={toggleTools}
-            onOpenTool={openTool}
-            onCloseToolPanel={closeToolPanel}
+            onClose={closeDiagnostics}
             onSubmitMeasurement={submitMeasurement}
             onPause={pauseDiagnosis}
             onResume={resumeDiagnosis}
-            visible
+            isPaused={state.session.status === "paused"}
+            variant="side"
+            showHeader
+          />
+        )}
+
+        {showContext && !isMobile && state.toolsExpanded && (
+          <ContextualToolBar
+            tools={state.tools}
+            activeToolId={state.activeToolPanel}
+            onOpenTool={openTool}
+            onClosePanel={closeToolPanel}
+            layout="side"
           />
         )}
       </div>
 
+      {isMobile && showContext && <GestureFeedback direction={feedback} />}
+
       {showContext && isMobile && state.diagnosticsExpanded && (
-        <>
-          <div
-            className={styles.mobileOverlay}
-            onClick={toggleDiagnostics}
-            aria-hidden="true"
-          />
+        <BottomSheet title="Diagnosi" onClose={closeDiagnostics} testId="diagnostics-sheet">
           <DiagnosticPanel
             tests={state.tests}
             nextTest={nextPendingTest}
-            expanded
-            onToggle={toggleDiagnostics}
+            onClose={closeDiagnostics}
             onSubmitMeasurement={submitMeasurement}
             onPause={pauseDiagnosis}
             onResume={resumeDiagnosis}
             isPaused={state.session.status === "paused"}
             variant="sheet"
           />
-        </>
+        </BottomSheet>
       )}
 
       {showContext && isMobile && state.toolsExpanded && (
-        <ContextualToolBar
-          tools={state.tools}
-          expanded
-          activeToolId={state.activeToolPanel}
-          onToggle={toggleTools}
-          onOpenTool={openTool}
-          onClosePanel={closeToolPanel}
-          layout="mobile"
-        />
+        <BottomSheet title="Strumenti" onClose={closeTools} testId="tools-sheet">
+          <ContextualToolBar
+            tools={state.tools}
+            activeToolId={state.activeToolPanel}
+            onOpenTool={openTool}
+            onClosePanel={closeToolPanel}
+            layout="sheet"
+          />
+        </BottomSheet>
       )}
     </div>
   );

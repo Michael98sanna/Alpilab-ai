@@ -1,21 +1,24 @@
 .banner {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-md);
-  background: var(--color-surface);
+  gap: var(--space-sm);
+  padding: 4px var(--space-md);
+  background: var(--color-bg-elevated);
   border-bottom: 1px solid var(--color-border);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  flex-shrink: 0;
 }
 
 .main {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .device {
@@ -32,9 +35,10 @@
 }
 
 .status {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-family: var(--font-mono);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .active {
@@ -45,9 +49,10 @@
   color: var(--color-warning);
 }
 
-@media (max-width: 390px) {
+@media (max-width: 360px) {
   .banner {
     flex-direction: column;
     align-items: flex-start;
+    gap: 2px;
   }
 }

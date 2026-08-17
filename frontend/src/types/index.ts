@@ -97,11 +97,11 @@ export type RepairAction =
   | { type: "LOAD_SCENARIO" };
 
 export const STATUS_LABELS: Record<CoreState, string> = {
-  IDLE: "Pronto ad aiutarti",
-  LISTENING: "In ascolto…",
-  THINKING: "Elaborazione in corso…",
-  SPEAKING: "Risposta in corso…",
-  WORKING: "Esecuzione azione…",
-  WARNING: "Attenzione richiesta",
-  ERROR: "Errore — verifica richiesta",
+  IDLE: "Alpilab pronto",
+  LISTENING: "Alpilab sta ascoltando",
+  THINKING: "Alpilab sta elaborando…",
+  SPEAKING: "Alpilab sta parlando",
+  WORKING: "Alpilab sta eseguendo…",
+  WARNING: "Alpilab — attenzione",
+  ERROR: "Alpilab — errore",
 };

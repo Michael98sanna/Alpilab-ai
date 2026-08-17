@@ -1,8 +1,6 @@
 import { useCallback, useReducer } from "react";
-import type { CoreState, DiagnosticStatus, RepairState, ToolId } from "../types";
-import { STATUS_LABELS } from "../types";
+import type { DiagnosticStatus, RepairState, ToolId } from "../types";
 import {
-  createStatusMessage,
   emptySession,
   initialDevices,
   initialMessages,
@@ -30,7 +28,7 @@ const defaultUiState = {
   toolsExpanded: false,
   activeToolPanel: null as ToolId | null,
   diagnosticsExpanded: false,
-  contextPanelExpanded: true,
+  contextPanelExpanded: false,
   sessionDevicesExpanded: false,
 };
 
@@ -62,17 +60,6 @@ function buildScenarioState(): RepairState {
 
 type Action = import("../types").RepairAction;
 
-function appendStatus(state: RepairState, coreState: CoreState): RepairState {
-  return {
-    ...state,
-    coreState,
-    messages: [
-      ...state.messages,
-      createStatusMessage(coreState, createId()),
-    ],
-  };
-}
-
 function repairReducer(state: RepairState, action: Action): RepairState {
   switch (action.type) {
     case "LOAD_SCENARIO":
@@ -97,7 +84,6 @@ function repairReducer(state: RepairState, action: Action): RepairState {
             content: newRepairPrompts.start,
             timestamp: nowTime(),
           },
-          createStatusMessage("IDLE", createId()),
         ],
         coreState: "IDLE",
       };
@@ -125,38 +111,36 @@ function repairReducer(state: RepairState, action: Action): RepairState {
       };
 
     case "SET_ONBOARDING_ISSUE":
-      return appendStatus(
-        {
-          ...state,
-          session: {
-            ...state.session,
-            issue: action.issue,
-            diagnosisLabel: "Diagnosis in progress",
-          },
-          onboardingStep: "complete",
-          tests: [
-            { id: createId(), name: "Battery voltage", status: "PENDING" },
-            { id: createId(), name: "USB communication", status: "PENDING" },
-            { id: createId(), name: "PP_VDD_MAIN", status: "PENDING" },
-          ],
-          messages: [
-            ...state.messages,
-            {
-              id: createId(),
-              role: "user",
-              content: action.issue,
-              timestamp: nowTime(),
-            },
-            {
-              id: createId(),
-              role: "assistant",
-              content: newRepairPrompts.complete,
-              timestamp: nowTime(),
-            },
-          ],
+      return {
+        ...state,
+        session: {
+          ...state.session,
+          issue: action.issue,
+          diagnosisLabel: "Diagnosis in progress",
         },
-        "WORKING",
-      );
+        onboardingStep: "complete",
+        coreState: "WORKING",
+        tests: [
+          { id: createId(), name: "Battery voltage", status: "PENDING" },
+          { id: createId(), name: "USB communication", status: "PENDING" },
+          { id: createId(), name: "PP_VDD_MAIN", status: "PENDING" },
+        ],
+        messages: [
+          ...state.messages,
+          {
+            id: createId(),
+            role: "user",
+            content: action.issue,
+            timestamp: nowTime(),
+          },
+          {
+            id: createId(),
+            role: "assistant",
+            content: newRepairPrompts.complete,
+            timestamp: nowTime(),
+          },
+        ],
+      };
 
     case "ADD_MESSAGE":
       return { ...state, messages: [...state.messages, action.message] };
@@ -187,10 +171,18 @@ function repairReducer(state: RepairState, action: Action): RepairState {
       };
 
     case "TOGGLE_TOOLS":
-      return { ...state, toolsExpanded: !state.toolsExpanded };
+      return {
+        ...state,
+        toolsExpanded: !state.toolsExpanded,
+        diagnosticsExpanded: false,
+      };
 
     case "TOGGLE_DIAGNOSTICS":
-      return { ...state, diagnosticsExpanded: !state.diagnosticsExpanded };
+      return {
+        ...state,
+        diagnosticsExpanded: !state.diagnosticsExpanded,
+        toolsExpanded: false,
+      };
 
     case "TOGGLE_CONTEXT_PANEL":
       return { ...state, contextPanelExpanded: !state.contextPanelExpanded };
@@ -202,16 +194,14 @@ function repairReducer(state: RepairState, action: Action): RepairState {
       };
 
     case "OPEN_TOOL":
-      return appendStatus(
-        {
-          ...state,
-          activeToolPanel: action.toolId,
-          tools: state.tools.map((t) =>
-            t.id === action.toolId ? { ...t, open: true } : t,
-          ),
-        },
-        "WORKING",
-      );
+      return {
+        ...state,
+        activeToolPanel: action.toolId,
+        coreState: "WORKING",
+        tools: state.tools.map((t) =>
+          t.id === action.toolId ? { ...t, open: true } : t,
+        ),
+      };
 
     case "CLOSE_TOOL_PANEL":
       return {
@@ -257,12 +247,7 @@ export function useRepairSession(loadScenarioOnInit = true) {
         return;
       }
 
-      dispatch({
-        type: "ADD_MESSAGE",
-        message: createStatusMessage("THINKING", createId()),
-      });
       dispatch({ type: "SET_CORE_STATE", state: "THINKING" });
-
       await new Promise((r) => setTimeout(r, 600));
 
       const lower = trimmed.toLowerCase();
@@ -274,13 +259,7 @@ export function useRepairSession(loadScenarioOnInit = true) {
       }
 
       const response = mockAiResponse(trimmed);
-
-      dispatch({
-        type: "ADD_MESSAGE",
-        message: createStatusMessage("SPEAKING", createId()),
-      });
       dispatch({ type: "SET_CORE_STATE", state: "SPEAKING" });
-
       await new Promise((r) => setTimeout(r, 400));
 
       dispatch({
@@ -292,22 +271,13 @@ export function useRepairSession(loadScenarioOnInit = true) {
           timestamp: nowTime(),
         },
       });
-      dispatch({
-        type: "ADD_MESSAGE",
-        message: createStatusMessage("IDLE", createId()),
-      });
       dispatch({ type: "SET_CORE_STATE", state: "IDLE" });
     },
     [state.onboardingStep],
   );
 
   const simulateVoice = useCallback(async () => {
-    dispatch({
-      type: "ADD_MESSAGE",
-      message: createStatusMessage("LISTENING", createId()),
-    });
     dispatch({ type: "SET_CORE_STATE", state: "LISTENING" });
-
     await new Promise((r) => setTimeout(r, 900));
 
     const transcript = mockVoiceTranscript();
@@ -321,20 +291,9 @@ export function useRepairSession(loadScenarioOnInit = true) {
       },
     });
 
-    dispatch({
-      type: "ADD_MESSAGE",
-      message: createStatusMessage("THINKING", createId()),
-    });
     dispatch({ type: "SET_CORE_STATE", state: "THINKING" });
-
     await new Promise((r) => setTimeout(r, 500));
-
-    dispatch({
-      type: "ADD_MESSAGE",
-      message: createStatusMessage("SPEAKING", createId()),
-    });
     dispatch({ type: "SET_CORE_STATE", state: "SPEAKING" });
-
     await new Promise((r) => setTimeout(r, 400));
 
     dispatch({
@@ -345,10 +304,6 @@ export function useRepairSession(loadScenarioOnInit = true) {
         content: mockAiResponse(transcript),
         timestamp: nowTime(),
       },
-    });
-    dispatch({
-      type: "ADD_MESSAGE",
-      message: createStatusMessage("IDLE", createId()),
     });
     dispatch({ type: "SET_CORE_STATE", state: "IDLE" });
   }, []);
@@ -365,16 +320,8 @@ export function useRepairSession(loadScenarioOnInit = true) {
         value: formatted,
         status,
       });
-      dispatch({
-        type: "ADD_MESSAGE",
-        message: createStatusMessage("WORKING", createId()),
-      });
       dispatch({ type: "SET_CORE_STATE", state: "WORKING" });
       setTimeout(() => {
-        dispatch({
-          type: "ADD_MESSAGE",
-          message: createStatusMessage("IDLE", createId()),
-        });
         dispatch({ type: "SET_CORE_STATE", state: "IDLE" });
       }, 800);
       dispatch({
@@ -432,6 +379,30 @@ export function useRepairSession(loadScenarioOnInit = true) {
     dispatch({ type: "TOGGLE_DIAGNOSTICS" });
   }, []);
 
+  const openDiagnostics = useCallback(() => {
+    if (!state.diagnosticsExpanded) {
+      dispatch({ type: "TOGGLE_DIAGNOSTICS" });
+    }
+  }, [state.diagnosticsExpanded]);
+
+  const openTools = useCallback(() => {
+    if (!state.toolsExpanded) {
+      dispatch({ type: "TOGGLE_TOOLS" });
+    }
+  }, [state.toolsExpanded]);
+
+  const closeDiagnostics = useCallback(() => {
+    if (state.diagnosticsExpanded) {
+      dispatch({ type: "TOGGLE_DIAGNOSTICS" });
+    }
+  }, [state.diagnosticsExpanded]);
+
+  const closeTools = useCallback(() => {
+    if (state.toolsExpanded) {
+      dispatch({ type: "TOGGLE_TOOLS" });
+    }
+  }, [state.toolsExpanded]);
+
   const toggleContextPanel = useCallback(() => {
     dispatch({ type: "TOGGLE_CONTEXT_PANEL" });
   }, []);
@@ -461,13 +432,16 @@ export function useRepairSession(loadScenarioOnInit = true) {
     resumeDiagnosis,
     toggleTools,
     toggleDiagnostics,
+    openDiagnostics,
+    openTools,
+    closeDiagnostics,
+    closeTools,
     toggleContextPanel,
     toggleSessionDevices,
     openTool,
     closeToolPanel,
     nextPendingTest,
     hasActiveRepair: state.session.status !== "none",
-    statusLabels: STATUS_LABELS,
   };
 }
 

@@ -4,73 +4,47 @@ import styles from "./ContextualToolBar.module.css";
 
 interface ContextualToolBarProps {
   tools: ToolItem[];
-  expanded: boolean;
   activeToolId: ToolId | null;
-  onToggle: () => void;
   onOpenTool: (id: ToolId) => void;
   onClosePanel: () => void;
-  layout: "mobile" | "desktop";
+  layout: "sheet" | "side";
 }
 
 export function ContextualToolBar({
   tools,
-  expanded,
   activeToolId,
-  onToggle,
   onOpenTool,
   onClosePanel,
   layout,
 }: ContextualToolBarProps) {
   const activeTool = tools.find((t) => t.id === activeToolId);
 
-  const toolButtons = tools.map((tool) => (
-    <button
-      key={tool.id}
-      type="button"
-      className={`${styles.toolBtn} ${tool.open ? styles.toolBtnActive : ""}`}
-      onClick={() => onOpenTool(tool.id)}
-      disabled={!tool.available}
-      aria-label={tool.label}
-    >
-      <span>{tool.icon}</span>
-      <span>{tool.label}</span>
-    </button>
-  ));
+  const toolList = (
+    <div className={layout === "sheet" ? styles.toolList : styles.sidebarList}>
+      {tools.map((tool) => (
+        <button
+          key={tool.id}
+          type="button"
+          className={`${styles.toolBtn} ${tool.open ? styles.toolBtnActive : ""}`}
+          onClick={() => onOpenTool(tool.id)}
+          disabled={!tool.available}
+          aria-label={tool.label}
+        >
+          <span>{tool.icon}</span>
+          <span>{tool.label}</span>
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <>
-      {layout === "desktop" && expanded && (
-        <aside className={styles.sidebar} aria-label="Strumenti contestuali">
-          <button type="button" className={styles.toggle} onClick={onToggle}>
-            Nascondi strumenti
-          </button>
-          {toolButtons}
+      {layout === "sheet" ? (
+        <div data-testid="tools-sheet-content">{toolList}</div>
+      ) : (
+        <aside className={styles.sidePanel} aria-label="Strumenti" data-testid="tools-side-panel">
+          {toolList}
         </aside>
-      )}
-
-      {layout === "mobile" && expanded && (
-        <div className={styles.sheet} role="dialog" aria-label="Strumenti">
-          {toolButtons}
-          <button type="button" className={styles.toggle} onClick={onToggle}>
-            Chiudi
-          </button>
-        </div>
-      )}
-
-      {layout === "mobile" && !expanded && (
-        <div className={styles.bar}>
-          <button type="button" className={styles.toggle} onClick={onToggle}>
-            🛠 Strumenti
-          </button>
-        </div>
-      )}
-
-      {layout === "desktop" && !expanded && (
-        <div className={styles.bar}>
-          <button type="button" className={styles.toggle} onClick={onToggle}>
-            Mostra strumenti contestuali
-          </button>
-        </div>
       )}
 
       {activeTool && (

@@ -77,33 +77,40 @@
 }
 
 .collapsed {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  font-size: 0.75rem;
+  display: none;
 }
 
-.collapsedHeader {
-  font-size: 0.65rem;
-  letter-spacing: 0.1em;
-  color: var(--color-text-muted);
-  margin-bottom: var(--space-xs);
+.content {
+  border: none;
+  padding: 0;
+  background: transparent;
 }
 
-.collapsedList {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: var(--space-sm);
-  font-family: var(--font-mono);
-  color: var(--color-text-secondary);
+.side {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  border-left: 1px solid var(--color-border);
+  border-radius: 0;
+  animation: slideInRight var(--duration-normal) var(--ease-out);
 }
 
-.collapsedItem {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side {
+    animation: none;
+  }
 }
 
 .panelHeader {
@@ -125,14 +132,5 @@
 }
 
 .sheet {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  margin: 0;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  z-index: 45;
-  max-height: 70dvh;
-  overflow-y: auto;
-  padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+  display: contents;
 }

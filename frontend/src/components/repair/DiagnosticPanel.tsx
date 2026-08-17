@@ -6,13 +6,13 @@ import styles from "./DiagnosticPanel.module.css";
 interface DiagnosticPanelProps {
   tests: DiagnosticTest[];
   nextTest?: DiagnosticTest;
-  expanded: boolean;
-  onToggle: () => void;
+  onClose: () => void;
   onSubmitMeasurement: (testId: string, value: string) => void;
   onPause: () => void;
   onResume: () => void;
   isPaused: boolean;
-  variant?: "inline" | "sheet";
+  variant?: "sheet" | "side";
+  showHeader?: boolean;
 }
 
 function statusIcon(status: DiagnosticTest["status"]) {
@@ -24,12 +24,6 @@ function statusIcon(status: DiagnosticTest["status"]) {
     default:
       return "○";
   }
-}
-
-function shortName(name: string) {
-  if (name === "Battery voltage") return "Battery";
-  if (name === "USB communication") return "USB";
-  return name;
 }
 
 function statusClass(status: DiagnosticTest["status"]) {
@@ -46,13 +40,13 @@ function statusClass(status: DiagnosticTest["status"]) {
 export function DiagnosticPanel({
   tests,
   nextTest,
-  expanded,
-  onToggle,
+  onClose,
   onSubmitMeasurement,
   onPause,
   onResume,
   isPaused,
-  variant = "inline",
+  variant = "sheet",
+  showHeader = false,
 }: DiagnosticPanelProps) {
   const [value, setValue] = useState("");
 
@@ -65,40 +59,31 @@ export function DiagnosticPanel({
   }
 
   const panelClass =
-    variant === "sheet" ? `${styles.panel} ${styles.sheet}` : styles.panel;
-
-  if (!expanded) {
-    return (
-      <section className={styles.collapsed} aria-label="Diagnostica" data-testid="diagnostics-collapsed">
-        <div className={styles.collapsedHeader}>DIAGNOSI</div>
-        <div className={styles.collapsedList}>
-          {tests.map((t) => (
-            <span key={t.id} className={styles.collapsedItem}>
-              {statusIcon(t.status)} {shortName(t.name)}
-              {t.value ? ` ${t.value}` : ""}
-            </span>
-          ))}
-        </div>
-        <Button size="small" variant="ghost" onClick={onToggle}>
-          Apri diagnosi
-        </Button>
-      </section>
-    );
-  }
+    variant === "side"
+      ? `${styles.panel} ${styles.side}`
+      : `${styles.panel} ${styles.content}`;
 
   return (
-    <section className={panelClass} aria-label="Diagnostica" data-testid="diagnostics-expanded">
-      <div className={styles.panelHeader}>
-        <span>Diagnostica</span>
-        <button type="button" className={styles.collapseBtn} onClick={onToggle}>
-          Chiudi
-        </button>
-      </div>
+    <section
+      className={panelClass}
+      aria-label="Diagnostica"
+      data-testid="diagnostics-expanded"
+    >
+      {showHeader && (
+        <div className={styles.panelHeader}>
+          <span>Diagnostica</span>
+          <button type="button" className={styles.collapseBtn} onClick={onClose}>
+            Chiudi
+          </button>
+        </div>
+      )}
 
       <div className={styles.list}>
         {tests.map((t) => (
           <div key={t.id} className={styles.testRow}>
-            <span>{t.name}</span>
+            <span>
+              {statusIcon(t.status)} {t.name}
+            </span>
             <span className={statusClass(t.status)}>
               {t.value ?? t.status}
             </span>

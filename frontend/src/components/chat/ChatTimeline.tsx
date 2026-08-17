@@ -1,6 +1,5 @@
 import type { RefObject } from "react";
 import type { ChatMessage } from "../../types";
-import { AssistantStatusMessage } from "./AssistantStatusMessage";
 import styles from "./ChatPanel.module.css";
 
 interface ChatTimelineProps {
@@ -18,6 +17,8 @@ export function ChatTimeline({
   showNewMessages,
   onJumpToLatest,
 }: ChatTimelineProps) {
+  const chatMessages = messages.filter((m) => m.role !== "status");
+
   return (
     <div className={styles.timelineWrap}>
       <div
@@ -28,25 +29,16 @@ export function ChatTimeline({
         onScroll={onScroll}
         data-testid="chat-timeline"
       >
-        {messages.map((msg) =>
-          msg.role === "status" && msg.coreState ? (
-            <AssistantStatusMessage
-              key={msg.id}
-              state={msg.coreState}
-              label={msg.content}
-              timestamp={msg.timestamp}
-            />
-          ) : (
-            <div
-              key={msg.id}
-              className={`${styles.message} ${styles[msg.role]}`}
-              data-testid={`message-${msg.role}`}
-            >
-              {msg.content}
-              <span className={styles.time}>{msg.timestamp}</span>
-            </div>
-          ),
-        )}
+        {chatMessages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`${styles.message} ${styles[msg.role]}`}
+            data-testid={`message-${msg.role}`}
+          >
+            {msg.content}
+            <span className={styles.time}>{msg.timestamp}</span>
+          </div>
+        ))}
       </div>
 
       {showNewMessages && (

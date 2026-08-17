@@ -1,12 +1,10 @@
 import type {
   ChatMessage,
-  CoreState,
   DiagnosticTest,
   RepairSession,
   SessionDevice,
   ToolItem,
 } from "../types";
-import { STATUS_LABELS } from "../types";
 
 export const MOCK_SESSION_LABEL = "Repair #001";
 
@@ -18,16 +16,6 @@ export const initialSession: RepairSession = {
   status: "active",
   diagnosisLabel: "Diagnosis in progress",
 };
-
-function statusMsg(state: CoreState, id: string, time: string): ChatMessage {
-  return {
-    id,
-    role: "status",
-    content: STATUS_LABELS[state],
-    timestamp: time,
-    coreState: state,
-  };
-}
 
 export const initialMessages: ChatMessage[] = [
   {
@@ -48,7 +36,6 @@ export const initialMessages: ChatMessage[] = [
     content: "Ricevuto. Iniziamo la diagnosi.",
     timestamp: "09:11",
   },
-  statusMsg("WORKING", "s1", "09:12"),
   {
     id: "m4",
     role: "assistant",
@@ -68,7 +55,6 @@ export const initialMessages: ChatMessage[] = [
       "Valore corretto. La batteria non sembra essere il problema principale.",
     timestamp: "09:14",
   },
-  statusMsg("THINKING", "s2", "09:15"),
   {
     id: "m7",
     role: "assistant",
@@ -88,7 +74,6 @@ export const initialMessages: ChatMessage[] = [
       "Confermato. USB FAILED. Il prossimo passo è misurare PP_VDD_MAIN.",
     timestamp: "09:16",
   },
-  statusMsg("IDLE", "s3", "09:16"),
 ];
 
 export const initialTests: DiagnosticTest[] = [
@@ -141,17 +126,4 @@ export function mockAiResponse(userText: string): string {
 
 export function mockVoiceTranscript(): string {
   return "Controlla la linea PP_VDD_MAIN sul multimetro.";
-}
-
-export function createStatusMessage(state: CoreState, id: string): ChatMessage {
-  return {
-    id,
-    role: "status",
-    content: STATUS_LABELS[state],
-    timestamp: new Date().toLocaleTimeString("it-IT", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-    coreState: state,
-  };
 }

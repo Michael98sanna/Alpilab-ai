@@ -24,6 +24,7 @@ interface ContextPanelProps {
   visible: boolean;
 }
 
+/** Legacy desktop context rail — superseded by on-demand side panels in V0.3. */
 export function ContextPanel({
   session,
   tests,
@@ -64,28 +65,42 @@ export function ContextPanel({
         </button>
       </div>
 
-      <DiagnosticPanel
-        tests={tests}
-        nextTest={nextTest}
-        expanded={diagnosticsExpanded}
-        onToggle={onToggleDiagnostics}
-        onSubmitMeasurement={onSubmitMeasurement}
-        onPause={onPause}
-        onResume={onResume}
-        isPaused={session.status === "paused"}
-      />
-
-      <div className={styles.toolsSection}>
-        <ContextualToolBar
-          tools={tools}
-          expanded={toolsExpanded}
-          activeToolId={activeToolId}
-          onToggle={onToggleTools}
-          onOpenTool={onOpenTool}
-          onClosePanel={onCloseToolPanel}
-          layout="desktop"
+      {diagnosticsExpanded && (
+        <DiagnosticPanel
+          tests={tests}
+          nextTest={nextTest}
+          onClose={onToggleDiagnostics}
+          onSubmitMeasurement={onSubmitMeasurement}
+          onPause={onPause}
+          onResume={onResume}
+          isPaused={session.status === "paused"}
+          variant="side"
+          showHeader
         />
-      </div>
+      )}
+
+      {toolsExpanded && (
+        <div className={styles.toolsSection}>
+          <ContextualToolBar
+            tools={tools}
+            activeToolId={activeToolId}
+            onOpenTool={onOpenTool}
+            onClosePanel={onCloseToolPanel}
+            layout="side"
+          />
+        </div>
+      )}
+
+      {!diagnosticsExpanded && !toolsExpanded && (
+        <div className={styles.toolsSection}>
+          <button type="button" className={styles.expandBtn} onClick={onToggleDiagnostics}>
+            Apri diagnosi
+          </button>
+          <button type="button" className={styles.expandBtn} onClick={onToggleTools}>
+            Apri strumenti
+          </button>
+        </div>
+      )}
     </aside>
   );
 }
