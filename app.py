@@ -1,6 +1,7 @@
-"""Alpilab AI - minimal application entry point."""
+"""Alpilab AI - application entry point."""
 
 from ai.router import AIRouter
+from ai.schemas import AIRequest
 
 
 def main() -> None:
@@ -21,8 +22,8 @@ def main() -> None:
         if not question:
             continue
 
-        response = router.ask(question)
-        print("\nAlpilab AI >", response)
+        response = router.generate(AIRequest(prompt=question))
+        print("\nAlpilab AI >", response.content)
 
 
 if __name__ == "__main__":
