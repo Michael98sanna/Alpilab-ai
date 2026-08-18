@@ -1,8 +1,10 @@
 """Provider router for Alpilab AI."""
 
 from collections.abc import Iterator
+import os
 
 from ai.providers.base import AIProvider
+from ai.providers.local import LocalAIProvider
 from ai.providers.mock import MockProvider
 from ai.schemas import AIRequest, AIResponse, ProviderCapability
 
@@ -11,16 +13,17 @@ class AIRouter:
     """
     Selects an AI backend without exposing provider details to the application.
 
-    Future routing dimensions (not yet implemented):
-    - local vs cloud providers
-    - fallback when a provider is unavailable
-    - request type (text vs image)
-    - cost, capability, and availability
+    Local and cloud providers are optional. MockProvider always works offline.
     """
 
     def __init__(self, providers: list[AIProvider] | None = None) -> None:
-        self._providers: list[AIProvider] = providers or [MockProvider()]
+        self._providers: list[AIProvider] = providers or self._default_providers()
         self._default_provider = self._providers[0]
+
+    @staticmethod
+    def _default_providers() -> list[AIProvider]:
+        local_url = os.getenv("ALPILAB_LOCAL_AI_URL", "").strip() or None
+        return [MockProvider(), LocalAIProvider(local_url)]
 
     @property
     def provider_name(self) -> str:
@@ -38,6 +41,14 @@ class AIRouter:
                     and ProviderCapability.IMAGE_INPUT in provider.capabilities()
                 ):
                     return provider
+
+        for provider in self._providers:
+            if (
+                provider.name == "local"
+                and provider.is_available()
+                and ProviderCapability.LOCAL in provider.capabilities()
+            ):
+                return provider
 
         for provider in self._providers:
             if provider.is_available():

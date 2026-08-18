@@ -77,6 +77,9 @@ alpilab-ai/
 │   └── src/
 ├── hub/                    # Interfacce Alpilab Hub (mock)
 ├── pc_agent/               # PC Agent V0.4 (Windows process, safe + Windows app tools)
+├── local_hub/              # Local Hub launcher (V0.5)
+├── clients/                # Windows desktop + Flutter mobile
+├── data/                   # SQLite locale (gitignored db)
 ├── tests/                  # Test pytest
 ├── docs/                   # Documentazione
 ├── app.py                  # Entry point CLI
@@ -296,6 +299,24 @@ Aprimi 3uTools
 ```
 
 Atteso: THINKING → WORKING → "Ho aperto 3uTools." (o messaggio dry-run se configurato).
+
+### V0.5 — Native client + Local-first
+
+Il prodotto principale è il **Local Hub** sul PC laboratorio (non il browser).
+
+```powershell
+python -m local_hub
+```
+
+- SQLite: `data/alpilab.db`
+- Discovery LAN: mDNS `_alpilab._tcp` (**Alpilab Negozio**)
+- Pairing: `POST /api/v1/pairing/start`
+- Windows: WebView pywebview (non Chrome) — `clients/windows/`
+- Android/iOS: Flutter in `clients/alpilab_mobile/` (SDK Flutter da installare sul PC)
+- `frontend/` resta come **legacy-dev-web** (UI V0.3.1)
+- Cloud / AI remota: **opzionale** (`LocalAIProvider` stub, MockProvider offline)
+
+Guida: [docs/V0_5_LOCAL_HUB.md](docs/V0_5_LOCAL_HUB.md)
 
 ## Cosa è pianificato (prossime fasi)
 

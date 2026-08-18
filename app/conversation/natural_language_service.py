@@ -47,7 +47,25 @@ class NaturalLanguageCommandService:
         parsed = self._parser.parse(text)
 
         if parsed.outcome == ParseOutcome.CONVERSATION:
-            logger.info("[INTENT] CONVERSATION — no tool dispatch")
+            logger.info("[INTENT] CONVERSATION — local AI router (no tool dispatch)")
+            await realtime_manager.set_assistant_status(
+                session_id,
+                "THINKING",
+                source_device_id=device_id,
+            )
+            from ai.router import AIRouter
+            from ai.schemas import AIRequest
+
+            reply = AIRouter().generate(AIRequest(prompt=text)).content
+            await self._reply(realtime_manager, session_id, device_id, reply)
+            await realtime_manager.set_assistant_status(
+                session_id,
+                "SPEAKING",
+                source_device_id=device_id,
+            )
+            await realtime_manager.set_assistant_status(
+                session_id, "IDLE", source_device_id=device_id
+            )
             return
 
         if parsed.confidence < CONFIDENCE_THRESHOLD:

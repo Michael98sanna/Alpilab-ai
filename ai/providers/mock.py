@@ -16,16 +16,23 @@ class MockProvider(AIProvider):
         return True
 
     def generate(self, request: AIRequest) -> AIResponse:
+        prompt = request.prompt.strip()
+        lowered = prompt.lower()
+        if lowered in {"ciao", "ciao!", "hello", "hi"}:
+            content = "Ciao, sono Alpilab AI. Come posso aiutarti sulla riparazione?"
+        else:
+            content = (
+                "[MOCK] Provider locale di test. "
+                f"Ho ricevuto: {prompt}\n\n"
+                "Nessun provider cloud è necessario. "
+                "Il prossimo step è un modello locale opzionale (Ollama/llama.cpp)."
+            )
         return AIResponse(
-            content=(
-                "[MOCK] Provider di test attivo. "
-                f"Prompt ricevuto: {request.prompt}\n\n"
-                "Il prossimo step sarà collegare un vero modello AI."
-            ),
+            content=content,
             provider=self.name,
             model="mock-v0",
             finish_reason="stop",
-            metadata={"mock": True},
+            metadata={"mock": True, "offline": True},
         )
 
     def generate_with_image(self, request: AIRequest) -> AIResponse:

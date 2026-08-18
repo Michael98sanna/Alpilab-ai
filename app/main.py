@@ -38,10 +38,23 @@ from app.api.ws import session_websocket
 from app.agent.ws import agent_websocket
 from app.api import create_route_registry
 from app.core.config import settings
+from app.hub.routes import PairCompleteBody
+from app.pairing.service import PairingError
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    import os
+
+    from app.realtime.session_manager import realtime_manager
+    from app.session.factory import get_session_store, session_store_backend
+
+    if session_store_backend() == "sqlite":
+        store = get_session_store()
+        realtime_manager.attach_persistence(store)
+        realtime_manager.get_or_create_session(
+            os.getenv("ALPILAB_DEFAULT_SESSION", "repair-001")
+        )
     yield
 
 
@@ -56,7 +69,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -156,25 +169,81 @@ def ai_generate(body: GenerateBody) -> dict:
     return response.model_dump(mode="json")
 
 
+@app.get("/api/v1/hub/info", tags=["hub"])
+def get_hub_info() -> dict:
+    from app.hub.routes import hub_info
+
+    return hub_info(port=int(__import__("os").getenv("PORT", "8000")))
+
+
+@app.post("/api/v1/pairing/start", tags=["hub"])
+def post_pairing_start() -> dict:
+    from app.hub.routes import start_pairing
+
+    try:
+        return start_pairing()
+    except PairingError as exc:
+        raise HTTPException(status_code=400, detail=exc.code) from exc
+
+
+@app.post("/api/v1/pairing/complete", tags=["hub"])
+def post_pairing_complete(body: PairCompleteBody) -> dict:
+    from app.hub.routes import complete_pairing
+
+    try:
+        return complete_pairing(body)
+    except PairingError as exc:
+        raise HTTPException(status_code=400, detail=exc.code) from exc
+
+
+@app.get("/api/v1/pairing/clients", tags=["hub"])
+def get_pairing_clients() -> dict:
+    from app.hub.routes import list_paired
+
+    try:
+        return list_paired()
+    except PairingError as exc:
+        raise HTTPException(status_code=400, detail=exc.code) from exc
+
+
+@app.delete("/api/v1/pairing/clients/{client_id}", tags=["hub"])
+def delete_pairing_client(client_id: str) -> dict:
+    from app.hub.routes import revoke_paired
+
+    try:
+        return revoke_paired(client_id)
+    except PairingError as exc:
+        raise HTTPException(status_code=404, detail=exc.code) from exc
+
+
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 
 def mount_frontend_spa(application: FastAPI) -> None:
     """Serve the built frontend from / so phones only need port 8000."""
-    if not FRONTEND_DIST.is_dir() or not (FRONTEND_DIST / "index.html").is_file():
-        return
-    assets_dir = FRONTEND_DIST / "assets"
-    if assets_dir.is_dir():
-        application.mount("/assets", StaticFiles(directory=assets_dir), name="spa-assets")
+    from fastapi.responses import HTMLResponse
 
-    @application.get("/{full_path:path}", include_in_schema=False)
-    async def spa_fallback(full_path: str) -> FileResponse:
-        if full_path.startswith(("api/", "ws/", "docs", "openapi.json", "redoc")):
-            raise HTTPException(status_code=404)
-        candidate = FRONTEND_DIST / full_path
-        if full_path and candidate.is_file():
-            return FileResponse(candidate)
-        return FileResponse(FRONTEND_DIST / "index.html")
+    from app.hub.fallback_ui import HUB_FALLBACK_HTML
+
+    if FRONTEND_DIST.is_dir() and (FRONTEND_DIST / "index.html").is_file():
+        assets_dir = FRONTEND_DIST / "assets"
+        if assets_dir.is_dir():
+            application.mount("/assets", StaticFiles(directory=assets_dir), name="spa-assets")
+
+        @application.get("/{full_path:path}", include_in_schema=False)
+        async def spa_fallback(full_path: str) -> FileResponse:
+            if full_path.startswith(("api/", "ws/", "docs", "openapi.json", "redoc")):
+                raise HTTPException(status_code=404)
+            candidate = FRONTEND_DIST / full_path
+            if full_path and candidate.is_file():
+                return FileResponse(candidate)
+            return FileResponse(FRONTEND_DIST / "index.html")
+
+        return
+
+    @application.get("/", include_in_schema=False)
+    async def hub_fallback() -> HTMLResponse:
+        return HTMLResponse(HUB_FALLBACK_HTML)
 
 
 mount_frontend_spa(app)

@@ -58,7 +58,7 @@ export function loadSessionId(fallback?: string | null): string {
   }
   const stored = localStorage.getItem(SESSION_KEY);
   if (stored) return stored;
-  const generated = `repair-${createId()}`;
+  const generated = "repair-001";
   saveSessionId(generated);
   return generated;
 }

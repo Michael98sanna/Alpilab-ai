@@ -153,7 +153,11 @@ def test_session_event_ordering(client: TestClient, manager: RealtimeSessionMana
         ws.receive_json()
         ws.receive_json()
     events = manager.events_for_session(session_id)
-    chat_events = [e for e in events if e.event_type.value == "CHAT_MESSAGE"]
+    chat_events = [
+        e
+        for e in events
+        if e.event_type.value == "CHAT_MESSAGE" and e.payload.get("role") == "user"
+    ]
     assert len(chat_events) >= 2
     assert chat_events[0].payload["content"] == "Primo"
     assert chat_events[1].payload["content"] == "Secondo"

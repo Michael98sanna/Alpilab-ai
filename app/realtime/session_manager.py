@@ -72,11 +72,12 @@ class RealtimeSessionManager:
     Authentication and authorization will be implemented before production deployment.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, persistence_store: Any | None = None) -> None:
         self._subscribers: dict[str, list[RealtimeSubscriber]] = defaultdict(list)
         self._event_log: list[RealtimeEvent] = []
         self._sessions: dict[str, RealtimeSessionData] = {}
         self._ws_connections: dict[str, dict[str, Any]] = {}
+        self._persistence_store = persistence_store
 
     # --- Session lifecycle ---
 
@@ -94,6 +95,7 @@ class RealtimeSessionManager:
         else:
             data = default_demo_session(str(uuid4())) if seed_demo else new_session()
         self._sessions[data.session_id] = data
+        self._persist_session(data.session_id)
         self.emit(
             data.session_id,
             RealtimeEventType.SESSION_CREATED,
@@ -299,6 +301,7 @@ class RealtimeSessionManager:
             source_client_device_id=device_id,
         )
         await self.send_event_ws(session_id, event)
+        self._persist_session(session_id)
         return event
 
     # --- Device presence ---
@@ -342,6 +345,7 @@ class RealtimeSessionManager:
         )
         await self.send_event_ws(session_id, event, exclude_device_id=device_id)
         snapshot = session.snapshot()
+        self._persist_session(session_id)
         return session, snapshot
 
     async def disconnect_device(self, session_id: str, device_id: str) -> None:
@@ -418,6 +422,7 @@ class RealtimeSessionManager:
             source_client_device_id=device_id,
         )
         await self.send_event_ws(session_id, event)
+        self._persist_session(session_id)
         return message
 
     async def set_assistant_status(
@@ -576,6 +581,36 @@ class RealtimeSessionManager:
         if session_id is None:
             return len(self._ws_connections)
         return sum(1 for c in self._ws_connections.values() if c["session_id"] == session_id)
+
+    def attach_persistence(self, store: Any) -> None:
+        """Bind SQLite (or compatible) store and restore snapshots."""
+        self._persistence_store = store
+        self.restore_persisted_sessions()
+
+    def restore_persisted_sessions(self) -> None:
+        store = self._persistence_store
+        if store is None or not hasattr(store, "list_realtime_session_ids"):
+            return
+        from app.realtime.persistence import snapshot_dict_to_session
+
+        for session_id in store.list_realtime_session_ids():
+            payload = store.load_realtime_snapshot(session_id)
+            if not payload:
+                continue
+            if session_id in self._sessions:
+                continue
+            self._sessions[session_id] = snapshot_dict_to_session(payload)
+
+    def _persist_session(self, session_id: str) -> None:
+        store = self._persistence_store
+        if store is None or not hasattr(store, "save_realtime_snapshot"):
+            return
+        session = self.get_session(session_id)
+        if session is None:
+            return
+        from app.realtime.persistence import persistable_snapshot
+
+        store.save_realtime_snapshot(session_id, persistable_snapshot(session))
 
 
 # Singleton for app lifespan

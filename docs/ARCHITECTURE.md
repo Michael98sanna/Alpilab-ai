@@ -9,21 +9,19 @@ Alpilab AI è un **ambiente di lavoro condiviso** per il laboratorio, non una se
 ## 1. System architecture
 
 ```text
-                    ALPILAB AI CLOUD
+                    ALPILAB LOCAL HUB (V0.5)
                            |
         +------------------+------------------+
         |                  |                  |
-   AI Router      Conversation/Command    Session Store
+   AI Router      Conversation/Command    SQLite
         |                  Engine                  |
         +------------------+----------------------+
                            |
               RealtimeSessionManager
                            |
-                    Web / PWA (future)
+              Windows App / Mobile App
                            |
-              +------------+------------+
-              |            |            |
-             PC       Smartphone     Tablet
+                    PC Agent + tools
                            |
                     ALPILAB HUB (future)
                            |
@@ -425,6 +423,9 @@ Viewport, theme-color; service worker non implementato.
 | PC Agent V0.2 | ✅ Safe tool execution (`demo.safe_test` pipeline) |
 | PC Agent V0.3 | ✅ WindowsAppTool + `windows.3utools.open` (dry-run + execution) |
 | PC Agent V0.4 | ✅ Natural language → `OPEN_APPLICATION` → `windows.3utools.open` |
+| Local Hub V0.5 | ✅ FastAPI + SQLite + mDNS + pairing + desktop launcher |
+| SQLiteSessionStore | ✅ `data/alpilab.db` (InMemory resta per i test) |
+| Native clients | ✅ Windows WebView launcher; Flutter source (SDK non in CI) |
 | Conversation/Command engine | ✅ Mock parser + NL parser (V0.4) |
 | Voice interfaces | ✅ Mock STT/TTS |
 | Diagnostic state + anti-loop | ✅ |
