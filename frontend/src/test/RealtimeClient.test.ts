@@ -74,4 +74,24 @@ describe("RealtimeClient", () => {
     client.send({ type: "chat_message", content: "Test", role: "user" });
     expect(MockWebSocket.instances[0].send).toHaveBeenCalled();
   });
+
+  it("sends pairing_token from client identity, not from the page URL", () => {
+    window.history.replaceState({}, "", "/?pairing_token=from-url&session=other");
+    const client = new RealtimeClient({
+      sessionId: "repair-001",
+      deviceId: "phone-stable-01",
+      deviceType: "phone",
+      deviceName: "Android",
+      pairingToken: "stored-token",
+      onMessage: vi.fn(),
+      onConnectionChange: vi.fn(),
+    });
+    client.connect();
+    const url = MockWebSocket.instances[0].url;
+    expect(url).toContain("/ws/sessions/repair-001");
+    expect(url).toContain("device_id=phone-stable-01");
+    expect(url).toContain("pairing_token=stored-token");
+    expect(url).not.toContain("from-url");
+    expect(url).not.toContain("other");
+  });
 });

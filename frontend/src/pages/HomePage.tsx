@@ -12,6 +12,8 @@ import { Button } from "../components/ui/Button";
 import { GestureFeedback } from "../components/ui/GestureFeedback";
 import { useChatScroll } from "../hooks/useChatScroll";
 import { useAppSession } from "../realtime/RealtimeProvider";
+import { isPcLoopbackUi } from "../realtime/sessionStorage";
+import { PairingDialog } from "../components/session/PairingDialog";
 import { useSwipeGesture, type PanelMode } from "../hooks/useSwipeGesture";
 import styles from "./HomePage.module.css";
 
@@ -77,6 +79,8 @@ export function HomePage() {
   });
 
   const gestureEnabled = isMobile && showContext;
+  const [pairingOpen, setPairingOpen] = useState(false);
+  const showPairing = isPcLoopbackUi();
 
   return (
     <div className={styles.layout}>
@@ -85,6 +89,7 @@ export function HomePage() {
         sessionDevicesExpanded={state.sessionDevicesExpanded}
         onToggleSessionDevices={toggleSessionDevices}
         onVoiceClick={simulateVoice}
+        onPairDevice={showPairing ? () => setPairingOpen(true) : undefined}
         connectionState={state.connectionState}
         showConnection={mode === "realtime"}
         pcAgent={mode === "realtime" ? state.pcAgent : null}
@@ -210,6 +215,7 @@ export function HomePage() {
           />
         </BottomSheet>
       )}
+      {pairingOpen && <PairingDialog onClose={() => setPairingOpen(false)} />}
     </div>
   );
 }

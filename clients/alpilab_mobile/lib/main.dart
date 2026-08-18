@@ -30,6 +30,17 @@ class DiscoveredHub {
   String get url => 'http://$host:$port';
 }
 
+Future<String> _stableClientId(SharedPreferences prefs) async {
+  final existing = prefs.getString('client_id');
+  if (existing != null && existing.isNotEmpty) {
+    return existing;
+  }
+  final id =
+      'phone-${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}';
+  await prefs.setString('client_id', id);
+  return id;
+}
+
 class HubFinderPage extends StatefulWidget {
   const HubFinderPage({super.key});
 
@@ -50,10 +61,16 @@ class _HubFinderPageState extends State<HubFinderPage> {
 
   Future<void> _restoreThenSearch() async {
     final prefs = await SharedPreferences.getInstance();
+    await _stableClientId(prefs);
     final hubUrl = prefs.getString('hub_url');
     final token = prefs.getString('pairing_token');
     final clientId = prefs.getString('client_id');
-    if (hubUrl != null && token != null && clientId != null && mounted) {
+    final sessionId = prefs.getString('session_id');
+    if (hubUrl != null &&
+        token != null &&
+        clientId != null &&
+        sessionId != null &&
+        mounted) {
       final uri = Uri.parse(hubUrl);
       Navigator.pushReplacement(
         context,
@@ -66,6 +83,7 @@ class _HubFinderPageState extends State<HubFinderPage> {
             ),
             pairingToken: token,
             clientId: clientId,
+            sessionId: sessionId,
           ),
         ),
       );
@@ -183,8 +201,7 @@ class _PairingPageState extends State<PairingPage> {
   Future<void> _pair() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final clientId = prefs.getString('client_id') ??
-          'phone-${DateTime.now().millisecondsSinceEpoch}';
+      final clientId = await _stableClientId(prefs);
       final res = await http.post(
         Uri.parse('${widget.hub.url}/api/v1/pairing/complete'),
         headers: {'Content-Type': 'application/json'},
@@ -206,9 +223,13 @@ class _PairingPageState extends State<PairingPage> {
         setState(() => _error = 'Pairing incompleto');
         return;
       }
+      final sessionId = (body['session_id'] as String?)?.trim().isNotEmpty == true
+          ? body['session_id'] as String
+          : await _sessionFromHub(widget.hub.url);
       await prefs.setString('hub_url', widget.hub.url);
       await prefs.setString('pairing_token', token);
       await prefs.setString('client_id', body['client_id'] as String? ?? clientId);
+      await prefs.setString('session_id', sessionId);
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -217,12 +238,29 @@ class _PairingPageState extends State<PairingPage> {
             hub: widget.hub,
             pairingToken: token,
             clientId: body['client_id'] as String? ?? clientId,
+            sessionId: sessionId,
           ),
         ),
       );
     } catch (e) {
       setState(() => _error = 'Hub non raggiungibile. Resta sulla stessa Wi-Fi del PC.');
     }
+  }
+
+  Future<String> _sessionFromHub(String hubUrl) async {
+    try {
+      final res = await http.get(Uri.parse('$hubUrl/api/v1/hub/info'));
+      if (res.statusCode < 400) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final id = body['default_session_id'] as String?;
+        if (id != null && id.trim().isNotEmpty) {
+          return id.trim();
+        }
+      }
+    } catch (_) {
+      // fall through
+    }
+    return 'repair-001';
   }
 
   @override
@@ -261,39 +299,66 @@ class SessionPage extends StatefulWidget {
     required this.hub,
     required this.pairingToken,
     required this.clientId,
+    required this.sessionId,
     super.key,
   });
   final DiscoveredHub hub;
   final String pairingToken;
   final String clientId;
+  final String sessionId;
 
   @override
   State<SessionPage> createState() => _SessionPageState();
 }
 
 class _SessionPageState extends State<SessionPage> {
-  late final WebViewController _controller;
+  WebViewController? _controller;
+  var _ready = false;
 
   @override
   void initState() {
     super.initState();
-    final uri = Uri.parse(widget.hub.url).replace(queryParameters: {
-      'pairing_token': widget.pairingToken,
-      'device_id': widget.clientId,
-      'device_type': 'phone',
-      'device_name': 'Android',
-      'session': 'repair-001',
+    _prepare();
+  }
+
+  Future<void> _prepare() async {
+    final controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted);
+    final origin = widget.hub.url;
+    final identity = jsonEncode({
+      'deviceId': widget.clientId,
+      'pairingToken': widget.pairingToken,
+      'sessionId': widget.sessionId,
+      'deviceType': 'phone',
+      'deviceName': 'Android',
     });
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(uri);
+    await controller.loadRequest(Uri.parse('$origin/favicon.ico'));
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    await controller.runJavaScript('''
+      (function() {
+        const c = $identity;
+        localStorage.setItem('alpilab.device_id', c.deviceId);
+        localStorage.setItem('alpilab.pairing_token', c.pairingToken);
+        localStorage.setItem('alpilab.session_id', c.sessionId);
+        localStorage.setItem('alpilab.device_type', c.deviceType);
+        localStorage.setItem('alpilab.device_name', c.deviceName);
+      })();
+    ''');
+    await controller.loadRequest(Uri.parse('$origin/'));
+    if (!mounted) return;
+    setState(() {
+      _controller = controller;
+      _ready = true;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('RepairSession')),
-      body: WebViewWidget(controller: _controller),
+      body: _ready && _controller != null
+          ? WebViewWidget(controller: _controller!)
+          : const Center(child: CircularProgressIndicator()),
     );
   }
 }

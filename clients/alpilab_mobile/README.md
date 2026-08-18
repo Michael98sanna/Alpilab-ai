@@ -23,7 +23,7 @@ Copia i permessi da `android_overlay/AndroidManifest.xml` (Internet, multicast, 
 1. Local Hub sul PC (ALPILAB AI.exe)
 2. App cerca **Alpilab Negozio** (mDNS, timeout ~6s)
 3. Codice pairing 6 cifre
-4. Token salvato in SharedPreferences per riconnessione
-5. RepairSession `repair-001` via WebView con `pairing_token`
+4. Token e `device_id` salvati in SharedPreferences (stabile tra riavvii)
+5. RepairSession dal Local Hub (`/api/v1/hub/info`), iniettata in localStorage — niente `?session=` / token in pagina
 
 iOS: stesso Dart, build solo su macOS.

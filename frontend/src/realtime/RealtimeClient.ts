@@ -48,11 +48,9 @@ export class RealtimeClient {
     if (this.options.seedDemo) {
       params.set("seed_demo", "true");
     }
-    if (typeof window !== "undefined") {
-      const token = new URLSearchParams(window.location.search).get("pairing_token");
-      if (token) {
-        params.set("pairing_token", token);
-      }
+    const token = this.options.pairingToken;
+    if (token) {
+      params.set("pairing_token", token);
     }
     const url = `${base}/ws/sessions/${encodeURIComponent(this.options.sessionId)}?${params}`;
 

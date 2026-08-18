@@ -74,6 +74,7 @@ export interface RealtimeClientOptions {
   deviceType: DeviceKind;
   deviceName: string;
   seedDemo?: boolean;
+  pairingToken?: string | null;
   onMessage: (msg: WsServerMessage) => void;
   onConnectionChange: (state: import("../config/env").ConnectionState) => void;
 }

@@ -116,6 +116,14 @@ export function mapRealtimeEventToActions(event: RealtimeEventEnvelope): RepairA
         ];
       }
       return [];
+    case "TOOL_EXECUTION_STARTED":
+      return [{ type: "SET_CORE_STATE", state: "WORKING" }];
+    case "TOOL_EXECUTION_COMPLETED": {
+      if (payload.success === true) {
+        return [];
+      }
+      return [{ type: "SET_CORE_STATE", state: "ERROR" }];
+    }
     default:
       return [];
   }

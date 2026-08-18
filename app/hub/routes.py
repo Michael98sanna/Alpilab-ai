@@ -58,13 +58,15 @@ def start_pairing() -> dict:
 
 
 def complete_pairing(body: PairCompleteBody) -> dict:
-    return _pairing().complete(
+    result = _pairing().complete(
         body.code,
         client_id=body.client_id,
         client_type=body.client_type,
         platform=body.platform,
         device_name=body.device_name,
     )
+    result["session_id"] = hub_info()["default_session_id"]
+    return result
 
 
 def list_paired() -> dict:

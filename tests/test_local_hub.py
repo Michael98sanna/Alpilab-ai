@@ -55,9 +55,12 @@ def test_pairing_requires_sqlite(monkeypatch, tmp_path) -> None:
     )
     assert done.status_code == 200
     assert done.json()["status"] == "authorized"
+    assert done.json()["session_id"] == "repair-001"
+    assert "token" in done.json()
     listed = client.get("/api/v1/pairing/clients")
     assert listed.status_code == 200
     assert listed.json()["clients"][0]["device_name"] == "TestPhone"
+    assert "token" not in listed.json()["clients"][0]
     reset_session_store_cache()
 
 

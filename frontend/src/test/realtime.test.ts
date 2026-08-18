@@ -31,6 +31,42 @@ describe("mapEvents", () => {
     expect(actions[0]).toEqual({ type: "SET_CORE_STATE", state: "THINKING" });
   });
 
+  it("maps TOOL_EXECUTION_STARTED to WORKING", () => {
+    const actions = mapRealtimeEventToActions({
+      id: "e-tool-start",
+      repair_session_id: "s1",
+      event_type: "TOOL_EXECUTION_STARTED",
+      payload: { tool_id: "windows.3utools.open" },
+    });
+    expect(actions[0]).toEqual({ type: "SET_CORE_STATE", state: "WORKING" });
+  });
+
+  it("maps TOOL_EXECUTION_COMPLETED failure to ERROR without claiming success", () => {
+    const actions = mapRealtimeEventToActions({
+      id: "e-tool-fail",
+      repair_session_id: "s1",
+      event_type: "TOOL_EXECUTION_COMPLETED",
+      payload: {
+        tool_id: "windows.3utools.open",
+        success: false,
+        error: "TOOL_DISABLED",
+      },
+    });
+    expect(actions).toEqual([{ type: "SET_CORE_STATE", state: "ERROR" }]);
+    expect(JSON.stringify(actions).toLowerCase()).not.toContain("ho aperto");
+  });
+
+  it("does not invent a success chat on TOOL_EXECUTION_COMPLETED", () => {
+    const actions = mapRealtimeEventToActions({
+      id: "e-tool-ok",
+      repair_session_id: "s1",
+      event_type: "TOOL_EXECUTION_COMPLETED",
+      payload: { tool_id: "windows.3utools.open", success: true },
+    });
+    expect(actions).toEqual([]);
+    expect(JSON.stringify(actions).toLowerCase()).not.toContain("ho aperto");
+  });
+
   it("maps session snapshot", () => {
     const snapshot: SessionSnapshot = {
       session: {
