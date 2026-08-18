@@ -31,11 +31,19 @@ HUB_FALLBACK_HTML = """<!DOCTYPE html>
   </p>
   <div id="log"></div>
   <script>
-    const session = "repair-001";
-    const deviceId = "hub-ui-" + Math.random().toString(16).slice(2, 8);
+    const params = new URLSearchParams(location.search);
+    const session = params.get("session") || "repair-001";
+    const pairingToken = params.get("pairing_token") || "";
+    const deviceId = params.get("device_id") || ("hub-ui-" + Math.random().toString(16).slice(2, 8));
+    const deviceType = pairingToken ? (params.get("device_type") || "phone") : "pc";
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = proto + "//" + location.host + "/ws/sessions/" + session
-      + "?device_id=" + deviceId + "&device_type=pc&device_name=HubUI";
+    let wsUrl = proto + "//" + location.host + "/ws/sessions/" + session
+      + "?device_id=" + encodeURIComponent(deviceId)
+      + "&device_type=" + encodeURIComponent(deviceType)
+      + "&device_name=" + encodeURIComponent(params.get("device_name") || "HubUI");
+    if (pairingToken) {
+      wsUrl += "&pairing_token=" + encodeURIComponent(pairingToken);
+    }
     const log = (t) => { document.getElementById("log").textContent += t + "\\n"; };
     fetch("/api/v1/hub/info").then(r => r.json()).then(info => {
       document.getElementById("info").textContent =

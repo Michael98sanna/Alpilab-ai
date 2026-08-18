@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:multicast_dns/multicast_dns.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 void main() => runApp(const AlpilabApp());
@@ -43,7 +45,33 @@ class _HubFinderPageState extends State<HubFinderPage> {
   @override
   void initState() {
     super.initState();
-    _search();
+    _restoreThenSearch();
+  }
+
+  Future<void> _restoreThenSearch() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hubUrl = prefs.getString('hub_url');
+    final token = prefs.getString('pairing_token');
+    final clientId = prefs.getString('client_id');
+    if (hubUrl != null && token != null && clientId != null && mounted) {
+      final uri = Uri.parse(hubUrl);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SessionPage(
+            hub: DiscoveredHub(
+              name: 'Alpilab Negozio',
+              host: uri.host,
+              port: uri.hasPort ? uri.port : 8000,
+            ),
+            pairingToken: token,
+            clientId: clientId,
+          ),
+        ),
+      );
+      return;
+    }
+    await _search();
   }
 
   Future<void> _search() async {
@@ -55,8 +83,13 @@ class _HubFinderPageState extends State<HubFinderPage> {
     final client = MDnsClient();
     try {
       await client.start();
-      await for (final PtrResourceRecord ptr in client.lookup<PtrResourceRecord>(
+      final found = <String>{};
+      final lookup = client.lookup<PtrResourceRecord>(
         ResourceRecordQuery.serverPointer('_alpilab._tcp.local'),
+      );
+      await for (final PtrResourceRecord ptr in lookup.timeout(
+        const Duration(seconds: 6),
+        onTimeout: (sink) => sink.close(),
       )) {
         await for (final SrvResourceRecord srv in client.lookup<SrvResourceRecord>(
           ResourceRecordQuery.service(ptr.domainName),
@@ -70,22 +103,25 @@ class _HubFinderPageState extends State<HubFinderPage> {
               host: ip.address.address,
               port: srv.port,
             );
-            if (!_hubs.any((h) => h.url == hub.url)) {
+            if (found.add(hub.url)) {
               setState(() => _hubs.add(hub));
             }
           }
         }
       }
+    } on TimeoutException {
+      // search window ended
     } catch (e) {
-      setState(() => _status = 'Discovery non disponibile: $e');
+      setState(() => _status = 'Discovery non disponibile. Verifica Wi-Fi e Local Hub.');
     } finally {
       client.stop();
       setState(() {
         _searching = false;
         if (_hubs.isEmpty && !_status.startsWith('Discovery')) {
-          _status = 'Nessun Hub trovato. Verifica Wi-Fi e Local Hub.';
+          _status =
+              'Nessun Hub trovato. Apri ALPILAB AI sul PC e resta sulla stessa Wi-Fi.';
         } else if (_hubs.isNotEmpty) {
-          _status = 'Seleziona un Hub';
+          _status = 'Seleziona Alpilab Negozio';
         }
       });
     }
@@ -112,7 +148,7 @@ class _HubFinderPageState extends State<HubFinderPage> {
                 children: _hubs
                     .map(
                       (hub) => ListTile(
-                        title: Text(hub.name.isEmpty ? 'Alpilab Negozio' : hub.name),
+                        title: const Text('Alpilab Negozio'),
                         subtitle: Text(hub.url),
                         onTap: () => Navigator.push(
                           context,
@@ -146,27 +182,46 @@ class _PairingPageState extends State<PairingPage> {
 
   Future<void> _pair() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final clientId = prefs.getString('client_id') ??
+          'phone-${DateTime.now().millisecondsSinceEpoch}';
       final res = await http.post(
         Uri.parse('${widget.hub.url}/api/v1/pairing/complete'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'code': _code.text.trim(),
+          'client_id': clientId,
           'client_type': 'phone',
           'platform': 'android',
           'device_name': 'Android',
         }),
       );
       if (res.statusCode >= 400) {
-        setState(() => _error = 'Codice non valido');
+        setState(() => _error = 'Codice non valido o scaduto');
         return;
       }
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      final token = body['token'] as String?;
+      if (token == null) {
+        setState(() => _error = 'Pairing incompleto');
+        return;
+      }
+      await prefs.setString('hub_url', widget.hub.url);
+      await prefs.setString('pairing_token', token);
+      await prefs.setString('client_id', body['client_id'] as String? ?? clientId);
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => SessionPage(hub: widget.hub)),
+        MaterialPageRoute(
+          builder: (_) => SessionPage(
+            hub: widget.hub,
+            pairingToken: token,
+            clientId: body['client_id'] as String? ?? clientId,
+          ),
+        ),
       );
     } catch (e) {
-      setState(() => _error = 'Connessione Hub fallita');
+      setState(() => _error = 'Hub non raggiungibile. Resta sulla stessa Wi-Fi del PC.');
     }
   }
 
@@ -178,9 +233,10 @@ class _PairingPageState extends State<PairingPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Text('Hub: ${widget.hub.url}'),
+            const Text('Alpilab Negozio'),
+            Text(widget.hub.url),
             const SizedBox(height: 12),
-            const Text('Inserisci il codice mostrato sul PC (Collega dispositivo).'),
+            const Text('Inserisci il codice a 6 cifre mostrato sul PC.'),
             TextField(
               controller: _code,
               keyboardType: TextInputType.number,
@@ -201,8 +257,15 @@ class _PairingPageState extends State<PairingPage> {
 }
 
 class SessionPage extends StatefulWidget {
-  const SessionPage({required this.hub, super.key});
+  const SessionPage({
+    required this.hub,
+    required this.pairingToken,
+    required this.clientId,
+    super.key,
+  });
   final DiscoveredHub hub;
+  final String pairingToken;
+  final String clientId;
 
   @override
   State<SessionPage> createState() => _SessionPageState();
@@ -214,9 +277,16 @@ class _SessionPageState extends State<SessionPage> {
   @override
   void initState() {
     super.initState();
+    final uri = Uri.parse(widget.hub.url).replace(queryParameters: {
+      'pairing_token': widget.pairingToken,
+      'device_id': widget.clientId,
+      'device_type': 'phone',
+      'device_name': 'Android',
+      'session': 'repair-001',
+    });
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(Uri.parse('${widget.hub.url}/'));
+      ..loadRequest(uri);
   }
 
   @override

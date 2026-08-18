@@ -68,6 +68,13 @@ def load_windows_apps_config(
         ).strip()
         executable = str(file_entry.get("executable", defaults["executable"])).strip()
 
+        if app_id == "3utools" and not executable_path:
+            from pc_agent.windows_apps.discover import discover_3utools_path
+
+            discovered = discover_3utools_path()
+            if discovered:
+                executable_path = discovered
+
         if not executable_path and not enabled:
             continue
 

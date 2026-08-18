@@ -6,9 +6,10 @@ Run:
 """
 
 from contextlib import asynccontextmanager
+import sys
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -97,7 +98,9 @@ async def ws_session(
     device_type: str = Query(..., min_length=1, max_length=32),
     device_name: str = Query("Device", min_length=1, max_length=120),
     seed_demo: bool = Query(False),
+    pairing_token: str | None = Query(None, max_length=256),
 ) -> None:
+    client_host = websocket.client.host if websocket.client else None
     await session_websocket(
         websocket,
         session_id,
@@ -105,6 +108,8 @@ async def ws_session(
         device_type,
         device_name,
         seed_demo=seed_demo,
+        pairing_token=pairing_token,
+        client_host=client_host,
     )
 
 
@@ -216,7 +221,39 @@ def delete_pairing_client(client_id: str) -> dict:
         raise HTTPException(status_code=404, detail=exc.code) from exc
 
 
-FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+@app.post("/api/v1/sessions/{session_id}/photos", tags=["storage"])
+async def upload_session_photo(session_id: str, file: UploadFile = File(...)) -> dict:
+    from app.storage.photos import save_session_photo
+
+    data = await file.read()
+    try:
+        return save_session_photo(session_id, file.filename or "photo.jpg", data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/sessions/{session_id}/photos", tags=["storage"])
+def get_session_photos(session_id: str) -> dict:
+    from app.storage.photos import list_session_photos
+
+    try:
+        return {"photos": list_session_photos(session_id)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _frontend_dist() -> Path:
+    if getattr(sys, "frozen", False):
+        meipass = Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
+        bundled = meipass / "frontend" / "dist"
+        if (bundled / "index.html").is_file():
+            return bundled
+        sidecar = Path(sys.executable).resolve().parent / "frontend" / "dist"
+        return sidecar
+    return Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+
+FRONTEND_DIST = _frontend_dist()
 
 
 def mount_frontend_spa(application: FastAPI) -> None:

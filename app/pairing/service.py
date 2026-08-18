@@ -87,6 +87,6 @@ class PairingService:
         row = self._store.get_paired_client(client_id)
         if row is None or row["revoked"]:
             return False
-        if token and row["token"] != token:
+        if not token or row["token"] != token:
             return False
         return True

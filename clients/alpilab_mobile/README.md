@@ -1,28 +1,29 @@
-# Alpilab Mobile (Flutter)
+# Alpilab Mobile (Flutter) — V0.5.1
 
-Client Android / iOS / tablet per il **Local Hub**.
+## Flutter in questo ambiente
 
-## Stato V0.5
+Il cloud agent **non ha Flutter SDK**. La build APK **non è stata eseguita qui**.
 
-Flutter **non è installato** nell'ambiente di sviluppo cloud. Il codice client è nel repo; la compilazione APK va fatta sul PC con Flutter SDK.
+Sul PC:
 
-```bash
-# https://docs.flutter.dev/get-started/install
-flutter create --platforms=android,ios,windows .
-flutter pub get
-flutter run -d android
+```powershell
+flutter --version
+flutter doctor
+.\scripts\prepare_android_client.ps1
+cd clients\alpilab_mobile
+flutter build apk --debug
 ```
 
-Da eseguire nella cartella `clients/alpilab_mobile` dopo `flutter create` per generare le cartelle `android/` e `ios/` (non versionate qui per evitare una toolchain enorme).
+APK: `build/app/outputs/flutter-apk/app-debug.apk` (installazione manuale, nessun Play Store).
 
-Flusso:
+Copia i permessi da `android_overlay/AndroidManifest.xml` (Internet, multicast, **cleartext HTTP** LAN).
 
-1. Avvia Local Hub sul PC
-2. Apri l'app → cerca `_alpilab._tcp`
-3. Seleziona **Alpilab Negozio**
-4. Inserisci il codice pairing del PC
-5. Entra in RepairSession (WebView verso il Hub)
+## Flusso
 
-iOS è pronto a livello di codice Dart; la build iOS richiede macOS/Xcode.
+1. Local Hub sul PC (ALPILAB AI.exe)
+2. App cerca **Alpilab Negozio** (mDNS, timeout ~6s)
+3. Codice pairing 6 cifre
+4. Token salvato in SharedPreferences per riconnessione
+5. RepairSession `repair-001` via WebView con `pairing_token`
 
-Tablet Android usa lo stesso APK.
+iOS: stesso Dart, build solo su macOS.

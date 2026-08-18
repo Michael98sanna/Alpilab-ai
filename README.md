@@ -316,7 +316,13 @@ python -m local_hub
 - `frontend/` resta come **legacy-dev-web** (UI V0.3.1)
 - Cloud / AI remota: **opzionale** (`LocalAIProvider` stub, MockProvider offline)
 
-Guida: [docs/V0_5_LOCAL_HUB.md](docs/V0_5_LOCAL_HUB.md)
+### V0.5.1 — Installable clients
+
+- Windows: `.\scripts\build_windows_exe.ps1` → `dist\ALPILAB AI.exe`
+- Config utente: `%USERPROFILE%\.alpilab\`
+- Android: Flutter sul PC → `flutter build apk --debug` (SDK non nel CI)
+- Test manuali: [docs/V0_5_1_TEST.md](docs/V0_5_1_TEST.md)
+- Packaging: [docs/V0_5_1_PACKAGING.md](docs/V0_5_1_PACKAGING.md)
 
 ## Cosa è pianificato (prossime fasi)
 

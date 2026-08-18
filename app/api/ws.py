@@ -11,6 +11,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from app.realtime.payloads import WsEnvelope
 from app.realtime.session_manager import realtime_manager
 from app.realtime.state_sync import StateUpdateRejected
+from app.security.client_auth import ClientAuthError, authorize_session_client
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +23,14 @@ async def session_websocket(
     device_type: str,
     device_name: str,
     seed_demo: bool = False,
+    pairing_token: str | None = None,
+    client_host: str | None = None,
 ) -> None:
     """
     WebSocket handler: /ws/sessions/{session_id}
 
-    Query params: device_id, device_type, device_name, seed_demo (optional)
+    Query params: device_id, device_type, device_name, seed_demo, pairing_token (clients).
+    PC Agent uses /ws/agent and is not authorized here.
     """
     await websocket.accept()
 
@@ -34,6 +38,12 @@ async def session_websocket(
         await websocket.send_json(payload)
 
     try:
+        authorize_session_client(
+            host=client_host,
+            device_id=device_id,
+            device_type=device_type,
+            pairing_token=pairing_token,
+        )
         _, snapshot = await realtime_manager.connect_device(
             session_id,
             device_id,
@@ -86,6 +96,16 @@ async def session_websocket(
             if result != "snapshot_sent":
                 await send_json(WsEnvelope(type="ack").model_dump(mode="json"))
 
+    except ClientAuthError as exc:
+        logger.info("Client WS denied device=%s code=%s", device_id, exc.code)
+        try:
+            await send_json(
+                WsEnvelope(type="error", message=exc.code).model_dump(mode="json")
+            )
+        except Exception:
+            pass
+        await websocket.close(code=4401)
+        return
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected session=%s device=%s", session_id, device_id)
     except ValueError as exc:
