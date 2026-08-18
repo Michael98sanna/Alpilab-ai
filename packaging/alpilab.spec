@@ -49,6 +49,10 @@ hidden += [
     "app.realtime.session_state",
     "app.realtime.state_sync",
     "app.realtime.persistence",
+    "app.conversation",
+    "app.conversation.engine",
+    "app.conversation.natural_language_service",
+    "app.conversation.user_messages",
 ]
 
 datas = [

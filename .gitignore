@@ -32,3 +32,8 @@ runtime_data/
 # OS
 .DS_Store
 Thumbs.db
+
+# PyInstaller
+/dist/
+/build/
+
