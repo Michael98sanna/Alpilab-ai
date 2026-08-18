@@ -7,12 +7,16 @@ Set-Location $RepoRoot
 
 Write-Host "[1] Build UI (always, so EXE is not stuck with a stale VITE_WS_URL)..." -ForegroundColor Yellow
 Push-Location frontend
-if (-not (Test-Path "node_modules")) { npm install }
+# Incomplete node_modules on Windows often miss @types/react; always install.
+npm install
+if ($LASTEXITCODE -ne 0) { Pop-Location; exit $LASTEXITCODE }
 # Process env wins over leftover .env (cloudflare tunnels, etc.).
 $env:VITE_APP_MODE = "realtime"
 $env:VITE_API_URL = "http://127.0.0.1:8000"
 $env:VITE_WS_URL = "ws://127.0.0.1:8000"
-npm run build
+# Vite only: tsc --noEmit fails on Windows if @types are missing and must not
+# block packaging. Dev/CI still use `npm run build` (tsc + vite).
+npx vite build
 if ($LASTEXITCODE -ne 0) { Pop-Location; exit $LASTEXITCODE }
 Pop-Location
 
