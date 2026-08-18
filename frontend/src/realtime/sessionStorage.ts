@@ -22,9 +22,16 @@ function detectDeviceName(type: DeviceKind): string {
 export function loadOrCreateDeviceId(): string {
   const existing = localStorage.getItem(DEVICE_KEY);
   if (existing) return existing;
-  const id = `device-${crypto.randomUUID().slice(0, 8)}`;
+  const id = `device-${createId()}`;
   localStorage.setItem(DEVICE_KEY, id);
   return id;
+}
+
+function createId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID().slice(0, 8);
+  }
+  return Math.random().toString(16).slice(2, 10);
 }
 
 export function loadDeviceType(): DeviceKind {
@@ -51,7 +58,7 @@ export function loadSessionId(fallback?: string | null): string {
   }
   const stored = localStorage.getItem(SESSION_KEY);
   if (stored) return stored;
-  const generated = `repair-${crypto.randomUUID().slice(0, 8)}`;
+  const generated = `repair-${createId()}`;
   saveSessionId(generated);
   return generated;
 }
