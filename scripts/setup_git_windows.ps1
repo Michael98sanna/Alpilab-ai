@@ -8,7 +8,7 @@
 
 $ErrorActionPreference = "Stop"
 $RepoUrl = "https://github.com/Michael98sanna/Alpilab-ai.git"
-$Branch = "cursor/pc-agent-v0-4"
+$Branch = "cursor/native-local-v0-5-1"
 
 Write-Host "`n=== ALPILAB — Setup GitHub Windows ===" -ForegroundColor Cyan
 
@@ -79,8 +79,8 @@ if ($gitDir) {
     Write-Host "[OK] Remote origin impostato (senza token nell'URL)" -ForegroundColor Green
     git fetch origin 2>&1 | ForEach-Object { Write-Host $_ }
     git checkout $Branch 2>$null
-    git pull origin $Branch 2>&1 | ForEach-Object { Write-Host $_ }
-    Write-Host "[OK] Branch: $Branch" -ForegroundColor Green
+    git reset --hard "origin/$Branch"
+    Write-Host "[OK] Cartella allineata a origin/$Branch" -ForegroundColor Green
     Write-Host "`nUltimo commit:" -ForegroundColor Gray
     git log -1 --oneline
 } else {

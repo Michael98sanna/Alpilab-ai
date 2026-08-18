@@ -60,17 +60,33 @@ Se vedi un hash commit → **GitHub funziona**.
 cd C:\Users\michael\Desktop
 gh repo clone Michael98sanna/Alpilab-ai
 cd Alpilab-ai
-git checkout cursor/pc-agent-v0-4
+git checkout cursor/native-local-v0-5-1
 ```
 
-### 4. Aggiornare (ogni volta che cambi PC)
+### 4. Aggiornare l'intera cartella (metodo semplice)
+
+Doppio click su `Aggiorna da GitHub.bat` nella root del repo.
+
+Oppure da PowerShell, **nella cartella del progetto**:
+
+```powershell
+.\scripts\sync_from_github.ps1
+```
+
+Equivale a: tutta la cartella Git = GitHub (`cursor/native-local-v0-5-1`).  
+Non tocca `%USERPROFILE%\.alpilab\` (config, SQLite, log).
+
+A mano:
 
 ```powershell
 cd C:\Users\michael\Desktop\Alpilab-ai
 git fetch origin
-git checkout cursor/pc-agent-v0-4
-git pull origin cursor/pc-agent-v0-4
+git checkout cursor/native-local-v0-5-1
+git reset --hard origin/cursor/native-local-v0-5-1
+git log -1 --oneline
 ```
+
+`git log -1 --oneline` deve mostrare il branch `cursor/native-local-v0-5-1` (fix uvicorn / sync, non più `ca5bbe9`).
 
 ---
 
@@ -117,7 +133,7 @@ Host github.com
 ```powershell
 git clone git@github.com:Michael98sanna/Alpilab-ai.git
 cd Alpilab-ai
-git checkout cursor/pc-agent-v0-4
+git checkout cursor/native-local-v0-5-1
 ```
 
 ---
@@ -178,18 +194,21 @@ git config --global credential.helper manager
 
 ---
 
-## Branch da usare per i test V0.4
+## Branch da usare per i test V0.5.1
 
 ```powershell
-git checkout cursor/pc-agent-v0-4
-git pull origin cursor/pc-agent-v0-4
+.\scripts\sync_from_github.ps1
 ```
 
-Ultimo commit atteso (V0.4 + script test): controlla con:
+oppure:
 
 ```powershell
+git checkout cursor/native-local-v0-5-1
+git reset --hard origin/cursor/native-local-v0-5-1
 git log -1 --oneline
 ```
+
+(Il branch V0.4 `cursor/pc-agent-v0-4` resta su GitHub, ma non è quello da usare ora.)
 
 ---
 
@@ -210,7 +229,7 @@ PC A (casa)                    GitHub                    PC B (lavoro)
 **Sempre prima di lavorare:**
 
 ```powershell
-git pull origin cursor/pc-agent-v0-4
+git pull origin cursor/native-local-v0-5-1
 ```
 
 **Prima di cambiare PC:**
@@ -218,7 +237,7 @@ git pull origin cursor/pc-agent-v0-4
 ```powershell
 git add -A
 git commit -m "descrizione"
-git push origin cursor/pc-agent-v0-4
+git push origin cursor/native-local-v0-5-1
 ```
 
 ---
@@ -240,10 +259,10 @@ git push origin cursor/pc-agent-v0-4
 
 Se Git non funziona affatto:
 
-1. Apri https://github.com/Michael98sanna/Alpilab-ai
-2. Branch `cursor/pc-agent-v0-4`
+1. Apri https://github.com/Michael98sanna/Alpilab-ai/tree/cursor/native-local-v0-5-1
+2. Branch `cursor/native-local-v0-5-1`
 3. **Code → Download ZIP**
-4. Estrai in `Desktop\Alpilab-ai`
+4. Estrai e sostituisci il contenuto di `Desktop\Alpilab-ai` (tieni fuori `.venv` se vuoi)
 
 Per i test va bene, ma **non puoi pushare** finché non sistemi Git.
 
@@ -255,4 +274,5 @@ Dalla root repo:
 
 ```powershell
 .\scripts\setup_git_windows.ps1
+.\scripts\sync_from_github.ps1
 ```
