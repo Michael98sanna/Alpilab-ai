@@ -28,7 +28,12 @@ def pairing_enforced() -> bool:
 def is_loopback_host(host: str | None) -> bool:
     if not host:
         return False
-    return host.split("%")[0].lower() in LOOPBACK_HOSTS
+    h = host.split("%")[0].lower().strip("[]")
+    if h in LOOPBACK_HOSTS:
+        return True
+    if h.startswith("::ffff:"):
+        return h.split("::ffff:", 1)[1] in LOOPBACK_HOSTS
+    return False
 
 
 def is_local_hub_ui(host: str | None, device_type: str) -> bool:

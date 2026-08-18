@@ -9,6 +9,7 @@ vi.mock("../config/env", () => ({
   getSessionIdFromUrl: () => null,
   getApiBaseUrl: () => "http://127.0.0.1:8000",
   getWsBaseUrl: () => "ws://127.0.0.1:8000",
+  isLoopbackHost: () => true,
 }));
 
 function renderHome() {

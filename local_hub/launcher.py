@@ -199,6 +199,27 @@ def _run_agent_mode() -> None:
     agent_main()
 
 
+def _wait_hub_ready(port: int, timeout: float = 20.0) -> None:
+    """Block until GET /health succeeds. No fixed sleep."""
+    import urllib.error
+    import urllib.request
+
+    url = f"http://127.0.0.1:{port}/health"
+    deadline = time.time() + timeout
+    last_error = "timeout"
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=1.0) as response:
+                if response.status == 200:
+                    logger.info("Local Hub health OK at %s", url)
+                    return
+                last_error = f"HTTP {response.status}"
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            last_error = str(exc)
+        time.sleep(0.1)
+    raise RuntimeError(f"Local Hub health check failed: {last_error}")
+
+
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
     if "--agent" in argv:
@@ -253,6 +274,7 @@ def main(argv: list[str] | None = None) -> None:
     deadline = time.time() + 15
     while not getattr(server, "started", False) and time.time() < deadline:
         time.sleep(0.1)
+    _wait_hub_ready(port)
 
     logger.info("Local Hub listening on http://127.0.0.1:%s", port)
     logger.info("LAN URL: %s", advertiser.lan_url)
@@ -262,6 +284,7 @@ def main(argv: list[str] | None = None) -> None:
 
     agent_proc = _start_pc_agent()
     ui_url = f"http://127.0.0.1:{port}/"
+    logger.info("WebView URL: %s", ui_url)
 
     try:
         if args.no_ui or not cfg.get("start_ui", True):

@@ -10,6 +10,7 @@ export type ConnectionState =
 const DEFAULT_WS = "ws://127.0.0.1:8000";
 const DEFAULT_API = "http://127.0.0.1:8000";
 const BACKEND_PORT = "8000";
+const VITE_DEV_PORT = "5173";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined" && Boolean(window.location);
@@ -17,6 +18,22 @@ function isBrowser(): boolean {
 
 export function isLoopbackHost(hostname: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
+export function isViteDevPort(port: string): boolean {
+  return port === VITE_DEV_PORT;
+}
+
+export function hubOriginFromLocation(
+  hostname: string,
+  port: string,
+  protocol: string,
+): string {
+  const httpProto = protocol === "https:" ? "https:" : "http:";
+  if (!port) {
+    return `${httpProto}//${hostname}`;
+  }
+  return `${httpProto}//${hostname}:${port}`;
 }
 
 export function backendHttpFromLocation(
@@ -48,14 +65,13 @@ export function resolveBackendHttpUrl(): string {
   if (!isBrowser()) {
     return import.meta.env.VITE_API_URL || DEFAULT_API;
   }
-  if (isLoopbackHost(window.location.hostname)) {
-    return import.meta.env.VITE_API_URL || DEFAULT_API;
+  const { hostname, port, protocol } = window.location;
+  // Vite dev only. EXE / Local Hub UI must use the page origin, never a baked
+  // VITE_WS_URL (tunnel/cloudflare leftover in frontend/dist).
+  if (isViteDevPort(port)) {
+    return backendHttpFromLocation(hostname, port, protocol);
   }
-  return backendHttpFromLocation(
-    window.location.hostname,
-    window.location.port,
-    window.location.protocol,
-  );
+  return hubOriginFromLocation(hostname, port, protocol);
 }
 
 export function resolveBackendWsUrl(): string {
@@ -68,17 +84,11 @@ export function getAppMode(): AppMode {
 }
 
 export function getApiBaseUrl(): string {
-  if (getAppMode() === "realtime" && isBrowser() && !isLoopbackHost(window.location.hostname)) {
-    return resolveBackendHttpUrl();
-  }
-  return import.meta.env.VITE_API_URL || DEFAULT_API;
+  return resolveBackendHttpUrl();
 }
 
 export function getWsBaseUrl(): string {
-  if (getAppMode() === "realtime" && isBrowser() && !isLoopbackHost(window.location.hostname)) {
-    return resolveBackendWsUrl();
-  }
-  return import.meta.env.VITE_WS_URL || DEFAULT_WS;
+  return resolveBackendWsUrl();
 }
 
 export function getSessionIdFromUrl(): string | null {

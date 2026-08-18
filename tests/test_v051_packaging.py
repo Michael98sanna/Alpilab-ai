@@ -69,6 +69,8 @@ def test_discover_ignores_other_exe(tmp_path, monkeypatch) -> None:
 
 def test_loopback_pc_ui_skips_pairing() -> None:
     assert is_local_hub_ui("127.0.0.1", "pc")
+    assert is_local_hub_ui("::ffff:127.0.0.1", "pc")
+    assert is_local_hub_ui("::1", "pc")
     assert not is_local_hub_ui("127.0.0.1", "phone")
     assert not is_local_hub_ui("192.168.1.10", "pc")
 

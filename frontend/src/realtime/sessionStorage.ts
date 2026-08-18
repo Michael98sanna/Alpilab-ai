@@ -1,4 +1,5 @@
 import type { DeviceKind } from "../types";
+import { isLoopbackHost } from "../config/env";
 
 const SESSION_KEY = "alpilab.session_id";
 const DEVICE_KEY = "alpilab.device_id";
@@ -35,6 +36,9 @@ function createId(): string {
 }
 
 export function loadDeviceType(): DeviceKind {
+  if (typeof window !== "undefined" && isLoopbackHost(window.location.hostname)) {
+    return "pc";
+  }
   const stored = localStorage.getItem(DEVICE_TYPE_KEY) as DeviceKind | null;
   if (stored === "pc" || stored === "phone" || stored === "tablet") return stored;
   const detected = detectDeviceType();

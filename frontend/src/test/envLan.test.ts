@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { backendHttpFromLocation, httpToWs } from "../config/env";
+import {
+  backendHttpFromLocation,
+  hubOriginFromLocation,
+  httpToWs,
+  isViteDevPort,
+} from "../config/env";
 
 describe("LAN backend URL resolution", () => {
   it("maps hotspot IP on Vite :5173 to backend :8000", () => {
@@ -19,5 +24,14 @@ describe("LAN backend URL resolution", () => {
     expect(backendHttpFromLocation("localhost", "5173", "http:")).toBe(
       "http://127.0.0.1:8000",
     );
+  });
+
+  it("uses page origin for Local Hub / EXE (not a baked tunnel URL)", () => {
+    expect(hubOriginFromLocation("127.0.0.1", "8000", "http:")).toBe(
+      "http://127.0.0.1:8000",
+    );
+    expect(httpToWs("http://127.0.0.1:8000")).toBe("ws://127.0.0.1:8000");
+    expect(isViteDevPort("8000")).toBe(false);
+    expect(isViteDevPort("5173")).toBe(true);
   });
 });

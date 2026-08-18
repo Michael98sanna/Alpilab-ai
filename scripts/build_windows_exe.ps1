@@ -5,18 +5,16 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
 
-if (-not (Test-Path "frontend\dist\index.html")) {
-    Write-Host "[1] Build UI (legacy frontend bundled into EXE)..." -ForegroundColor Yellow
-    Push-Location frontend
-    if (-not (Test-Path "node_modules")) { npm install }
-    @"
-VITE_APP_MODE=realtime
-VITE_API_URL=http://127.0.0.1:8000
-VITE_WS_URL=ws://127.0.0.1:8000
-"@ | Set-Content -Path .env -Encoding ascii
-    npm run build
-    Pop-Location
-}
+Write-Host "[1] Build UI (always, so EXE is not stuck with a stale VITE_WS_URL)..." -ForegroundColor Yellow
+Push-Location frontend
+if (-not (Test-Path "node_modules")) { npm install }
+# Process env wins over leftover .env (cloudflare tunnels, etc.).
+$env:VITE_APP_MODE = "realtime"
+$env:VITE_API_URL = "http://127.0.0.1:8000"
+$env:VITE_WS_URL = "ws://127.0.0.1:8000"
+npm run build
+if ($LASTEXITCODE -ne 0) { Pop-Location; exit $LASTEXITCODE }
+Pop-Location
 
 Write-Host "[2] PyInstaller..." -ForegroundColor Yellow
 # python -m so Scripts\ need not be on PATH. --distpath/--workpath keep output
