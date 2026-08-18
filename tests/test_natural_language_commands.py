@@ -265,6 +265,64 @@ async def test_handle_user_message_triggers_execution(tmp_path, monkeypatch) -> 
     assert "verrebbe avviato" in assistant_msgs[0].content.lower()
 
 
+@pytest.mark.asyncio
+async def test_handle_user_message_failure_does_not_claim_success(
+    tmp_path, monkeypatch
+) -> None:
+    from datetime import datetime, timezone
+
+    from app.agent.payloads import AgentCapabilities, ResultEnvelope
+    from app.agent.registry import RegisteredAgent
+    from app.conversation import natural_language_service as nls_mod
+    from app.conversation.natural_language_service import NaturalLanguageCommandService
+    from app.realtime.session_manager import RealtimeSessionManager
+
+    _setup_3utools_dry_run(tmp_path)
+    rt = RealtimeSessionManager()
+    rt.create_session("repair-nl-fail", seed_demo=False)
+    agent_registry.register(
+        RegisteredAgent(
+            agent_id="agent-test-01",
+            session_id="repair-nl-fail",
+            agent_name="PC",
+            platform="windows",
+            agent_version="0.4.0",
+            capabilities=AgentCapabilities(windows_apps=True, safe_test=True),
+            status="ONLINE",
+            connected_at=datetime.now(timezone.utc),
+            last_seen=datetime.now(timezone.utc),
+            send_json=lambda x: None,
+        )
+    )
+
+    async def mock_execute(session_id, agent_id, tool_id, arguments=None, **kwargs):
+        return ResultEnvelope(
+            request_id="req-nl-fail",
+            command_id="cmd-nl-fail",
+            agent_id=agent_id,
+            tool_id=tool_id,
+            success=False,
+            result={},
+            error="TOOL_DISABLED",
+            timestamp="2026-01-01T00:00:00+00:00",
+        )
+
+    monkeypatch.setattr(nls_mod.tool_execution_service, "execute_tool", mock_execute)
+    from app.realtime import session_manager as sm_mod
+
+    monkeypatch.setattr(sm_mod, "realtime_manager", rt)
+
+    await NaturalLanguageCommandService().handle_user_message(
+        "repair-nl-fail", "phone-01", "Aprimi 3uTools"
+    )
+    session = rt.get_session("repair-nl-fail")
+    assert session is not None
+    assistant_msgs = [m for m in session.messages if m.role == "assistant"]
+    assert len(assistant_msgs) == 1
+    assert "ho aperto 3utools" not in assistant_msgs[0].content.lower()
+    assert "disabilitato" in assistant_msgs[0].content.lower()
+
+
 def test_e2e_conversation_no_tool_dispatch(client: TestClient, tmp_path) -> None:
     _setup_3utools_dry_run(tmp_path)
     session_id = "repair-nl-conv"

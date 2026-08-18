@@ -246,17 +246,11 @@ class NaturalLanguageCommandService:
             )
             return
 
-        dry_run = result.result.get("mode") == "dry_run"
-        msg = success_message(dry_run=dry_run)
-        logger.info(
-            "[RESULT] success=%s tool=%s summary=%s",
-            result.success,
-            tool_id,
-            msg,
-        )
-        logger.info("[TOOL] %s", tool_id)
-
         if result.success:
+            dry_run = result.result.get("mode") == "dry_run"
+            msg = success_message(dry_run=dry_run)
+            logger.info("[RESULT] success=True tool=%s summary=%s", tool_id, msg)
+            logger.info("[TOOL] %s", tool_id)
             await self._reply(realtime_manager, session_id, device_id, msg)
             await realtime_manager.set_assistant_status(
                 session_id,
@@ -266,16 +260,21 @@ class NaturalLanguageCommandService:
             await realtime_manager.set_assistant_status(
                 session_id, "IDLE", source_device_id=device_id
             )
-        else:
-            await self._reply(
-                realtime_manager,
-                session_id,
-                device_id,
-                error_message(result.error or "TOOL_EXECUTION_FAILED"),
-            )
-            await realtime_manager.set_assistant_status(
-                session_id, "ERROR", source_device_id=device_id
-            )
+            return
+
+        code = result.error or "TOOL_EXECUTION_FAILED"
+        msg = error_message(code)
+        logger.info(
+            "[RESULT] success=False tool=%s error=%s summary=%s",
+            tool_id,
+            code,
+            msg,
+        )
+        logger.info("[TOOL] %s", tool_id)
+        await self._reply(realtime_manager, session_id, device_id, msg)
+        await realtime_manager.set_assistant_status(
+            session_id, "ERROR", source_device_id=device_id
+        )
 
     async def _reply(self, realtime_manager, session_id: str, device_id: str, content: str) -> None:
         await realtime_manager.add_chat_message(
