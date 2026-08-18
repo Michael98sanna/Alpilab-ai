@@ -7,10 +7,25 @@
 # - 3uTools installato sul PC lavoro (per test reale)
 
 ## 1. Clone + branch
+
+> **GitHub non funziona?** Esegui prima: `.\scripts\setup_git_windows.ps1`  
+> Guida: [docs/GIT_SETUP.md](../docs/GIT_SETUP.md)
+
+```powershell
 cd C:\Users\michael\Desktop
+gh repo clone Michael98sanna/Alpilab-ai
+cd Alpilab-ai
+git checkout cursor/pc-agent-v0-4
+git pull origin cursor/pc-agent-v0-4
+```
+
+Alternativa senza `gh`:
+
+```powershell
 git clone https://github.com/Michael98sanna/Alpilab-ai.git
 cd Alpilab-ai
 git checkout cursor/pc-agent-v0-4
+```
 python -m pip install -r requirements.txt
 cd frontend
 npm install
