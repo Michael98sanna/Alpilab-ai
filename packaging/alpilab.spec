@@ -86,6 +86,8 @@ exe = EXE(
     upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
+    # Windowed GUI (no black console). stdio may be None; launcher log_config
+    # must not use uvicorn DefaultFormatter / isatty().
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,

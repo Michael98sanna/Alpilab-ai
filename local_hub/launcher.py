@@ -10,6 +10,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import Any, TextIO
 
 import uvicorn
 
@@ -18,6 +19,92 @@ from local_hub.paths import is_frozen, log_dir, sqlite_path
 from local_hub.user_config import load_hub_config
 
 logger = logging.getLogger("alpilab.local_hub")
+
+
+def _writable_stdio() -> TextIO | None:
+    """Return a real stdio stream, or None in a windowed frozen EXE."""
+    for candidate in (sys.stderr, sys.stdout):
+        if candidate is not None and callable(getattr(candidate, "write", None)):
+            return candidate
+    return None
+
+
+def hub_uvicorn_log_config(log_path: Path) -> dict[str, Any]:
+    """Uvicorn logging that does not call isatty() on None stdio.
+
+    Windowed PyInstaller sets sys.stdout/sys.stderr to None. Uvicorn's
+    DefaultFormatter then crashes in ColourizedFormatter.__init__.
+    Use stdlib Formatter + FileHandler (hub.log); attach a console
+    handler only when a real stream exists.
+    """
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    handlers: dict[str, Any] = {
+        "file": {
+            "class": "logging.FileHandler",
+            "formatter": "default",
+            "filename": str(log_path),
+            "encoding": "utf-8",
+        },
+        "access_file": {
+            "class": "logging.FileHandler",
+            "formatter": "access",
+            "filename": str(log_path),
+            "encoding": "utf-8",
+        },
+    }
+    error_handlers = ["file"]
+    access_handlers = ["access_file"]
+    stream = _writable_stdio()
+    if stream is not None:
+        handlers["console"] = {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+            "stream": stream,
+        }
+        error_handlers.append("console")
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {
+                "()": "logging.Formatter",
+                "fmt": "[ALPILAB-HUB] %(levelname)s %(message)s",
+            },
+            "access": {
+                "()": "logging.Formatter",
+                "fmt": "[ALPILAB-HUB] %(message)s",
+            },
+        },
+        "handlers": handlers,
+        "loggers": {
+            "uvicorn": {"handlers": error_handlers, "level": "INFO", "propagate": False},
+            "uvicorn.error": {
+                "handlers": error_handlers,
+                "level": "INFO",
+                "propagate": False,
+            },
+            "uvicorn.access": {
+                "handlers": access_handlers,
+                "level": "INFO",
+                "propagate": False,
+            },
+        },
+    }
+
+
+def _configure_hub_logging(log_path: Path) -> None:
+    handlers: list[logging.Handler] = [
+        logging.FileHandler(log_path, encoding="utf-8"),
+    ]
+    stream = _writable_stdio()
+    if stream is not None:
+        handlers.append(logging.StreamHandler(stream))
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[ALPILAB-HUB] %(message)s",
+        handlers=handlers,
+        force=True,
+    )
 
 
 def _configure_local_env(host: str, port: int, session_id: str) -> None:
@@ -135,14 +222,7 @@ def main(argv: list[str] | None = None) -> None:
     session_id = str(cfg.get("default_session_id") or "repair-001")
 
     log_path = log_dir() / "hub.log"
-    logging.basicConfig(
-        level=logging.INFO,
-        format="[ALPILAB-HUB] %(message)s",
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler(log_path, encoding="utf-8"),
-        ],
-    )
+    _configure_hub_logging(log_path)
     _configure_local_env(host, port, session_id)
     _ensure_windows_apps_file()
     if args.no_agent or not cfg.get("start_pc_agent", True):
@@ -156,12 +236,15 @@ def main(argv: list[str] | None = None) -> None:
     if not args.no_mdns and cfg.get("start_mdns", True):
         advertiser.start()
 
+    # Do not pass use_colors: uvicorn would inject it into formatters.
+    # Keep console=False in the spec; logging goes to hub.log without a TTY.
     config = uvicorn.Config(
         "app.main:app",
         host=host,
         port=port,
         log_level="info",
         lifespan="on",
+        log_config=hub_uvicorn_log_config(log_path),
     )
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, daemon=True)
