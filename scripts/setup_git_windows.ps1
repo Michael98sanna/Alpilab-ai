@@ -8,7 +8,7 @@
 
 $ErrorActionPreference = "Stop"
 $RepoUrl = "https://github.com/Michael98sanna/Alpilab-ai.git"
-$Branch = "cursor/native-local-v0-5-1"
+$Branch = "main"
 
 Write-Host "`n=== ALPILAB — Setup GitHub Windows ===" -ForegroundColor Cyan
 

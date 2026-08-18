@@ -13,7 +13,7 @@
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
-$Branch = "cursor/native-local-v0-5-1"
+$Branch = "main"
 $RepoUrl = "https://github.com/Michael98sanna/Alpilab-ai.git"
 
 Set-Location $RepoRoot

@@ -60,7 +60,7 @@ Se vedi un hash commit → **GitHub funziona**.
 cd C:\Users\michael\Desktop
 gh repo clone Michael98sanna/Alpilab-ai
 cd Alpilab-ai
-git checkout cursor/native-local-v0-5-1
+git checkout main
 ```
 
 ### 4. Aggiornare l'intera cartella (metodo semplice)
@@ -73,7 +73,7 @@ Oppure da PowerShell, **nella cartella del progetto**:
 .\scripts\sync_from_github.ps1
 ```
 
-Equivale a: tutta la cartella Git = GitHub (`cursor/native-local-v0-5-1`).  
+Equivale a: tutta la cartella Git = GitHub (`main`).  
 Non tocca `%USERPROFILE%\.alpilab\` (config, SQLite, log).
 
 A mano:
@@ -81,12 +81,12 @@ A mano:
 ```powershell
 cd C:\Users\michael\Desktop\Alpilab-ai
 git fetch origin
-git checkout cursor/native-local-v0-5-1
-git reset --hard origin/cursor/native-local-v0-5-1
+git checkout main
+git reset --hard origin/main
 git log -1 --oneline
 ```
 
-`git log -1 --oneline` deve mostrare il branch `cursor/native-local-v0-5-1` (fix uvicorn / sync, non più `ca5bbe9`).
+`git log -1 --oneline` deve mostrare il branch `main` (fix uvicorn / sync, non più `ca5bbe9`).
 
 ---
 
@@ -133,7 +133,7 @@ Host github.com
 ```powershell
 git clone git@github.com:Michael98sanna/Alpilab-ai.git
 cd Alpilab-ai
-git checkout cursor/native-local-v0-5-1
+git checkout main
 ```
 
 ---
@@ -203,8 +203,8 @@ git config --global credential.helper manager
 oppure:
 
 ```powershell
-git checkout cursor/native-local-v0-5-1
-git reset --hard origin/cursor/native-local-v0-5-1
+git checkout main
+git reset --hard origin/main
 git log -1 --oneline
 ```
 
@@ -229,7 +229,7 @@ PC A (casa)                    GitHub                    PC B (lavoro)
 **Sempre prima di lavorare:**
 
 ```powershell
-git pull origin cursor/native-local-v0-5-1
+git pull origin main
 ```
 
 **Prima di cambiare PC:**
@@ -237,7 +237,7 @@ git pull origin cursor/native-local-v0-5-1
 ```powershell
 git add -A
 git commit -m "descrizione"
-git push origin cursor/native-local-v0-5-1
+git push origin main
 ```
 
 ---
@@ -259,8 +259,8 @@ git push origin cursor/native-local-v0-5-1
 
 Se Git non funziona affatto:
 
-1. Apri https://github.com/Michael98sanna/Alpilab-ai/tree/cursor/native-local-v0-5-1
-2. Branch `cursor/native-local-v0-5-1`
+1. Apri https://github.com/Michael98sanna/Alpilab-ai/tree/main
+2. Branch `main`
 3. **Code → Download ZIP**
 4. Estrai e sostituisci il contenuto di `Desktop\Alpilab-ai` (tieni fuori `.venv` se vuoi)
 
