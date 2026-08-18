@@ -6,9 +6,12 @@ Run:
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, Query, WebSocket
+from fastapi import FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes.agents import (
     AgentStatusResponse,
@@ -151,6 +154,30 @@ class GenerateBody(BaseModel):
 def ai_generate(body: GenerateBody) -> dict:
     response = generate_text(AIRequest(prompt=body.prompt))
     return response.model_dump(mode="json")
+
+
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+
+def mount_frontend_spa(application: FastAPI) -> None:
+    """Serve the built frontend from / so phones only need port 8000."""
+    if not FRONTEND_DIST.is_dir() or not (FRONTEND_DIST / "index.html").is_file():
+        return
+    assets_dir = FRONTEND_DIST / "assets"
+    if assets_dir.is_dir():
+        application.mount("/assets", StaticFiles(directory=assets_dir), name="spa-assets")
+
+    @application.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str) -> FileResponse:
+        if full_path.startswith(("api/", "ws/", "docs", "openapi.json", "redoc")):
+            raise HTTPException(status_code=404)
+        candidate = FRONTEND_DIST / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+
+mount_frontend_spa(app)
 
 
 def get_registered_routes() -> list[tuple[str, str, str]]:

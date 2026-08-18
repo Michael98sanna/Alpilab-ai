@@ -5,8 +5,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: true,
-    // Consente tunnel (localtunnel, ngrok) per test da smartphone
+    host: "0.0.0.0",
+    strictPort: true,
+    // Consente accesso da smartphone via IP LAN e tunnel
     allowedHosts: true,
   },
   test: {
