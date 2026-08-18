@@ -2,12 +2,8 @@
 # Requires: pip install -r requirements.txt -r requirements-desktop.txt
 
 $ErrorActionPreference = "Stop"
-Set-Location (Split-Path -Parent $PSScriptRoot)
-
-if (-not (Get-Command pyinstaller -ErrorAction SilentlyContinue)) {
-    Write-Host "PyInstaller non trovato. Installa: python -m pip install -r requirements-desktop.txt" -ForegroundColor Red
-    exit 1
-}
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+Set-Location $RepoRoot
 
 if (-not (Test-Path "frontend\dist\index.html")) {
     Write-Host "[1] Build UI (legacy frontend bundled into EXE)..." -ForegroundColor Yellow
@@ -23,6 +19,21 @@ VITE_WS_URL=ws://127.0.0.1:8000
 }
 
 Write-Host "[2] PyInstaller..." -ForegroundColor Yellow
-pyinstaller --noconfirm --clean packaging\alpilab.spec
-Write-Host "Output: dist\ALPILAB AI.exe" -ForegroundColor Green
+# python -m so Scripts\ need not be on PATH. --distpath/--workpath keep output
+# at repo root even though the spec lives under packaging\.
+python -m PyInstaller --noconfirm --clean `
+    --distpath (Join-Path $RepoRoot "dist") `
+    --workpath (Join-Path $RepoRoot "build") `
+    (Join-Path $RepoRoot "packaging\alpilab.spec")
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+$exe = Join-Path $RepoRoot "dist\ALPILAB AI.exe"
+if (-not (Test-Path $exe)) {
+    Write-Host "Build failed: $exe not found" -ForegroundColor Red
+    exit 1
+}
+$info = Get-Item $exe
+Write-Host "Output: $($info.FullName)" -ForegroundColor Green
+Write-Host ("Size: {0:N0} bytes" -f $info.Length)
+Write-Host "Timestamp: $($info.LastWriteTime)"
 Write-Host "Config utente: %USERPROFILE%\.alpilab\" -ForegroundColor Gray

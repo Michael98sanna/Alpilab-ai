@@ -95,6 +95,7 @@ def _open_desktop(url: str) -> None:
             url,
         )
         return
+    logger.info("Opening embedded WebView at %s (not Chrome)", url)
     webview.create_window(
         "ALPILAB AI",
         url,
@@ -173,6 +174,8 @@ def main(argv: list[str] | None = None) -> None:
     logger.info("Local Hub listening on http://127.0.0.1:%s", port)
     logger.info("LAN URL: %s", advertiser.lan_url)
     logger.info("Default session: %s", session_id)
+    logger.info("SQLite: %s", sqlite_path())
+    logger.info("User data: %s", Path.home() / ".alpilab")
 
     agent_proc = _start_pc_agent()
     ui_url = f"http://127.0.0.1:{port}/"

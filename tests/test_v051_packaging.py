@@ -18,6 +18,7 @@ from app.session.factory import reset_session_store_cache
 from app.session.sqlite_store import SQLiteSessionStore
 from local_hub.paths import ensure_user_layout, is_frozen
 from local_hub.user_config import DEFAULT_CONFIG, load_hub_config
+from pc_agent.windows_apps.config import DEFAULT_CONFIG_PATH
 from pc_agent.windows_apps.discover import KNOWN_3UTOOLS_NAME, discover_3utools_path
 
 
@@ -139,3 +140,39 @@ def test_hub_info_still_ok() -> None:
     res = client.get("/api/v1/hub/info")
     assert res.status_code == 200
     assert res.json()["default_session_id"] == "repair-001"
+
+
+def test_spec_paths_survive_packaging_cwd() -> None:
+    """PyInstaller runs the spec with CWD=packaging/; relative local_hub/ would miss."""
+    repo = Path(__file__).resolve().parent.parent
+    spec = (repo / "packaging" / "alpilab.spec").read_text(encoding="utf-8")
+    assert "SPECPATH" in spec
+    assert "local_hub" in spec
+    packaging = repo / "packaging"
+    assert not (packaging / "local_hub" / "__main__.py").exists()
+    assert (repo / "local_hub" / "__main__.py").is_file()
+    assert (repo / "frontend" / "dist" / "index.html").is_file()
+    assert (repo / "pc_agent" / "windows_apps.json.example").is_file()
+
+
+def test_user_data_independent_of_cwd(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    layout_root = tmp_path / "home" / ".alpilab"
+    monkeypatch.setattr("local_hub.paths.user_dir", lambda: layout_root)
+    layout = ensure_user_layout()
+    assert layout["root"] == layout_root
+    assert tmp_path.joinpath("data").exists() is False
+    assert ".alpilab" in DEFAULT_CONFIG_PATH.replace("\\", "/")
+    assert DEFAULT_CONFIG_PATH.endswith("windows_apps.json")
+
+
+def test_startup_log_source_does_not_record_secrets() -> None:
+    src = (Path(__file__).resolve().parent.parent / "local_hub" / "__main__.py").read_text(
+        encoding="utf-8"
+    )
+    assert "startup.log" in src
+    assert "os.environ" not in src
+    assert "pairing" not in src.lower()
+    lowered = src.lower()
+    assert "authorization" not in lowered
+    assert "password" not in lowered

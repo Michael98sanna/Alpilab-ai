@@ -1,21 +1,67 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for ALPILAB AI.exe — run from repo root on Windows."""
+"""PyInstaller spec for ALPILAB AI.exe.
+
+PyInstaller executes this file with CWD = packaging/. All script/data/pathex
+entries MUST be resolved from SPECPATH (this directory), not from ".".
+"""
+
+from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_submodules
 
+_ROOT = Path(SPECPATH).resolve().parent
+
+
+def _collect(pkg: str) -> list[str]:
+    try:
+        return collect_submodules(pkg)
+    except Exception:
+        return [pkg]
+
+
 hidden = []
-for pkg in ("app", "pc_agent", "ai", "hub", "local_hub", "uvicorn", "fastapi", "starlette", "zeroconf"):
-    hidden += collect_submodules(pkg)
+for pkg in (
+    "app",
+    "pc_agent",
+    "ai",
+    "local_hub",
+    "uvicorn",
+    "fastapi",
+    "starlette",
+    "zeroconf",
+    "webview",
+    "aiosqlite",
+):
+    hidden += _collect(pkg)
+
+hidden += [
+    "uvicorn.logging",
+    "uvicorn.lifespan.on",
+    "uvicorn.loops.auto",
+    "uvicorn.protocols.http.auto",
+    "uvicorn.protocols.websockets.auto",
+    "webview.platforms.winforms",
+    "webview.platforms.edgechromium",
+    "app.realtime",
+    "app.realtime.session_manager",
+    "app.realtime.events",
+    "app.realtime.payloads",
+    "app.realtime.session_state",
+    "app.realtime.state_sync",
+    "app.realtime.persistence",
+]
+
+datas = [
+    (str(_ROOT / "frontend" / "dist"), "frontend/dist"),
+    (str(_ROOT / "pc_agent" / "windows_apps.json.example"), "pc_agent"),
+]
 
 a = Analysis(
-    ["local_hub/__main__.py"],
-    pathex=["."],
+    [str(_ROOT / "local_hub" / "__main__.py")],
+    pathex=[str(_ROOT)],
     binaries=[],
-    datas=[
-        ("frontend/dist", "frontend/dist"),
-        ("pc_agent/windows_apps.json.example", "pc_agent"),
-    ],
-    hiddenimports=hidden + ["webview", "uvicorn.logging", "uvicorn.protocols.http.auto"],
+    datas=datas,
+    hiddenimports=sorted(set(hidden)),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -33,7 +79,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
