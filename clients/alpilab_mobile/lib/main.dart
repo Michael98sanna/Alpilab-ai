@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 const _multicastChannel = MethodChannel('ai.alpilab/multicast');
+const _networkChannel = MethodChannel('ai.alpilab/network');
 
 void main() => runApp(const AlpilabApp());
 
@@ -107,6 +108,9 @@ class _HubFinderPageState extends State<HubFinderPage> {
       _status = 'Ricerca Alpilab Negozio sulla LAN…';
       _hubs.clear();
     });
+
+    // Phase 1: mDNS discovery
+    debugPrint('ALPILAB: mDNS discovery started');
     final client = MDnsClient();
     try {
       try {
@@ -125,7 +129,8 @@ class _HubFinderPageState extends State<HubFinderPage> {
         const Duration(seconds: 6),
         onTimeout: (sink) => sink.close(),
       )) {
-        await for (final SrvResourceRecord srv in client.lookup<SrvResourceRecord>(
+        await for (final SrvResourceRecord srv
+            in client.lookup<SrvResourceRecord>(
           ResourceRecordQuery.service(ptr.domainName),
         )) {
           await for (final IPAddressResourceRecord ip
@@ -137,7 +142,7 @@ class _HubFinderPageState extends State<HubFinderPage> {
               host: ip.address.address,
               port: srv.port,
             );
-            debugPrint('ALPILAB: discovered ${hub.name} at ${hub.url}');
+            debugPrint('ALPILAB: mDNS discovered ${hub.name} at ${hub.url}');
             if (found.add(hub.url)) {
               setState(() => _hubs.add(hub));
             }
@@ -145,11 +150,10 @@ class _HubFinderPageState extends State<HubFinderPage> {
         }
       }
     } on TimeoutException {
-      debugPrint('ALPILAB: discovery timeout (6s)');
+      // mDNS search window ended
     } catch (e, st) {
-      debugPrint('ALPILAB: discovery error: $e');
+      debugPrint('ALPILAB: mDNS error: $e');
       debugPrint('ALPILAB: $st');
-      setState(() => _status = 'Discovery non disponibile. Verifica Wi-Fi e Local Hub.');
     } finally {
       client.stop();
       try {
@@ -158,15 +162,67 @@ class _HubFinderPageState extends State<HubFinderPage> {
       } catch (e) {
         debugPrint('ALPILAB: MulticastLock release failed: $e');
       }
-      setState(() {
-        _searching = false;
-        if (_hubs.isEmpty && !_status.startsWith('Discovery')) {
-          _status =
-              'Nessun Hub trovato. Apri ALPILAB AI sul PC e resta sulla stessa Wi-Fi.';
-        } else if (_hubs.isNotEmpty) {
-          _status = 'Seleziona Alpilab Negozio';
-        }
-      });
+    }
+
+    debugPrint('ALPILAB: mDNS found ${_hubs.length} hubs');
+
+    // Phase 2: HTTP gateway fallback (only if mDNS found nothing)
+    if (_hubs.isEmpty) {
+      await _httpGatewayFallback();
+    }
+
+    setState(() {
+      _searching = false;
+      if (_hubs.isEmpty) {
+        _status =
+            'Nessun Hub trovato. Apri ALPILAB AI sul PC e resta sulla stessa Wi-Fi.';
+      } else {
+        _status = 'Seleziona Alpilab Negozio';
+      }
+    });
+  }
+
+  Future<void> _httpGatewayFallback() async {
+    debugPrint('ALPILAB: mDNS found no hubs, trying HTTP gateway fallback');
+    try {
+      final String? gateway =
+          await _networkChannel.invokeMethod<String>('getWifiGateway');
+      if (gateway == null || gateway.isEmpty) {
+        debugPrint('ALPILAB: HTTP gateway fallback failed (no gateway)');
+        return;
+      }
+      debugPrint('ALPILAB: gateway detected: $gateway');
+
+      final uri = Uri.parse('http://$gateway:8000/api/v1/hub/info');
+      final response = await http
+          .get(uri)
+          .timeout(const Duration(seconds: 2));
+
+      if (response.statusCode != 200) {
+        debugPrint(
+            'ALPILAB: HTTP gateway fallback failed (status ${response.statusCode})');
+        return;
+      }
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final name = body['name'] as String?;
+      final sessionId = body['default_session_id'] as String?;
+      if (name == null || sessionId == null) {
+        debugPrint('ALPILAB: HTTP gateway fallback failed (invalid JSON)');
+        return;
+      }
+
+      // Use lan_ip from response if available, otherwise use gateway
+      final hubHost = (body['lan_ip'] as String?) ?? gateway;
+      const hubPort = 8000;
+      final hub = DiscoveredHub(name: name, host: hubHost, port: hubPort);
+
+      debugPrint('ALPILAB: HTTP gateway fallback succeeded: ${hub.url}');
+      setState(() => _hubs.add(hub));
+    } on TimeoutException {
+      debugPrint('ALPILAB: HTTP gateway fallback failed (timeout)');
+    } catch (e) {
+      debugPrint('ALPILAB: HTTP gateway fallback failed ($e)');
     }
   }
 
