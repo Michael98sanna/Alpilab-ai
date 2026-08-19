@@ -136,7 +136,7 @@ class RepairSession(BaseModel):
     """Container for the full repair workflow."""
 
     id: str
-    device_id: str
+    device_id: str | None = None
     status: RepairSessionStatus = RepairSessionStatus.OPEN
     opened_at: datetime | None = None
     closed_at: datetime | None = None

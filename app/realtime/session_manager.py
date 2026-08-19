@@ -504,6 +504,77 @@ class RealtimeSessionManager:
         changes = apply_repair_context_update(device=device, issue=issue, label=label)
         await self._broadcast_state_update(session_id, device_id, changes)
 
+    async def update_detected_devices(
+        self,
+        session_id: str,
+        devices: list[dict[str, Any]],
+    ) -> None:
+        """Replace the detected-device list (called by PC Agent scanner)."""
+        from app.schemas.device_context import DetectedDevice
+
+        session = self.get_session(session_id)
+        if not session:
+            raise ValueError("session not found")
+        session.detected_devices = [DetectedDevice.model_validate(d) for d in devices]
+        session.state_version += 1
+        event = self.emit(
+            session_id,
+            RealtimeEventType.REPAIR_DEVICE_LIST_UPDATED,
+            payload={"detected_devices": [d.model_dump(mode="json") for d in session.detected_devices]},
+        )
+        await self.send_event_ws(session_id, event)
+        self._persist_session(session_id)
+
+    async def associate_repair_device(
+        self,
+        session_id: str,
+        device_id: str,
+        source_client_device_id: str | None = None,
+    ) -> None:
+        """Associate a detected device with the session (user action)."""
+        from app.schemas.device_context import DeviceContext
+
+        session = self.get_session(session_id)
+        if not session:
+            raise ValueError("session not found")
+        detected = next((d for d in session.detected_devices if d.id == device_id), None)
+        if detected is None:
+            raise ValueError(f"device {device_id!r} not in detected list")
+        now = utc_now()
+        session.device_context = DeviceContext.from_detected(detected, associated_at=now)
+        session.device = detected.display_name
+        session.state_version += 1
+        event = self.emit(
+            session_id,
+            RealtimeEventType.REPAIR_DEVICE_ASSOCIATED,
+            payload=session.device_context.model_dump(mode="json"),
+            source_client_device_id=source_client_device_id,
+        )
+        await self.send_event_ws(session_id, event)
+        self._persist_session(session_id)
+
+    async def unassociate_repair_device(
+        self,
+        session_id: str,
+        source_client_device_id: str | None = None,
+    ) -> None:
+        """Remove the associated device from the session."""
+        session = self.get_session(session_id)
+        if not session:
+            raise ValueError("session not found")
+        old_id = session.device_context.id if session.device_context else None
+        session.device_context = None
+        session.device = None
+        session.state_version += 1
+        event = self.emit(
+            session_id,
+            RealtimeEventType.REPAIR_DEVICE_UNASSOCIATED,
+            payload={"device_id": old_id},
+            source_client_device_id=source_client_device_id,
+        )
+        await self.send_event_ws(session_id, event)
+        self._persist_session(session_id)
+
     async def handle_client_message(
         self,
         session_id: str,
@@ -573,6 +644,21 @@ class RealtimeSessionManager:
                 device=message.device,
                 issue=message.issue,
                 label=message.label,
+            )
+            return "ack"
+        if message.type == "associate_repair_device":
+            if not message.repair_device_id:
+                raise StateUpdateRejected(
+                    "repair_device_id required",
+                    request_type="associate_repair_device",
+                )
+            await self.associate_repair_device(
+                session_id, message.repair_device_id, source_client_device_id=device_id,
+            )
+            return "ack"
+        if message.type == "unassociate_repair_device":
+            await self.unassociate_repair_device(
+                session_id, source_client_device_id=device_id,
             )
             return "ack"
         raise ValueError("unsupported message type")

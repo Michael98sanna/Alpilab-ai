@@ -17,6 +17,7 @@ from app.realtime.payloads import (
 )
 
 from app.agent.payloads import AgentPresencePayload
+from app.schemas.device_context import DetectedDevice, DeviceContext
 
 
 def utc_now() -> datetime:
@@ -47,6 +48,8 @@ class RealtimeSessionData:
     assistant_status: AssistantStatus = "IDLE"
     state_version: int = 0
     pc_agent: AgentPresencePayload | None = None
+    device_context: DeviceContext | None = None
+    detected_devices: list[DetectedDevice] = field(default_factory=list)
     created_at: datetime = field(default_factory=utc_now)
 
     def repair_context(self) -> RepairContextPayload:
@@ -83,6 +86,8 @@ class RealtimeSessionData:
             assistant_status=self.assistant_status,
             state_version=self.state_version,
             pc_agent=self.pc_agent,
+            device_context=self.device_context.model_dump(mode="json") if self.device_context else None,
+            detected_devices=[d.model_dump(mode="json") for d in self.detected_devices],
         )
 
 
