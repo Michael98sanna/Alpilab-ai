@@ -73,3 +73,51 @@ WINDOWS_3UTOOLS_OPEN_TOOL = ExecutableToolSpec(
     enabled=True,
     allowed_argument_keys=frozenset(),
 )
+
+ALPILAB_CHECK_SEARCH_PRODUCTS_TOOL = ExecutableToolSpec(
+    tool_id="alpilab_check.search_products",
+    name="Alpilab Check: Search Products",
+    description="Search products through local Alpilab Check bridge v1",
+    version="1.0",
+    tool_type=ToolType.ALPILAB_CHECK,
+    risk_level=ActionRiskLevel.READ_ONLY,
+    required_capabilities=["alpilab_check"],
+    enabled=True,
+    allowed_argument_keys=frozenset({"query", "limit"}),
+)
+
+ALPILAB_CHECK_GET_PRODUCT_TOOL = ExecutableToolSpec(
+    tool_id="alpilab_check.get_product",
+    name="Alpilab Check: Get Product",
+    description="Get product details through local Alpilab Check bridge v1",
+    version="1.0",
+    tool_type=ToolType.ALPILAB_CHECK,
+    risk_level=ActionRiskLevel.READ_ONLY,
+    required_capabilities=["alpilab_check"],
+    enabled=True,
+    allowed_argument_keys=frozenset({"product_id"}),
+)
+
+ALPILAB_CHECK_SEARCH_INVOICES_TOOL = ExecutableToolSpec(
+    tool_id="alpilab_check.search_invoices",
+    name="Alpilab Check: Search Invoices",
+    description="Search invoices through local Alpilab Check bridge v1",
+    version="1.0",
+    tool_type=ToolType.ALPILAB_CHECK,
+    risk_level=ActionRiskLevel.READ_ONLY,
+    required_capabilities=["alpilab_check"],
+    enabled=True,
+    allowed_argument_keys=frozenset({"query", "limit"}),
+)
+
+ALPILAB_CHECK_GET_INVOICE_TOOL = ExecutableToolSpec(
+    tool_id="alpilab_check.get_invoice",
+    name="Alpilab Check: Get Invoice",
+    description="Get invoice details through local Alpilab Check bridge v1",
+    version="1.0",
+    tool_type=ToolType.ALPILAB_CHECK,
+    risk_level=ActionRiskLevel.READ_ONLY,
+    required_capabilities=["alpilab_check"],
+    enabled=True,
+    allowed_argument_keys=frozenset({"invoice_id"}),
+)

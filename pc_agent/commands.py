@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from pc_agent.tools.dispatcher import LocalToolDispatcher
+from pc_agent.tools.alpilab_check_handlers import configure_alpilab_check_client
 from pc_agent.tools.windows_handlers import configure_windows_app_tool
 from pc_agent.windows_apps.registry import local_app_registry
 
@@ -26,6 +27,7 @@ def configure_dispatcher(capabilities: dict[str, bool]) -> None:
     _dispatcher.set_capabilities(capabilities)
     local_app_registry.reload()
     configure_windows_app_tool()
+    configure_alpilab_check_client()
 
 
 def handle_command(

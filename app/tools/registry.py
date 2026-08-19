@@ -2,7 +2,15 @@
 
 from app.schemas.enums import ToolStatus, ToolType
 from app.tools.base import Tool, ToolCapability
-from app.tools.executable import ExecutableToolSpec, SAFE_TEST_TOOL, WINDOWS_3UTOOLS_OPEN_TOOL
+from app.tools.executable import (
+    ALPILAB_CHECK_GET_INVOICE_TOOL,
+    ALPILAB_CHECK_GET_PRODUCT_TOOL,
+    ALPILAB_CHECK_SEARCH_INVOICES_TOOL,
+    ALPILAB_CHECK_SEARCH_PRODUCTS_TOOL,
+    ExecutableToolSpec,
+    SAFE_TEST_TOOL,
+    WINDOWS_3UTOOLS_OPEN_TOOL,
+)
 
 
 class ToolRegistry:
@@ -55,6 +63,10 @@ class ToolRegistry:
     def _seed_executable(self) -> None:
         self.register_executable(SAFE_TEST_TOOL)
         self.register_executable(WINDOWS_3UTOOLS_OPEN_TOOL)
+        self.register_executable(ALPILAB_CHECK_SEARCH_PRODUCTS_TOOL)
+        self.register_executable(ALPILAB_CHECK_GET_PRODUCT_TOOL)
+        self.register_executable(ALPILAB_CHECK_SEARCH_INVOICES_TOOL)
+        self.register_executable(ALPILAB_CHECK_GET_INVOICE_TOOL)
 
     def _seed_defaults(self) -> None:
         defaults = [
