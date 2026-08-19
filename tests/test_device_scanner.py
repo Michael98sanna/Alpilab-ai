@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, patch
+import subprocess
+import sys
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from pc_agent.device_scanner import (
     DeviceScanner,
     ScannedDevice,
+    _SUBPROCESS_FLAGS,
     _parse_devices_output,
+    _run_adb,
     scan_devices,
 )
 
@@ -375,3 +379,60 @@ class TestAdbErrorHandling:
 
         # Scanner recovered after error — call_count should be > 1
         assert call_count > 1
+
+
+# ---------------------------------------------------------------------------
+# 15-17. Windows no-console flag (V0.6.1)
+# ---------------------------------------------------------------------------
+
+class TestNoConsoleFlag:
+    def test_subprocess_flags_set_on_windows(self):
+        """On Windows, CREATE_NO_WINDOW must be present in _SUBPROCESS_FLAGS."""
+        if sys.platform == "win32":
+            assert "creationflags" in _SUBPROCESS_FLAGS
+            assert _SUBPROCESS_FLAGS["creationflags"] == subprocess.CREATE_NO_WINDOW
+        else:
+            assert _SUBPROCESS_FLAGS == {}
+
+    @pytest.mark.asyncio
+    async def test_run_adb_passes_creationflags(self):
+        """_run_adb must forward _SUBPROCESS_FLAGS to create_subprocess_exec."""
+        captured_kwargs: dict = {}
+
+        async def mock_exec(*args, **kwargs):
+            captured_kwargs.update(kwargs)
+            proc = MagicMock()
+            proc.returncode = 0
+            proc.communicate = AsyncMock(return_value=(b"List of devices attached\n\n", b""))
+            return proc
+
+        with patch("asyncio.create_subprocess_exec", side_effect=mock_exec):
+            await _run_adb("adb", "devices", "-l")
+
+        if sys.platform == "win32":
+            assert captured_kwargs.get("creationflags") == subprocess.CREATE_NO_WINDOW
+        else:
+            assert "creationflags" not in captured_kwargs
+
+    @pytest.mark.asyncio
+    async def test_full_scan_uses_no_console(self):
+        """scan_devices end-to-end: subprocess must carry no-console flag on Windows."""
+        captured_kwargs_list: list[dict] = []
+
+        async def mock_exec(*args, **kwargs):
+            captured_kwargs_list.append(dict(kwargs))
+            proc = MagicMock()
+            proc.returncode = 0
+            proc.communicate = AsyncMock(return_value=(b"List of devices attached\n\n", b""))
+            return proc
+
+        with patch("asyncio.create_subprocess_exec", side_effect=mock_exec):
+            with patch("pc_agent.device_scanner._find_adb", return_value="adb"):
+                await scan_devices()
+
+        assert len(captured_kwargs_list) >= 1
+        for kw in captured_kwargs_list:
+            if sys.platform == "win32":
+                assert kw.get("creationflags") == subprocess.CREATE_NO_WINDOW
+            else:
+                assert "creationflags" not in kw

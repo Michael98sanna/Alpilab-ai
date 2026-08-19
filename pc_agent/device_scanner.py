@@ -6,9 +6,17 @@ import asyncio
 import logging
 import os
 import shutil
+import subprocess
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
+
+# On Windows, suppress the brief console window that would appear for each
+# adb.exe subprocess call (both in normal Python and PyInstaller frozen EXE).
+_SUBPROCESS_FLAGS: dict[str, Any] = {}
+if sys.platform == "win32":
+    _SUBPROCESS_FLAGS["creationflags"] = subprocess.CREATE_NO_WINDOW
 
 logger = logging.getLogger("alpilab.device_scanner")
 
@@ -63,12 +71,17 @@ def _find_adb() -> str | None:
 
 
 async def _run_adb(adb_path: str, *args: str) -> str | None:
-    """Run an ADB command and return stdout, or None on error."""
+    """Run an ADB command and return stdout, or None on error.
+
+    On Windows, CREATE_NO_WINDOW prevents a console flash for every adb call.
+    The flag is a no-op on Linux/macOS.
+    """
     try:
         proc = await asyncio.create_subprocess_exec(
             adb_path, *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            **_SUBPROCESS_FLAGS,
         )
         stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=5.0)
         if proc.returncode != 0:
