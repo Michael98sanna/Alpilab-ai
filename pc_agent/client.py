@@ -13,6 +13,7 @@ from websockets.asyncio.client import ClientConnection
 
 from pc_agent.commands import configure_dispatcher, handle_command
 from pc_agent.config import AgentConfig
+from pc_agent.device_scanner import DeviceScanner
 
 logger = logging.getLogger("alpilab.pc_agent")
 
@@ -37,6 +38,7 @@ class AgentClient:
         self._ws: ClientConnection | None = None
         self._stop = asyncio.Event()
         self._heartbeat_task: asyncio.Task[None] | None = None
+        self._scanner: DeviceScanner | None = None
         self._reconnect_attempts = 0
         configure_dispatcher(
             {
@@ -99,10 +101,15 @@ class AgentClient:
             self.state = AgentState.ONLINE
             logger.info("ONLINE")
             self._heartbeat_task = asyncio.create_task(self._heartbeat_sender(ws))
+            self._scanner = DeviceScanner(on_change=self._send_detected_devices)
+            self._scanner.start()
             try:
                 async for raw in ws:
                     await self._handle_message(ws, raw)
             finally:
+                if self._scanner:
+                    self._scanner.stop()
+                    self._scanner = None
                 if self._heartbeat_task:
                     self._heartbeat_task.cancel()
                     self._heartbeat_task = None
@@ -142,6 +149,19 @@ class AgentClient:
                 logger.debug("Heartbeat sent")
             except websockets.ConnectionClosed:
                 break
+
+    async def _send_detected_devices(self, devices: list[dict]) -> None:
+        """Callback from DeviceScanner — sends device list to Hub."""
+        if self._ws is None:
+            return
+        try:
+            await self._ws.send(json.dumps({
+                "type": "detected_devices_update",
+                "devices": devices,
+            }))
+            logger.info("Sent detected_devices_update (%d devices)", len(devices))
+        except Exception:
+            logger.debug("Failed to send detected_devices_update", exc_info=True)
 
     async def _handle_message(self, ws: ClientConnection, raw: str | bytes) -> None:
         try:

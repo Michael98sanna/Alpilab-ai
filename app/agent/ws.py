@@ -120,6 +120,16 @@ async def agent_websocket(
                 await agent_gateway.handle_tool_execute_result(session_id, message)
                 continue
 
+            if message.type == "detected_devices_update":
+                devices = message.devices or []
+                from app.realtime.session_manager import realtime_manager
+                try:
+                    await realtime_manager.update_detected_devices(session_id, devices)
+                    logger.info("Updated detected_devices for session=%s (%d devices)", session_id, len(devices))
+                except Exception:
+                    logger.warning("Failed to update detected_devices", exc_info=True)
+                continue
+
             await send_json(
                 AgentOutboundMessage(
                     type="error",
