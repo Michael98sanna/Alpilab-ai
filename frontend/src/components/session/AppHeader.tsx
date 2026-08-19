@@ -26,6 +26,8 @@ export function AppHeader({
   const connectionLabel =
     connectionState === "CONNECTED"
       ? "Connected"
+      : connectionState === "UNAUTHORIZED"
+        ? "Dispositivo non autorizzato"
       : connectionState === "RECONNECTING"
         ? "Reconnecting…"
         : connectionState === "CONNECTING"

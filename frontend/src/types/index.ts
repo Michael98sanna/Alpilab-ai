@@ -104,7 +104,8 @@ export type ConnectionState =
   | "CONNECTED"
   | "DISCONNECTED"
   | "RECONNECTING"
-  | "ERROR";
+  | "ERROR"
+  | "UNAUTHORIZED";
 
 export interface RepairState {
   session: RepairSession;

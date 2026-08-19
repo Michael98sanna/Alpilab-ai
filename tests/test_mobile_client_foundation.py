@@ -132,6 +132,31 @@ def test_ws_rejected_when_device_id_does_not_match_token(sqlite_hub: TestClient)
         assert msg["message"] == "UNAUTHORIZED"
 
 
+def test_ws_rejected_when_token_revoked(sqlite_hub: TestClient) -> None:
+    paired = _pair(sqlite_hub, "phone-stable-01")
+    token = paired["token"]
+    session_id = paired["session_id"]
+    revoked = sqlite_hub.delete("/api/v1/pairing/clients/phone-stable-01")
+    assert revoked.status_code == 200
+    with sqlite_hub.websocket_connect(
+        f"/ws/sessions/{session_id}"
+        f"?device_id=phone-stable-01&device_type=phone&device_name=Pixel"
+        f"&pairing_token={token}"
+    ) as ws:
+        msg = ws.receive_json()
+        assert msg["type"] == "error"
+        assert msg["message"] == "UNAUTHORIZED"
+
+
+def test_ws_rejected_when_device_not_paired(sqlite_hub: TestClient) -> None:
+    with sqlite_hub.websocket_connect(
+        "/ws/sessions/repair-001?device_id=phone-new&device_type=phone&device_name=Pixel"
+    ) as ws:
+        msg = ws.receive_json()
+        assert msg["type"] == "error"
+        assert msg["message"] in {"PAIRING_REQUIRED", "UNAUTHORIZED"}
+
+
 def test_pc_loopback_client_still_skips_pairing(sqlite_hub: TestClient) -> None:
     with sqlite_hub.websocket_connect(
         "/ws/sessions/repair-001?device_id=pc-local&device_type=pc&device_name=PC"

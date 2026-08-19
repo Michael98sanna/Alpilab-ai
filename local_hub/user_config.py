@@ -16,6 +16,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "start_pc_agent": True,
     "start_mdns": True,
     "start_ui": True,
+    "start_with_windows": True,
 }
 
 

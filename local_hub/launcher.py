@@ -17,6 +17,7 @@ import uvicorn
 from app.hub.discovery import DEFAULT_HUB_NAME, HubAdvertiser
 from local_hub.paths import is_frozen, log_dir, sqlite_path
 from local_hub.user_config import load_hub_config
+from local_hub.windows_startup import ensure_windows_autostart
 
 logger = logging.getLogger("alpilab.local_hub")
 
@@ -166,9 +167,12 @@ def _start_pc_agent() -> subprocess.Popen | None:
         return None
     env = os.environ.copy()
     logger.info("Starting PC Agent")
+    popen_kwargs: dict[str, Any] = {"env": env}
+    if sys.platform == "win32":
+        popen_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
     if is_frozen():
-        return subprocess.Popen([sys.executable, "--agent"], env=env)  # noqa: S603
-    return subprocess.Popen([sys.executable, "-m", "pc_agent"], env=env)  # noqa: S603
+        return subprocess.Popen([sys.executable, "--agent"], **popen_kwargs)  # noqa: S603
+    return subprocess.Popen([sys.executable, "-m", "pc_agent"], **popen_kwargs)  # noqa: S603
 
 
 def _open_desktop(url: str) -> None:
@@ -244,6 +248,7 @@ def main(argv: list[str] | None = None) -> None:
 
     log_path = log_dir() / "hub.log"
     _configure_hub_logging(log_path)
+    ensure_windows_autostart(bool(cfg.get("start_with_windows", True)))
     _configure_local_env(host, port, session_id)
     _ensure_windows_apps_file()
     if args.no_agent or not cfg.get("start_pc_agent", True):
@@ -261,6 +266,7 @@ def main(argv: list[str] | None = None) -> None:
         port=port,
         log_level="info",
         lifespan="on",
+        access_log=False,
         log_config=hub_uvicorn_log_config(log_path),
     )
     server = uvicorn.Server(config)

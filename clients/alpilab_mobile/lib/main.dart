@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -45,12 +46,30 @@ Future<String> _stableClientId(SharedPreferences prefs) async {
   return id;
 }
 
+Future<String> _sessionFromHub(String hubUrl, {String fallback = 'repair-001'}) async {
+  try {
+    final res = await http.get(Uri.parse('$hubUrl/api/v1/hub/info'));
+    if (res.statusCode < 400) {
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      final id = body['default_session_id'] as String?;
+      if (id != null && id.trim().isNotEmpty) {
+        return id.trim();
+      }
+    }
+  } catch (_) {
+    // fall through
+  }
+  return fallback;
+}
+
 class HubFinderPage extends StatefulWidget {
   const HubFinderPage({super.key});
 
   @override
   State<HubFinderPage> createState() => _HubFinderPageState();
 }
+
+enum _AuthProbe { authorized, unauthorized, offline }
 
 class _HubFinderPageState extends State<HubFinderPage> {
   final List<DiscoveredHub> _hubs = [];
@@ -81,25 +100,114 @@ class _HubFinderPageState extends State<HubFinderPage> {
         clientId != null &&
         sessionId != null &&
         mounted) {
-      final uri = Uri.parse(hubUrl);
+      final ok = await _attemptAutoLogin(
+        prefs: prefs,
+        savedHubUrl: hubUrl,
+        token: token,
+        clientId: clientId,
+        savedSessionId: sessionId,
+      );
+      if (ok) return;
+    }
+    await _search();
+  }
+
+  Future<bool> _attemptAutoLogin({
+    required SharedPreferences prefs,
+    required String savedHubUrl,
+    required String token,
+    required String clientId,
+    required String savedSessionId,
+  }) async {
+    setState(() => _status = 'Connessione automatica…');
+    // First try fresh discovery (mDNS + HTTP fallback), then fallback to saved hub.
+    await _search();
+    final savedUri = Uri.parse(savedHubUrl);
+    final fallbackHub = DiscoveredHub(
+      name: 'Alpilab Negozio',
+      host: savedUri.host,
+      port: savedUri.hasPort ? savedUri.port : 8000,
+    );
+    final targetHub = _hubs.isNotEmpty ? _hubs.first : fallbackHub;
+    final liveSessionId = await _sessionFromHub(
+      targetHub.url,
+      fallback: savedSessionId,
+    );
+    final auth = await _probeSessionAuth(
+      hub: targetHub,
+      clientId: clientId,
+      token: token,
+      sessionId: liveSessionId,
+    );
+    if (auth == _AuthProbe.authorized) {
+      await prefs.setString('hub_url', targetHub.url);
+      await prefs.setString('session_id', liveSessionId);
+      if (!mounted) return false;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => SessionPage(
-            hub: DiscoveredHub(
-              name: 'Alpilab Negozio',
-              host: uri.host,
-              port: uri.hasPort ? uri.port : 8000,
-            ),
+            hub: targetHub,
             pairingToken: token,
             clientId: clientId,
-            sessionId: sessionId,
+            sessionId: liveSessionId,
           ),
         ),
       );
-      return;
+      return true;
     }
-    await _search();
+    if (auth == _AuthProbe.unauthorized) {
+      await prefs.remove('pairing_token');
+      await prefs.remove('session_id');
+      if (!mounted) return false;
+      setState(() {
+        _status = 'Dispositivo non autorizzato — effettua nuovamente il pairing.';
+      });
+      return false;
+    }
+    return false;
+  }
+
+  Future<_AuthProbe> _probeSessionAuth({
+    required DiscoveredHub hub,
+    required String clientId,
+    required String token,
+    required String sessionId,
+  }) async {
+    final qp = Uri(
+      scheme: 'ws',
+      host: hub.host,
+      port: hub.port,
+      path: '/ws/sessions/$sessionId',
+      queryParameters: {
+        'device_id': clientId,
+        'device_type': 'phone',
+        'device_name': 'Android',
+        'pairing_token': token,
+      },
+    );
+    WebSocket? ws;
+    try {
+      ws = await WebSocket.connect(qp.toString()).timeout(const Duration(seconds: 4));
+      ws.add(jsonEncode({'type': 'request_snapshot'}));
+      final raw = await ws.first.timeout(const Duration(seconds: 4));
+      final msg = jsonDecode(raw as String) as Map<String, dynamic>;
+      if (msg['type'] == 'error') {
+        final m = (msg['message'] as String?) ?? '';
+        if (m == 'UNAUTHORIZED' || m == 'PAIRING_REQUIRED') {
+          return _AuthProbe.unauthorized;
+        }
+        return _AuthProbe.offline;
+      }
+      if (msg['type'] == 'snapshot') {
+        return _AuthProbe.authorized;
+      }
+    } catch (_) {
+      return _AuthProbe.offline;
+    } finally {
+      await ws?.close();
+    }
+    return _AuthProbe.offline;
   }
 
   Future<void> _search() async {
@@ -330,22 +438,6 @@ class _PairingPageState extends State<PairingPage> {
     } catch (e) {
       setState(() => _error = 'Hub non raggiungibile. Resta sulla stessa Wi-Fi del PC.');
     }
-  }
-
-  Future<String> _sessionFromHub(String hubUrl) async {
-    try {
-      final res = await http.get(Uri.parse('$hubUrl/api/v1/hub/info'));
-      if (res.statusCode < 400) {
-        final body = jsonDecode(res.body) as Map<String, dynamic>;
-        final id = body['default_session_id'] as String?;
-        if (id != null && id.trim().isNotEmpty) {
-          return id.trim();
-        }
-      }
-    } catch (_) {
-      // fall through
-    }
-    return 'repair-001';
   }
 
   @override
