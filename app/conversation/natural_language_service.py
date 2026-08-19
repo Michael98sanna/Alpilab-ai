@@ -231,7 +231,7 @@ class NaturalLanguageCommandService:
                 session_id,
                 agent_id,
                 tool_id,
-                {},
+                dict(intent.parameters),
             )
         except ToolExecutionError as exc:
             logger.warning("[RESULT] success=false error=%s", exc.error_code)
@@ -247,8 +247,7 @@ class NaturalLanguageCommandService:
             return
 
         if result.success:
-            dry_run = result.result.get("mode") == "dry_run"
-            msg = success_message(dry_run=dry_run)
+            msg = self._success_message_for_tool(tool_id, result.result)
             logger.info("[RESULT] success=True tool=%s summary=%s", tool_id, msg)
             logger.info("[TOOL] %s", tool_id)
             await self._reply(realtime_manager, session_id, device_id, msg)
@@ -275,6 +274,37 @@ class NaturalLanguageCommandService:
         await realtime_manager.set_assistant_status(
             session_id, "ERROR", source_device_id=device_id
         )
+
+    def _success_message_for_tool(self, tool_id: str, payload: dict) -> str:
+        if tool_id == "windows.3utools.open":
+            dry_run = payload.get("mode") == "dry_run"
+            return success_message(dry_run=dry_run)
+        if tool_id == "alpilab_check.search_products":
+            items = payload.get("items") if isinstance(payload, dict) else None
+            if isinstance(items, list):
+                if not items:
+                    return "Non ho trovato prodotti nel listino per questa ricerca."
+                sample = [str(i.get("name") or i.get("id") or "n/d") for i in items[:3] if isinstance(i, dict)]
+                return f"Ho trovato {len(items)} prodotti nel listino: {', '.join(sample)}."
+        if tool_id == "alpilab_check.get_product":
+            if isinstance(payload, dict) and payload:
+                pid = payload.get("id", "n/d")
+                name = payload.get("name", "prodotto")
+                return f"Dettaglio prodotto {pid}: {name}."
+            return "Non ho trovato dettagli per il prodotto richiesto."
+        if tool_id == "alpilab_check.search_invoices":
+            items = payload.get("items") if isinstance(payload, dict) else None
+            if isinstance(items, list):
+                if not items:
+                    return "Non ho trovato fatture per questa ricerca."
+                sample = [str(i.get("code") or i.get("id") or "n/d") for i in items[:3] if isinstance(i, dict)]
+                return f"Ho trovato {len(items)} fatture: {', '.join(sample)}."
+        if tool_id == "alpilab_check.get_invoice":
+            if isinstance(payload, dict) and payload:
+                iid = payload.get("id", "n/d")
+                return f"Dettaglio fattura {iid} recuperato."
+            return "Non ho trovato dettagli per la fattura richiesta."
+        return "Richiesta completata."
 
     async def _reply(self, realtime_manager, session_id: str, device_id: str, content: str) -> None:
         await realtime_manager.add_chat_message(
