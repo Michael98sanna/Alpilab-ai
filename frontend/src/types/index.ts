@@ -52,6 +52,31 @@ export interface SessionDevice {
   online: boolean;
 }
 
+export interface DetectedDevice {
+  id: string;
+  brand: string | null;
+  model: string | null;
+  variant: string | null;
+  serial_number: string | null;
+  connection_type: string;
+  source: string;
+  detected_at: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface DeviceContext {
+  id: string;
+  brand: string | null;
+  model: string | null;
+  serial_number: string | null;
+  connection_type: string | null;
+  source: string | null;
+  associated_at: string;
+  color?: string | null;
+  storage?: string | null;
+  battery_health?: string | null;
+}
+
 export interface PcAgentStatus {
   agentId: string;
   agentName: string;
@@ -100,6 +125,8 @@ export interface RepairState {
   savingTestId: string | null;
   stateError: string | null;
   pcAgent: PcAgentStatus | null;
+  detectedDevices: DetectedDevice[];
+  deviceContext: DeviceContext | null;
 }
 
 export type RepairAction =
@@ -131,7 +158,9 @@ export type RepairAction =
   | { type: "SET_SAVING_TEST"; testId: string | null }
   | { type: "SET_STATE_ERROR"; message: string | null }
   | { type: "STATE_UPDATE_REJECTED"; reason: string; stateVersion: number }
-  | { type: "SET_PC_AGENT"; agent: PcAgentStatus | null };
+  | { type: "SET_PC_AGENT"; agent: PcAgentStatus | null }
+  | { type: "SET_DETECTED_DEVICES"; devices: DetectedDevice[] }
+  | { type: "SET_DEVICE_CONTEXT"; context: DeviceContext | null };
 
 /** @deprecated Use CORE_STATUS_CONFIG from config/coreStatus */
 export const STATUS_LABELS: Record<CoreState, string> = {

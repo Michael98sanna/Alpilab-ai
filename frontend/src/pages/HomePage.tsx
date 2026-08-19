@@ -14,6 +14,7 @@ import { useChatScroll } from "../hooks/useChatScroll";
 import { useAppSession } from "../realtime/RealtimeProvider";
 import { isPcLoopbackUi } from "../realtime/sessionStorage";
 import { PairingDialog } from "../components/session/PairingDialog";
+import { DeviceSelectionPanel } from "../components/repair/DeviceSelectionPanel";
 import { useSwipeGesture, type PanelMode } from "../hooks/useSwipeGesture";
 import styles from "./HomePage.module.css";
 
@@ -51,6 +52,8 @@ export function HomePage() {
     closeToolPanel,
     nextPendingTest,
     hasActiveRepair,
+    associateDevice,
+    unassociateDevice,
   } = useAppSession();
 
   const layout = useLayoutMode();
@@ -80,7 +83,19 @@ export function HomePage() {
 
   const gestureEnabled = isMobile && showContext;
   const [pairingOpen, setPairingOpen] = useState(false);
+  const [devicePanelDismissed, setDevicePanelDismissed] = useState(false);
   const showPairing = isPcLoopbackUi();
+
+  const showDevicePanel =
+    !devicePanelDismissed &&
+    (state.detectedDevices.length > 0 || state.deviceContext !== null);
+
+  // Reset dismiss when new devices appear
+  useEffect(() => {
+    if (state.detectedDevices.length > 0) {
+      setDevicePanelDismissed(false);
+    }
+  }, [state.detectedDevices.length]);
 
   return (
     <div className={styles.layout}>
@@ -96,6 +111,16 @@ export function HomePage() {
       />
 
       {showContext && <RepairContextBanner session={state.session} />}
+
+      {showDevicePanel && (
+        <DeviceSelectionPanel
+          detectedDevices={state.detectedDevices}
+          deviceContext={state.deviceContext}
+          onAssociate={associateDevice}
+          onUnassociate={unassociateDevice}
+          onDismiss={() => setDevicePanelDismissed(true)}
+        />
+      )}
 
       <div className={styles.body}>
         <main

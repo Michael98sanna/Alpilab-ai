@@ -27,6 +27,8 @@ interface SessionContextValue extends RepairSessionApi {
   mode: AppMode;
   sessionId: string;
   deviceId: string;
+  associateDevice: (deviceId: string) => void;
+  unassociateDevice: () => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -128,6 +130,15 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     clientRef.current?.send({ type: "diagnosis_pause", paused: false });
   }, []);
 
+  const associateDevice = useCallback((deviceId: string) => {
+    clientRef.current?.send({ type: "associate_repair_device", repair_device_id: deviceId });
+    // Optimistic local dispatch not needed — server will emit REPAIR_DEVICE_ASSOCIATED
+  }, []);
+
+  const unassociateDevice = useCallback(() => {
+    clientRef.current?.send({ type: "unassociate_repair_device" });
+  }, []);
+
   const value: SessionContextValue = useMemo(
     () => ({
       ...session,
@@ -140,6 +151,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         : session.submitMeasurement,
       pauseDiagnosis: isRealtime ? pauseDiagnosisRealtime : session.pauseDiagnosis,
       resumeDiagnosis: isRealtime ? resumeDiagnosisRealtime : session.resumeDiagnosis,
+      associateDevice,
+      unassociateDevice,
     }),
     [
       session,
@@ -151,6 +164,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       submitMeasurementRealtime,
       pauseDiagnosisRealtime,
       resumeDiagnosisRealtime,
+      associateDevice,
+      unassociateDevice,
     ],
   );
 

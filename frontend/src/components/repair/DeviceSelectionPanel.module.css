@@ -1,0 +1,137 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--surface-subtle, #1a1a2e);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  font-size: 12px;
+}
+
+.labelSmall {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+  color: var(--text-muted, rgba(255, 255, 255, 0.45));
+  margin-bottom: 4px;
+}
+
+.associated {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detectedSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deviceList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deviceItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
+}
+
+.deviceItem:last-child {
+  border-bottom: none;
+}
+
+.deviceInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.deviceName {
+  color: var(--text-primary, rgba(255, 255, 255, 0.9));
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.serial {
+  color: var(--text-muted, rgba(255, 255, 255, 0.45));
+  font-size: 11px;
+  font-family: monospace;
+}
+
+.stateTag {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  background: rgba(255, 180, 0, 0.15);
+  color: rgba(255, 200, 80, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.associateBtn {
+  background: var(--accent, #4a90d9);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.associateBtn:hover {
+  background: var(--accent-hover, #5aa0e9);
+}
+
+.removeBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 80, 80, 0.4);
+  color: rgba(255, 100, 100, 0.9);
+  border-radius: 5px;
+  padding: 3px 9px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.removeBtn:hover {
+  background: rgba(255, 80, 80, 0.1);
+  border-color: rgba(255, 80, 80, 0.7);
+}
+
+.dismissBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 0;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dismissBtn:hover {
+  color: var(--text-primary, rgba(255, 255, 255, 0.7));
+}
+
+.associatedBadge {
+  font-size: 11px;
+  color: rgba(100, 220, 120, 0.9);
+  white-space: nowrap;
+}
