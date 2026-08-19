@@ -2,10 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:multicast_dns/multicast_dns.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
+const _multicastChannel = MethodChannel('ai.alpilab/multicast');
 
 void main() => runApp(const AlpilabApp());
 
@@ -59,6 +62,12 @@ class _HubFinderPageState extends State<HubFinderPage> {
     _restoreThenSearch();
   }
 
+  @override
+  void dispose() {
+    _multicastChannel.invokeMethod('release').catchError((_) {});
+    super.dispose();
+  }
+
   Future<void> _restoreThenSearch() async {
     final prefs = await SharedPreferences.getInstance();
     await _stableClientId(prefs);
@@ -100,6 +109,13 @@ class _HubFinderPageState extends State<HubFinderPage> {
     });
     final client = MDnsClient();
     try {
+      try {
+        await _multicastChannel.invokeMethod('acquire');
+        debugPrint('ALPILAB: MulticastLock acquired');
+      } catch (e) {
+        debugPrint('ALPILAB: MulticastLock acquire failed: $e');
+      }
+
       await client.start();
       final found = <String>{};
       final lookup = client.lookup<PtrResourceRecord>(
@@ -121,6 +137,7 @@ class _HubFinderPageState extends State<HubFinderPage> {
               host: ip.address.address,
               port: srv.port,
             );
+            debugPrint('ALPILAB: discovered ${hub.name} at ${hub.url}');
             if (found.add(hub.url)) {
               setState(() => _hubs.add(hub));
             }
@@ -128,11 +145,19 @@ class _HubFinderPageState extends State<HubFinderPage> {
         }
       }
     } on TimeoutException {
-      // search window ended
-    } catch (e) {
+      debugPrint('ALPILAB: discovery timeout (6s)');
+    } catch (e, st) {
+      debugPrint('ALPILAB: discovery error: $e');
+      debugPrint('ALPILAB: $st');
       setState(() => _status = 'Discovery non disponibile. Verifica Wi-Fi e Local Hub.');
     } finally {
       client.stop();
+      try {
+        await _multicastChannel.invokeMethod('release');
+        debugPrint('ALPILAB: MulticastLock released');
+      } catch (e) {
+        debugPrint('ALPILAB: MulticastLock release failed: $e');
+      }
       setState(() {
         _searching = false;
         if (_hubs.isEmpty && !_status.startsWith('Discovery')) {
