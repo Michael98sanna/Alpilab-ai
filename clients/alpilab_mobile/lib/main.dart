@@ -194,31 +194,35 @@ class _HubFinderPageState extends State<HubFinderPage> {
       debugPrint('ALPILAB: gateway detected: $gateway');
 
       final uri = Uri.parse('http://$gateway:8000/api/v1/hub/info');
-      final response = await http
-          .get(uri)
-          .timeout(const Duration(seconds: 2));
+      final httpClient = http.Client();
+      try {
+        final response = await httpClient
+            .get(uri)
+            .timeout(const Duration(seconds: 8));
 
-      if (response.statusCode != 200) {
-        debugPrint(
-            'ALPILAB: HTTP gateway fallback failed (status ${response.statusCode})');
-        return;
+        if (response.statusCode != 200) {
+          debugPrint(
+              'ALPILAB: HTTP gateway fallback failed (status ${response.statusCode})');
+          return;
+        }
+
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final name = body['name'] as String?;
+        final sessionId = body['default_session_id'] as String?;
+        if (name == null || sessionId == null) {
+          debugPrint('ALPILAB: HTTP gateway fallback failed (invalid JSON)');
+          return;
+        }
+
+        final hubHost = (body['lan_ip'] as String?) ?? gateway;
+        const hubPort = 8000;
+        final hub = DiscoveredHub(name: name, host: hubHost, port: hubPort);
+
+        debugPrint('ALPILAB: HTTP gateway fallback succeeded: ${hub.url}');
+        setState(() => _hubs.add(hub));
+      } finally {
+        httpClient.close();
       }
-
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final name = body['name'] as String?;
-      final sessionId = body['default_session_id'] as String?;
-      if (name == null || sessionId == null) {
-        debugPrint('ALPILAB: HTTP gateway fallback failed (invalid JSON)');
-        return;
-      }
-
-      // Use lan_ip from response if available, otherwise use gateway
-      final hubHost = (body['lan_ip'] as String?) ?? gateway;
-      const hubPort = 8000;
-      final hub = DiscoveredHub(name: name, host: hubHost, port: hubPort);
-
-      debugPrint('ALPILAB: HTTP gateway fallback succeeded: ${hub.url}');
-      setState(() => _hubs.add(hub));
     } on TimeoutException {
       debugPrint('ALPILAB: HTTP gateway fallback failed (timeout)');
     } catch (e) {
