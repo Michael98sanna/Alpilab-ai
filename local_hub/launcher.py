@@ -249,11 +249,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.no_agent or not cfg.get("start_pc_agent", True):
         os.environ["ALPILAB_HUB_START_AGENT"] = "false"
 
-    advertiser = HubAdvertiser(port=port, name=name, lan_ip="127.0.0.1")
-    # Advertise the LAN address, keep Windows UI on loopback.
-    from app.hub.discovery import detect_lan_ip
-
-    advertiser.lan_ip = detect_lan_ip()
+    advertiser = HubAdvertiser(port=port, name=name)
     if not args.no_mdns and cfg.get("start_mdns", True):
         advertiser.start()
 

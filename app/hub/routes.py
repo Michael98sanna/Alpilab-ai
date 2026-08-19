@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from app.hub.discovery import DEFAULT_HUB_NAME, detect_lan_ip
+from app.hub.discovery import DEFAULT_HUB_NAME, enumerate_local_ipv4, select_lan_ip
 from app.pairing.service import PairingError, PairingService
 from app.session.factory import get_session_store
 from app.session.sqlite_store import SQLiteSessionStore
@@ -25,11 +25,11 @@ def _pairing() -> PairingService:
     return PairingService(store)
 
 
-def hub_info(port: int = 8000) -> dict:
-    ip = detect_lan_ip()
-    return {
+def hub_info(port: int = 8000, client_host: str | None = None) -> dict:
+    ip = select_lan_ip(client_host)
+    payload = {
         "name": DEFAULT_HUB_NAME,
-        "version": "0.5.0",
+        "version": "0.5.4",
         "mode": "local-first",
         "default_session_id": "repair-001",
         "lan_ip": ip,
@@ -38,11 +38,15 @@ def hub_info(port: int = 8000) -> dict:
         "discovery": "_alpilab._tcp.local.",
         "pairing_required": True,
     }
+    lan_ips = enumerate_local_ipv4()
+    if len(lan_ips) > 1:
+        payload["lan_ips"] = lan_ips
+    return payload
 
 
-def start_pairing() -> dict:
+def start_pairing(client_host: str | None = None) -> dict:
     started = _pairing().start()
-    info = hub_info()
+    info = hub_info(client_host=client_host)
     return {
         **started,
         "hub_name": info["name"],

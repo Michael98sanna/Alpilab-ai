@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile, WebSocket
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -175,18 +175,23 @@ def ai_generate(body: GenerateBody) -> dict:
 
 
 @app.get("/api/v1/hub/info", tags=["hub"])
-def get_hub_info() -> dict:
+def get_hub_info(request: Request) -> dict:
     from app.hub.routes import hub_info
 
-    return hub_info(port=int(__import__("os").getenv("PORT", "8000")))
+    client_host = request.client.host if request.client else None
+    return hub_info(
+        port=int(__import__("os").getenv("PORT", "8000")),
+        client_host=client_host,
+    )
 
 
 @app.post("/api/v1/pairing/start", tags=["hub"])
-def post_pairing_start() -> dict:
+def post_pairing_start(request: Request) -> dict:
     from app.hub.routes import start_pairing
 
     try:
-        return start_pairing()
+        client_host = request.client.host if request.client else None
+        return start_pairing(client_host=client_host)
     except PairingError as exc:
         raise HTTPException(status_code=400, detail=exc.code) from exc
 
