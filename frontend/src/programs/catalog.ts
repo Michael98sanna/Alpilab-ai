@@ -1,9 +1,13 @@
 /**
- * Lab programs catalog for UI V0.7.
+ * Lab programs catalog for UI V0.7+.
  * toolId is the only executable identifier (never display name → shell).
  */
 
-export type ProgramStatus = "operational" | "configured" | "future";
+export type ProgramStatus =
+  | "operational"
+  | "configured"
+  | "unavailable"
+  | "future";
 
 export type ProgramId =
   | "3utools"
@@ -40,10 +44,10 @@ export const LAB_PROGRAMS: LabProgram[] = [
   {
     id: "alpilab_check",
     name: "Alpilab Check",
-    icon: "🟡",
-    description: "Software Alpilab Check (listino via bridge in chat; apertura app non configurata)",
-    status: "configured",
-    toolId: null,
+    icon: "🟢",
+    description: "Programma gestionale / laboratorio",
+    status: "operational",
+    toolId: "windows.alpilab_check.open",
     voiceHint: "Apri Alpilab Check",
     actionLabel: "Apri",
   },
@@ -95,11 +99,27 @@ export function statusLabel(status: ProgramStatus): string {
       return "OPERATIVO";
     case "configured":
       return "NON ANCORA CONFIGURATO";
+    case "unavailable":
+      return "NON DISPONIBILE";
     case "future":
       return "INTEGRAZIONE FUTURA";
   }
 }
 
 export function canExecuteProgram(program: LabProgram): boolean {
-  return program.status === "operational" && program.toolId !== null;
+  return (
+    program.status === "operational" &&
+    (program.toolId === "windows.3utools.open" ||
+      program.toolId === "windows.alpilab_check.open")
+  );
+}
+
+export type OpenableToolId =
+  | "windows.3utools.open"
+  | "windows.alpilab_check.open";
+
+export function isOpenableToolId(toolId: string | null): toolId is OpenableToolId {
+  return (
+    toolId === "windows.3utools.open" || toolId === "windows.alpilab_check.open"
+  );
 }

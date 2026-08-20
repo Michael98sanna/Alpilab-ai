@@ -386,6 +386,13 @@ class NaturalLanguageCommandService:
         if tool_id == "windows.3utools.open":
             dry_run = payload.get("mode") == "dry_run"
             return success_message(dry_run=dry_run)
+        if tool_id == "windows.alpilab_check.open":
+            if payload.get("already_running"):
+                return "Alpilab Check è già aperto."
+            dry_run = payload.get("mode") == "dry_run"
+            if dry_run:
+                return "Alpilab Check: verifica dry-run completata."
+            return "Alpilab Check avviato."
         if tool_id == "alpilab_check.search_products":
             return format_search_products_response(
                 payload if isinstance(payload, dict) else {},

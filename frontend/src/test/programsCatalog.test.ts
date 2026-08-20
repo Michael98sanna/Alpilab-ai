@@ -10,8 +10,8 @@ describe("programs catalog V0.7", () => {
     const byId = Object.fromEntries(LAB_PROGRAMS.map((p) => [p.id, p]));
     expect(byId["3utools"].status).toBe("operational");
     expect(byId["3utools"].toolId).toBe("windows.3utools.open");
-    expect(byId.alpilab_check.status).toBe("configured");
-    expect(byId.alpilab_check.toolId).toBeNull();
+    expect(byId.alpilab_check.status).toBe("operational");
+    expect(byId.alpilab_check.toolId).toBe("windows.alpilab_check.open");
     expect(byId.alpilab_check.actionLabel).toBe("Apri");
     expect(byId.thermal_camera.status).toBe("configured");
     expect(byId.microscope.status).toBe("configured");
@@ -19,9 +19,9 @@ describe("programs catalog V0.7", () => {
     expect(byId.borneo.status).toBe("future");
   });
 
-  it("only 3utools is executable from UI", () => {
+  it("only 3utools and alpilab_check are executable from UI", () => {
     const executable = LAB_PROGRAMS.filter(canExecuteProgram);
-    expect(executable.map((p) => p.id)).toEqual(["3utools"]);
+    expect(executable.map((p) => p.id).sort()).toEqual(["3utools", "alpilab_check"]);
   });
 
   it("status labels are user-facing", () => {

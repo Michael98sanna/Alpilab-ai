@@ -153,6 +153,8 @@ class NaturalLanguageCommandParser:
         value = text.strip().lower()
         value = value.replace("3u tools", "3utools")
         value = value.replace("3 u tools", "3utools")
+        value = value.replace("alpilab check", "alpilab_check")
+        value = value.replace("alpilabcheck", "alpilab_check")
         value = re.sub(r"\s+", " ", value)
         return value.rstrip("?").strip()
 
@@ -188,6 +190,19 @@ class NaturalLanguageCommandParser:
             intent = Intent(
                 type=IntentType.OPEN_APPLICATION,
                 target="3utools",
+                raw_text=raw_text,
+                confidence=MATCH_CONFIDENCE,
+            )
+            return NaturalLanguageParseResult(
+                outcome=ParseOutcome.ACTION_COMMAND,
+                intent=intent,
+                confidence=MATCH_CONFIDENCE,
+            )
+
+        if normalized_target == "alpilab_check":
+            intent = Intent(
+                type=IntentType.OPEN_APPLICATION,
+                target="alpilab_check",
                 raw_text=raw_text,
                 confidence=MATCH_CONFIDENCE,
             )

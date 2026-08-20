@@ -86,6 +86,10 @@ async def execute_3utools_open(session_id: str, agent_id: str) -> ToolExecuteRes
     return await _execute_tool(session_id, agent_id, "windows.3utools.open")
 
 
+async def execute_alpilab_check_open(session_id: str, agent_id: str) -> ToolExecuteResponse:
+    return await _execute_tool(session_id, agent_id, "windows.alpilab_check.open")
+
+
 async def _execute_tool(session_id: str, agent_id: str, tool_id: str) -> ToolExecuteResponse:
     try:
         result = await tool_execution_service.execute_tool(

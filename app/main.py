@@ -20,6 +20,7 @@ from app.api.routes.agents import (
     ToolExecuteResponse,
     ToolListResponse,
     execute_3utools_open,
+    execute_alpilab_check_open,
     execute_safe_test,
     get_agents_status,
     list_executable_tools,
@@ -157,6 +158,17 @@ async def post_safe_test_execute(session_id: str, agent_id: str) -> ToolExecuteR
 )
 async def post_3utools_open_execute(session_id: str, agent_id: str) -> ToolExecuteResponse:
     return await execute_3utools_open(session_id, agent_id)
+
+
+@app.post(
+    "/api/v1/sessions/{session_id}/agents/{agent_id}/tools/windows.alpilab_check.open/execute",
+    response_model=ToolExecuteResponse,
+    tags=["agents"],
+)
+async def post_alpilab_check_open_execute(
+    session_id: str, agent_id: str
+) -> ToolExecuteResponse:
+    return await execute_alpilab_check_open(session_id, agent_id)
 
 
 # Legacy AI route (foundation compatibility)

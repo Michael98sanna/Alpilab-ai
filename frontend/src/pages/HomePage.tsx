@@ -18,7 +18,7 @@ import { useChatScroll } from "../hooks/useChatScroll";
 import { useAppSession } from "../realtime/RealtimeProvider";
 import { isPcLoopbackUi } from "../realtime/sessionStorage";
 import type { LabProgram, ProgramId } from "../programs/catalog";
-import { canExecuteProgram } from "../programs/catalog";
+import { canExecuteProgram, isOpenableToolId } from "../programs/catalog";
 import styles from "./HomePage.module.css";
 
 export function HomePage() {
@@ -72,9 +72,10 @@ export function HomePage() {
 
   const handleOpenProgram = useCallback(
     async (program: LabProgram): Promise<ProgramActionResult> => {
-      if (!canExecuteProgram(program) || program.toolId !== "windows.3utools.open") {
+      if (!canExecuteProgram(program) || !isOpenableToolId(program.toolId)) {
         return { ok: false, message: "Non ancora configurato" };
       }
+      const toolId = program.toolId;
 
       if (mode !== "realtime") {
         return {
@@ -90,19 +91,42 @@ export function HomePage() {
 
       setBusyProgramId(program.id);
       try {
-        const result = await executeRegisteredTool(
-          sessionId,
-          agentId,
-          "windows.3utools.open",
-        );
+        const result = await executeRegisteredTool(sessionId, agentId, toolId);
         if (result.success) {
-          return { ok: true, message: "3uTools avviato." };
+          if (result.result.already_running === true) {
+            return {
+              ok: true,
+              message:
+                toolId === "windows.alpilab_check.open"
+                  ? "✓ Alpilab Check già aperto"
+                  : "✓ 3uTools già aperto",
+            };
+          }
+          return {
+            ok: true,
+            message:
+              toolId === "windows.alpilab_check.open"
+                ? "✓ Alpilab Check avviato"
+                : "✓ 3uTools avviato",
+          };
+        }
+        const err = result.error || "";
+        const label =
+          toolId === "windows.alpilab_check.open" ? "Alpilab Check" : "3uTools";
+        if (err === "APP_NOT_REGISTERED" || err === "TOOL_DISABLED") {
+          return { ok: false, message: "Non ancora configurato" };
+        }
+        if (err === "EXECUTABLE_NOT_FOUND") {
+          return {
+            ok: false,
+            message: `✕ Impossibile aprire ${label} — eseguibile non trovato`,
+          };
         }
         return {
           ok: false,
-          message: result.error
-            ? `Errore: ${result.error}`
-            : "Apertura 3uTools non riuscita.",
+          message: err
+            ? `✕ Impossibile aprire ${label}: ${err}`
+            : `✕ Impossibile aprire ${label}`,
         };
       } catch {
         return { ok: false, message: "Errore di rete durante l'apertura." };

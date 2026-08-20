@@ -66,7 +66,9 @@ export function ProgramsPanel({
           const isFuture = program.status === "future";
           const actionDisabled = busy || isFuture;
           const buttonLabel = busy
-            ? "Avvio…"
+            ? program.id === "alpilab_check"
+              ? "APERTURA ALPILAB CHECK..."
+              : "Avvio…"
             : isFuture
               ? "Integrazione futura"
               : program.actionLabel;

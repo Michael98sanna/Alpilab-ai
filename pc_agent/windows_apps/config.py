@@ -20,6 +20,11 @@ KNOWN_APPS: dict[str, dict[str, str]] = {
         "executable": "3uTools.exe",
         "env_prefix": "ALPILAB_WINAPP_3UTOOLS",
     },
+    "alpilab_check": {
+        "name": "Alpilab Check",
+        "executable": "AlpilabCheck.exe",
+        "env_prefix": "ALPILAB_WINAPP_ALPILAB_CHECK",
+    },
 }
 
 
@@ -112,6 +117,19 @@ def load_windows_apps_config(
             discovered = discover_3utools_path()
             if discovered:
                 executable_path = discovered
+
+        if app_id == "alpilab_check" and not executable_path:
+            from local_hub.alpilab_check_config import load_alpilab_check_launcher_settings
+
+            launcher = load_alpilab_check_launcher_settings()
+            if launcher is not None:
+                executable_path = launcher.executable_path
+                if "enabled" not in file_entry:
+                    enabled = launcher.enabled
+                if "dry_run" not in file_entry:
+                    dry_run = launcher.dry_run
+                if "executable" not in file_entry and launcher.executable:
+                    executable = launcher.executable
 
         if not executable_path and not enabled:
             continue

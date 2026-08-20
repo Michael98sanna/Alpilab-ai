@@ -7,6 +7,7 @@ from pc_agent.windows_apps.models import WindowsApplicationConfig
 
 TOOL_ID_TO_APP_ID: dict[str, str] = {
     "windows.3utools.open": "3utools",
+    "windows.alpilab_check.open": "alpilab_check",
 }
 
 

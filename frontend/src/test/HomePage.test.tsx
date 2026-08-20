@@ -102,7 +102,7 @@ describe("HomePage V0.7 sections", () => {
     );
     expect(screen.getByTestId("program-alpilab_check")).toHaveAttribute(
       "data-status",
-      "configured",
+      "operational",
     );
     expect(screen.getByTestId("program-action-alpilab_check")).toHaveTextContent(
       "Apri",
@@ -135,7 +135,7 @@ describe("HomePage V0.7 sections", () => {
     spy.mockRestore();
   });
 
-  it("Alpilab Check Apri does not navigate to chat and stays not configured", async () => {
+  it("Alpilab Check Apri does not navigate to chat in mock mode", async () => {
     const user = userEvent.setup();
     const spy = vi.spyOn(toolsApi, "executeRegisteredTool");
     renderHome();
@@ -144,11 +144,11 @@ describe("HomePage V0.7 sections", () => {
       "Apri",
     );
     await user.click(screen.getByTestId("program-action-alpilab_check"));
-    expect(screen.getByTestId("program-feedback-alpilab_check")).toHaveTextContent(
-      "Non ancora configurato",
-    );
     expect(screen.getByTestId("programs-section")).toBeInTheDocument();
     expect(screen.queryByTestId("chat-section")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("program-feedback-alpilab_check")).toHaveTextContent(
+      /realtime|PC Agent/i,
+    );
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });

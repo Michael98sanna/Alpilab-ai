@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "../config/env";
+import type { OpenableToolId } from "../programs/catalog";
 
 export interface ToolExecuteResult {
   success: boolean;
@@ -14,7 +15,7 @@ export interface ToolExecuteResult {
 export async function executeRegisteredTool(
   sessionId: string,
   agentId: string,
-  toolId: "windows.3utools.open" | "demo.safe_test",
+  toolId: OpenableToolId | "demo.safe_test",
 ): Promise<ToolExecuteResult> {
   const base = getApiBaseUrl().replace(/\/$/, "");
   const url =

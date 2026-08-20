@@ -8,6 +8,7 @@ from app.tools.registry import default_tool_registry
 def test_existing_executable_tools_unchanged() -> None:
     ids = {t.tool_id for t in default_tool_registry.list_executable()}
     assert "windows.3utools.open" in ids
+    assert "windows.alpilab_check.open" in ids
     assert "alpilab_check.search_products" in ids
     assert "alpilab_check.get_product" in ids
     assert "demo.safe_test" in ids

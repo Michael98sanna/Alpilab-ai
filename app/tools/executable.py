@@ -74,6 +74,18 @@ WINDOWS_3UTOOLS_OPEN_TOOL = ExecutableToolSpec(
     allowed_argument_keys=frozenset(),
 )
 
+WINDOWS_ALPILAB_CHECK_OPEN_TOOL = ExecutableToolSpec(
+    tool_id="windows.alpilab_check.open",
+    name="Open Alpilab Check",
+    description="Open the locally configured Alpilab Check application on the PC Agent",
+    version="1.0",
+    tool_type=ToolType.ALPILAB_CHECK,
+    risk_level=ActionRiskLevel.CONFIRM_REQUIRED,
+    required_capabilities=["windows_apps"],
+    enabled=True,
+    allowed_argument_keys=frozenset(),
+)
+
 ALPILAB_CHECK_SEARCH_PRODUCTS_TOOL = ExecutableToolSpec(
     tool_id="alpilab_check.search_products",
     name="Alpilab Check: Search Products",

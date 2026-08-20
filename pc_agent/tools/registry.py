@@ -14,6 +14,7 @@ from pc_agent.windows_apps.registry import TOOL_ID_TO_APP_ID
 
 SAFE_TEST_TOOL_ID = "demo.safe_test"
 WINDOWS_3UTOOLS_OPEN_TOOL_ID = "windows.3utools.open"
+WINDOWS_ALPILAB_CHECK_OPEN_TOOL_ID = "windows.alpilab_check.open"
 ALPILAB_CHECK_SEARCH_PRODUCTS_TOOL_ID = "alpilab_check.search_products"
 ALPILAB_CHECK_GET_PRODUCT_TOOL_ID = "alpilab_check.get_product"
 ALPILAB_CHECK_SEARCH_INVOICES_TOOL_ID = "alpilab_check.search_invoices"

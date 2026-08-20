@@ -8,6 +8,7 @@ from app.schemas.enums import IntentType
 # Explicit registry — no dynamic tool_id construction from free text.
 APPLICATION_TOOL_MAP: dict[str, str] = {
     "3utools": "windows.3utools.open",
+    "alpilab_check": "windows.alpilab_check.open",
     "alpilab_check.search_products": "alpilab_check.search_products",
     "alpilab_check.get_product": "alpilab_check.get_product",
     "alpilab_check.search_invoices": "alpilab_check.search_invoices",
