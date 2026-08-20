@@ -387,12 +387,26 @@ class TestAdbErrorHandling:
 
 class TestNoConsoleFlag:
     def test_subprocess_flags_set_on_windows(self):
-        """On Windows, CREATE_NO_WINDOW must be present in _SUBPROCESS_FLAGS."""
+        """On Windows, CREATE_NO_WINDOW + SW_HIDE startupinfo must be set."""
         if sys.platform == "win32":
             assert "creationflags" in _SUBPROCESS_FLAGS
             assert _SUBPROCESS_FLAGS["creationflags"] == subprocess.CREATE_NO_WINDOW
+            assert "startupinfo" in _SUBPROCESS_FLAGS
+            si = _SUBPROCESS_FLAGS["startupinfo"]
+            assert si.dwFlags & subprocess.STARTF_USESHOWWINDOW
+            assert si.wShowWindow == 0
         else:
             assert _SUBPROCESS_FLAGS == {}
+
+    def test_windows_no_console_helper(self):
+        from pc_agent.win_no_console import windows_no_console_kwargs
+
+        flags = windows_no_console_kwargs()
+        if sys.platform == "win32":
+            assert flags["creationflags"] == subprocess.CREATE_NO_WINDOW
+            assert flags["startupinfo"].wShowWindow == 0
+        else:
+            assert flags == {}
 
     @pytest.mark.asyncio
     async def test_run_adb_passes_creationflags(self):
@@ -411,6 +425,7 @@ class TestNoConsoleFlag:
 
         if sys.platform == "win32":
             assert captured_kwargs.get("creationflags") == subprocess.CREATE_NO_WINDOW
+            assert "startupinfo" in captured_kwargs
         else:
             assert "creationflags" not in captured_kwargs
 
@@ -434,5 +449,6 @@ class TestNoConsoleFlag:
         for kw in captured_kwargs_list:
             if sys.platform == "win32":
                 assert kw.get("creationflags") == subprocess.CREATE_NO_WINDOW
+                assert "startupinfo" in kw
             else:
                 assert "creationflags" not in kw

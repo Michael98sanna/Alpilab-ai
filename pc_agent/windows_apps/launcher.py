@@ -35,6 +35,8 @@ def is_image_running(image_name: str) -> bool:
     if sys.platform != "win32":
         return False
     try:
+        from pc_agent.win_no_console import windows_no_console_kwargs
+
         completed = subprocess.run(  # noqa: S603
             [
                 "tasklist",
@@ -49,6 +51,7 @@ def is_image_running(image_name: str) -> bool:
             shell=False,
             check=False,
             timeout=8,
+            **windows_no_console_kwargs(),
         )
     except (OSError, subprocess.TimeoutExpired):
         return False

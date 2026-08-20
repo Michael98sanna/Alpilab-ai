@@ -70,19 +70,29 @@ def _enumerate_posix() -> list[LocalInterface]:
 def _enumerate_windows() -> list[LocalInterface]:
     import json
     import subprocess
+    import sys
 
     script = (
         "Get-NetIPAddress -AddressFamily IPv4 | "
         "Select-Object IPAddress, PrefixLength, InterfaceAlias | "
         "ConvertTo-Json -Compress"
     )
+    run_kwargs: dict = {
+        "capture_output": True,
+        "text": True,
+        "timeout": 15,
+        "check": False,
+    }
+    if sys.platform == "win32":
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = 0  # SW_HIDE
+        run_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+        run_kwargs["startupinfo"] = startupinfo
     try:
         proc = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", script],
-            capture_output=True,
-            text=True,
-            timeout=15,
-            check=False,
+            ["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", script],
+            **run_kwargs,
         )
     except (OSError, subprocess.TimeoutExpired):
         return []
