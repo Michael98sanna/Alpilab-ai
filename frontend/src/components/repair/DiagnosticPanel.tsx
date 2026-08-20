@@ -6,7 +6,7 @@ import styles from "./DiagnosticPanel.module.css";
 interface DiagnosticPanelProps {
   tests: DiagnosticTest[];
   nextTest?: DiagnosticTest;
-  onClose: () => void;
+  onClose?: () => void;
   onSubmitMeasurement: (testId: string, value: string) => void;
   onPause: () => void;
   onResume: () => void;
@@ -52,8 +52,6 @@ export function DiagnosticPanel({
 }: DiagnosticPanelProps) {
   const [value, setValue] = useState("");
 
-  if (tests.length === 0) return null;
-
   function handleSubmit() {
     if (!nextTest || !value.trim() || isSaving) return;
     onSubmitMeasurement(nextTest.id, value.trim());
@@ -74,24 +72,32 @@ export function DiagnosticPanel({
       {showHeader && (
         <div className={styles.panelHeader}>
           <span>Diagnostica</span>
-          <button type="button" className={styles.collapseBtn} onClick={onClose}>
-            Chiudi
-          </button>
+          {onClose && (
+            <button type="button" className={styles.collapseBtn} onClick={onClose}>
+              Chiudi
+            </button>
+          )}
         </div>
       )}
 
-      <div className={styles.list}>
-        {tests.map((t) => (
-          <div key={t.id} className={styles.testRow}>
-            <span>
-              {statusIcon(t.status)} {t.name}
-            </span>
-            <span className={statusClass(t.status)}>
-              {t.value ?? t.status}
-            </span>
-          </div>
-        ))}
-      </div>
+      {tests.length === 0 ? (
+        <p className={styles.empty} data-testid="diagnostics-empty">
+          Nessun test diagnostico disponibile
+        </p>
+      ) : (
+        <div className={styles.list}>
+          {tests.map((t) => (
+            <div key={t.id} className={styles.testRow}>
+              <span>
+                {statusIcon(t.status)} {t.name}
+              </span>
+              <span className={statusClass(t.status)}>
+                {t.value ?? t.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {nextTest && (
         <div>

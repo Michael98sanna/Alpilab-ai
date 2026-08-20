@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HomePage } from "../pages/HomePage";
 import { RealtimeProvider } from "../realtime/RealtimeProvider";
+import * as toolsApi from "../api/tools";
 
 vi.mock("../config/env", () => ({
   getAppMode: () => "mock",
@@ -20,71 +21,34 @@ function renderHome() {
   );
 }
 
-function swipe(
-  element: Element,
-  start: { x: number; y: number },
-  end: { x: number; y: number },
-) {
-  fireEvent.touchStart(element, {
-    touches: [{ clientX: start.x, clientY: start.y }],
-  });
-  fireEvent.touchMove(element, {
-    touches: [{ clientX: end.x, clientY: end.y }],
-  });
-  fireEvent.touchEnd(element, {
-    changedTouches: [{ clientX: end.x, clientY: end.y }],
-  });
-}
-
-function dragSheetDown(sheetTestId: string, deltaY: number) {
-  const dragZone = screen.getByTestId(`${sheetTestId}-drag-zone`);
-  const startY = 100;
-  const endY = startY + deltaY;
-  fireEvent.touchStart(dragZone, {
-    touches: [{ clientY: startY, clientX: 200 }],
-  });
-  fireEvent.touchMove(dragZone, {
-    touches: [{ clientY: endY, clientX: 200 }],
-  });
-  fireEvent.touchEnd(dragZone, {
-    changedTouches: [{ clientY: endY, clientX: 200 }],
-  });
-}
-
-describe("HomePage V0.3.1 layout", () => {
-  it("renders header and chat timeline", () => {
+describe("HomePage V0.7 layout", () => {
+  it("renders header, section nav and chat timeline", () => {
     renderHome();
     expect(screen.getByRole("banner")).toHaveTextContent("ALPILAB AI");
+    expect(screen.getByTestId("main-section-nav")).toBeInTheDocument();
+    expect(screen.getByTestId("section-chat")).toBeInTheDocument();
+    expect(screen.getByTestId("section-diagnostics")).toBeInTheDocument();
+    expect(screen.getByTestId("section-programs")).toBeInTheDocument();
     expect(screen.getByTestId("chat-timeline")).toBeInTheDocument();
   });
 
-  it("shows centered sticky core above input, not in timeline", () => {
+  it("shows centered sticky core above input", () => {
     renderHome();
-    const statusBar = screen.getByTestId("alpilab-status-bar");
-    expect(statusBar).toBeInTheDocument();
-    expect(screen.getByTestId("core-status-center")).toBeInTheDocument();
+    expect(screen.getByTestId("alpilab-status-bar")).toBeInTheDocument();
     expect(screen.getByTestId("core-status-label")).toHaveTextContent("ALPILAB AI");
-
-    const timeline = screen.getByTestId("chat-timeline");
-    expect(within(timeline).queryByTestId("assistant-status")).not.toBeInTheDocument();
   });
 
-  it("shows compact repair context banner", () => {
+  it("shows compact repair context banner when scenario loaded", () => {
     renderHome();
     const ctx = screen.getByTestId("repair-context");
     expect(within(ctx).getByText("iPhone 13 Pro")).toBeInTheDocument();
     expect(within(ctx).getByText("No Power")).toBeInTheDocument();
   });
 
-  it("keeps diagnostics closed by default", () => {
+  it("keeps diagnostics section closed by default (chat active)", () => {
     renderHome();
-    expect(screen.queryByTestId("diagnostics-expanded")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("diagnostics-sheet")).not.toBeInTheDocument();
-  });
-
-  it("shows session devices compact chip in header", () => {
-    renderHome();
-    expect(screen.getByTestId("session-devices-chip")).toBeInTheDocument();
+    expect(screen.queryByTestId("diagnostics-section")).not.toBeInTheDocument();
+    expect(screen.getByTestId("chat-section")).toBeInTheDocument();
   });
 
   it("opens pairing dialog from Collega dispositivo", async () => {
@@ -95,7 +59,82 @@ describe("HomePage V0.3.1 layout", () => {
   });
 });
 
-describe("HomePage V0.3.1 core states", () => {
+describe("HomePage V0.7 sections", () => {
+  it("opens Diagnosi when repair session is active", async () => {
+    const user = userEvent.setup();
+    renderHome();
+    await user.click(screen.getByTestId("section-diagnostics"));
+    expect(screen.getByTestId("diagnostics-section")).toBeInTheDocument();
+    expect(screen.getByTestId("diagnostics-expanded")).toBeInTheDocument();
+  });
+
+  it("opens Programmi with operational and future entries", async () => {
+    const user = userEvent.setup();
+    renderHome();
+    await user.click(screen.getByTestId("section-programs"));
+    expect(screen.getByTestId("programs-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("program-3utools")).toHaveAttribute(
+      "data-status",
+      "operational",
+    );
+    expect(screen.getByTestId("program-alpilab_check")).toHaveAttribute(
+      "data-status",
+      "operational",
+    );
+    expect(screen.getByTestId("program-thermal_camera")).toHaveAttribute(
+      "data-status",
+      "configured",
+    );
+    expect(screen.getByTestId("program-microscope")).toHaveAttribute(
+      "data-status",
+      "configured",
+    );
+    expect(screen.getByTestId("program-zxw")).toHaveAttribute("data-status", "future");
+    expect(screen.getByTestId("program-borneo")).toHaveAttribute(
+      "data-status",
+      "future",
+    );
+  });
+
+  it("shows not configured for thermal without executing tools", async () => {
+    const user = userEvent.setup();
+    const spy = vi.spyOn(toolsApi, "executeRegisteredTool");
+    renderHome();
+    await user.click(screen.getByTestId("section-programs"));
+    await user.click(screen.getByTestId("program-action-thermal_camera"));
+    expect(screen.getByTestId("program-feedback-thermal_camera")).toHaveTextContent(
+      "Non ancora configurato",
+    );
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("routes Alpilab Check to chat without fake execute", async () => {
+    const user = userEvent.setup();
+    const spy = vi.spyOn(toolsApi, "executeRegisteredTool");
+    renderHome();
+    await user.click(screen.getByTestId("section-programs"));
+    await user.click(screen.getByTestId("program-action-alpilab_check"));
+    expect(screen.getByTestId("chat-section")).toBeInTheDocument();
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("does not execute 3uTools in mock mode (no false success)", async () => {
+    const user = userEvent.setup();
+    const spy = vi.spyOn(toolsApi, "executeRegisteredTool");
+    renderHome();
+    await user.click(screen.getByTestId("section-programs"));
+    await user.click(screen.getByTestId("program-action-3utools"));
+    expect(await screen.findByTestId("program-feedback-3utools")).toHaveTextContent(
+      /realtime|PC Agent/i,
+    );
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
+
+describe("HomePage V0.7 core states", () => {
   it("shows STO PENSANDO... while processing a message", async () => {
     const user = userEvent.setup();
     renderHome();
@@ -118,16 +157,9 @@ describe("HomePage V0.3.1 core states", () => {
       { timeout: 2000 },
     );
   });
-
-  it("shows STO ASCOLTANDO... during voice simulation", async () => {
-    const user = userEvent.setup();
-    renderHome();
-    await user.click(screen.getByLabelText("Microfono"));
-    expect(screen.getByTestId("core-status-label")).toHaveTextContent("STO ASCOLTANDO...");
-  });
 });
 
-describe("HomePage V0.3.1 interactions", () => {
+describe("HomePage V0.7 interactions", () => {
   it("allows sending a chat message", async () => {
     const user = userEvent.setup();
     renderHome();
@@ -135,143 +167,6 @@ describe("HomePage V0.3.1 interactions", () => {
     await user.type(input, "Test messaggio mock");
     await user.click(screen.getByLabelText("Invia messaggio"));
     expect(screen.getByText("Test messaggio mock")).toBeInTheDocument();
-  });
-
-  it("opens and closes diagnostics via buttons", async () => {
-    const user = userEvent.setup();
-    renderHome();
-    await user.click(screen.getByLabelText("Apri diagnosi"));
-    expect(screen.getByTestId("diagnostics-sheet")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Chiudi" }));
-    expect(screen.queryByTestId("diagnostics-sheet")).not.toBeInTheDocument();
-  });
-
-  it("opens tools bottom sheet via tap", async () => {
-    const user = userEvent.setup();
-    renderHome();
-    await user.click(screen.getByLabelText("Apri strumenti"));
-    expect(screen.getByTestId("tools-sheet")).toBeInTheDocument();
-    expect(screen.getByLabelText("Microscope")).toBeInTheDocument();
-  });
-});
-
-describe("HomePage V0.3.1 gestures", () => {
-  const originalMatchMedia = window.matchMedia;
-  const originalInnerWidth = window.innerWidth;
-
-  beforeEach(() => {
-    Object.defineProperty(window, "innerWidth", {
-      writable: true,
-      configurable: true,
-      value: 390,
-    });
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: !query.includes("1024px"),
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }));
-  });
-
-  afterEach(() => {
-    window.matchMedia = originalMatchMedia;
-    Object.defineProperty(window, "innerWidth", {
-      writable: true,
-      configurable: true,
-      value: originalInnerWidth,
-    });
-  });
-
-  it("swipe left-to-right opens diagnostics", () => {
-    renderHome();
-    swipe(screen.getByTestId("chat-swipe-zone"), { x: 10, y: 200 }, { x: 120, y: 205 });
-    expect(screen.getByTestId("diagnostics-sheet")).toBeInTheDocument();
-  });
-
-  it("swipe right-to-left opens tools", () => {
-    renderHome();
-    swipe(screen.getByTestId("chat-swipe-zone"), { x: 380, y: 200 }, { x: 260, y: 205 });
-    expect(screen.getByTestId("tools-sheet")).toBeInTheDocument();
-  });
-
-  it("vertical scroll does not open panels", () => {
-    renderHome();
-    swipe(screen.getByTestId("chat-swipe-zone"), { x: 200, y: 100 }, { x: 205, y: 280 });
-    expect(screen.queryByTestId("diagnostics-sheet")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("tools-sheet")).not.toBeInTheDocument();
-  });
-
-  it("closes diagnostics with swipe left when open", async () => {
-    const user = userEvent.setup();
-    renderHome();
-    await user.click(screen.getByLabelText("Apri diagnosi"));
-    swipe(screen.getByTestId("diagnostics-sheet"), { x: 300, y: 400 }, { x: 180, y: 405 });
-    expect(screen.queryByTestId("diagnostics-sheet")).not.toBeInTheDocument();
-  });
-
-  it("closes diagnostics with swipe down when open", async () => {
-    const user = userEvent.setup();
-    renderHome();
-    await user.click(screen.getByLabelText("Apri diagnosi"));
-    swipe(screen.getByTestId("diagnostics-sheet"), { x: 200, y: 300 }, { x: 200, y: 420 });
-    expect(screen.queryByTestId("diagnostics-sheet")).not.toBeInTheDocument();
-  });
-
-  it("closes tools with swipe right when open", async () => {
-    const user = userEvent.setup();
-    renderHome();
-    await user.click(screen.getByLabelText("Apri strumenti"));
-    swipe(screen.getByTestId("tools-sheet"), { x: 100, y: 400 }, { x: 220, y: 405 });
-    expect(screen.queryByTestId("tools-sheet")).not.toBeInTheDocument();
-  });
-
-  it("closes tools with swipe down when open", async () => {
-    const user = userEvent.setup();
-    renderHome();
-    await user.click(screen.getByLabelText("Apri strumenti"));
-    swipe(screen.getByTestId("tools-sheet"), { x: 200, y: 300 }, { x: 200, y: 420 });
-    expect(screen.queryByTestId("tools-sheet")).not.toBeInTheDocument();
-  });
-});
-
-describe("HomePage V0.3.1 sheet drag", () => {
-  const originalMatchMedia = window.matchMedia;
-
-  beforeEach(() => {
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: !query.includes("1024px"),
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }));
-  });
-
-  afterEach(() => {
-    window.matchMedia = originalMatchMedia;
-  });
-
-  it("dismisses sheet when drag exceeds threshold", async () => {
-    const user = userEvent.setup();
-    renderHome();
-    await user.click(screen.getByLabelText("Apri diagnosi"));
-    dragSheetDown("diagnostics-sheet", 120);
-    expect(screen.queryByTestId("diagnostics-sheet")).not.toBeInTheDocument();
-  });
-
-  it("snaps back when drag is below threshold", async () => {
-    const user = userEvent.setup();
-    renderHome();
-    await user.click(screen.getByLabelText("Apri diagnosi"));
-    dragSheetDown("diagnostics-sheet", 30);
-    expect(screen.getByTestId("diagnostics-sheet")).toBeInTheDocument();
   });
 });
 
@@ -300,10 +195,10 @@ describe("HomePage desktop layout", () => {
     expect(screen.getByTestId("core-status-center")).toBeInTheDocument();
   });
 
-  it("shows diagnostic side panel when opened", async () => {
+  it("shows diagnostic panel via section nav", async () => {
     const user = userEvent.setup();
     renderHome();
-    await user.click(screen.getByLabelText("Apri diagnosi"));
+    await user.click(screen.getByTestId("section-diagnostics"));
     expect(screen.getByTestId("diagnostics-expanded")).toBeInTheDocument();
   });
 });

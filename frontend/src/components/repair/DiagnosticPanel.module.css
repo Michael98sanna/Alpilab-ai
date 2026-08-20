@@ -54,6 +54,16 @@
   font-size: 0.75rem;
 }
 
+.empty {
+  margin: var(--space-md) 0;
+  padding: var(--space-md);
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
 .form {
   display: flex;
   gap: var(--space-sm);
