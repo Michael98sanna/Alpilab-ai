@@ -11,11 +11,13 @@ export class RealtimeClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private closedIntentionally = false;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private authRejected = false;
 
   constructor(private readonly options: RealtimeClientOptions) {}
 
   connect(): void {
     this.closedIntentionally = false;
+    this.authRejected = false;
     this.openSocket();
   }
 
@@ -48,11 +50,9 @@ export class RealtimeClient {
     if (this.options.seedDemo) {
       params.set("seed_demo", "true");
     }
-    if (typeof window !== "undefined") {
-      const token = new URLSearchParams(window.location.search).get("pairing_token");
-      if (token) {
-        params.set("pairing_token", token);
-      }
+    const token = this.options.pairingToken;
+    if (token) {
+      params.set("pairing_token", token);
     }
     const url = `${base}/ws/sessions/${encodeURIComponent(this.options.sessionId)}?${params}`;
 
@@ -67,6 +67,17 @@ export class RealtimeClient {
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(String(event.data)) as WsServerMessage;
+        if (
+          data.type === "error" &&
+          (data.message === "UNAUTHORIZED" || data.message === "PAIRING_REQUIRED")
+        ) {
+          this.authRejected = true;
+          this.closedIntentionally = true;
+          this.clearTimers();
+          this.options.onConnectionChange("UNAUTHORIZED");
+          this.ws?.close();
+          return;
+        }
         this.options.onMessage(data);
       } catch {
         this.options.onConnectionChange("ERROR");
@@ -80,7 +91,9 @@ export class RealtimeClient {
     this.ws.onclose = () => {
       this.clearHeartbeat();
       if (this.closedIntentionally) {
-        this.options.onConnectionChange("DISCONNECTED");
+        if (!this.authRejected) {
+          this.options.onConnectionChange("DISCONNECTED");
+        }
         return;
       }
       this.scheduleReconnect();

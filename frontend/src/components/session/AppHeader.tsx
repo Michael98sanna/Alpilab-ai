@@ -7,6 +7,7 @@ interface AppHeaderProps {
   sessionDevicesExpanded?: boolean;
   onToggleSessionDevices?: () => void;
   onVoiceClick?: () => void;
+  onPairDevice?: () => void;
   connectionState?: import("../../types").ConnectionState;
   showConnection?: boolean;
   pcAgent?: import("../../types").PcAgentStatus | null;
@@ -17,6 +18,7 @@ export function AppHeader({
   sessionDevicesExpanded = false,
   onToggleSessionDevices,
   onVoiceClick,
+  onPairDevice,
   connectionState = "DISCONNECTED",
   showConnection = false,
   pcAgent = null,
@@ -24,6 +26,8 @@ export function AppHeader({
   const connectionLabel =
     connectionState === "CONNECTED"
       ? "Connected"
+      : connectionState === "UNAUTHORIZED"
+        ? "Dispositivo non autorizzato"
       : connectionState === "RECONNECTING"
         ? "Reconnecting…"
         : connectionState === "CONNECTING"
@@ -60,6 +64,16 @@ export function AppHeader({
             expanded={sessionDevicesExpanded}
             onToggle={onToggleSessionDevices}
           />
+        )}
+        {onPairDevice && (
+          <button
+            type="button"
+            className={styles.pairBtn}
+            onClick={onPairDevice}
+            data-testid="pair-device"
+          >
+            Collega dispositivo
+          </button>
         )}
         <button
           type="button"

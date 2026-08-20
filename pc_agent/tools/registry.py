@@ -3,11 +3,21 @@
 from __future__ import annotations
 
 from pc_agent.tools.base import LocalToolSpec, execute_safe_test
+from pc_agent.tools.alpilab_check_handlers import (
+    handle_get_invoice,
+    handle_get_product,
+    handle_search_invoices,
+    handle_search_products,
+)
 from pc_agent.tools.windows_handlers import make_windows_app_handler
 from pc_agent.windows_apps.registry import TOOL_ID_TO_APP_ID
 
 SAFE_TEST_TOOL_ID = "demo.safe_test"
 WINDOWS_3UTOOLS_OPEN_TOOL_ID = "windows.3utools.open"
+ALPILAB_CHECK_SEARCH_PRODUCTS_TOOL_ID = "alpilab_check.search_products"
+ALPILAB_CHECK_GET_PRODUCT_TOOL_ID = "alpilab_check.get_product"
+ALPILAB_CHECK_SEARCH_INVOICES_TOOL_ID = "alpilab_check.search_invoices"
+ALPILAB_CHECK_GET_INVOICE_TOOL_ID = "alpilab_check.get_invoice"
 
 
 class LocalToolRegistry:
@@ -42,6 +52,38 @@ class LocalToolRegistry:
                     handler=make_windows_app_handler(tool_id),
                 )
             )
+        self.register(
+            LocalToolSpec(
+                tool_id=ALPILAB_CHECK_SEARCH_PRODUCTS_TOOL_ID,
+                required_capability="alpilab_check",
+                allowed_argument_keys=frozenset({"query", "limit"}),
+                handler=handle_search_products,
+            )
+        )
+        self.register(
+            LocalToolSpec(
+                tool_id=ALPILAB_CHECK_GET_PRODUCT_TOOL_ID,
+                required_capability="alpilab_check",
+                allowed_argument_keys=frozenset({"product_id"}),
+                handler=handle_get_product,
+            )
+        )
+        self.register(
+            LocalToolSpec(
+                tool_id=ALPILAB_CHECK_SEARCH_INVOICES_TOOL_ID,
+                required_capability="alpilab_check",
+                allowed_argument_keys=frozenset({"query", "limit"}),
+                handler=handle_search_invoices,
+            )
+        )
+        self.register(
+            LocalToolSpec(
+                tool_id=ALPILAB_CHECK_GET_INVOICE_TOOL_ID,
+                required_capability="alpilab_check",
+                allowed_argument_keys=frozenset({"invoice_id"}),
+                handler=handle_get_invoice,
+            )
+        )
 
 
 local_tool_registry = LocalToolRegistry()

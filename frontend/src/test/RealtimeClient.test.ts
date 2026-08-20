@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { RealtimeClient } from "../realtime/RealtimeClient";
 
 class MockWebSocket {
@@ -27,15 +27,25 @@ class MockWebSocket {
   simulateMessage(data: unknown) {
     this.onmessage?.({ data: JSON.stringify(data) });
   }
+
+  simulateClose() {
+    this.readyState = 3;
+    this.onclose?.();
+  }
 }
 
 describe("RealtimeClient", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     MockWebSocket.instances = [];
     vi.stubGlobal(
       "WebSocket",
       Object.assign(MockWebSocket, { OPEN: 1, CONNECTING: 0, CLOSING: 2, CLOSED: 3 }),
     );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("connects and receives snapshot", () => {
@@ -73,5 +83,71 @@ describe("RealtimeClient", () => {
     MockWebSocket.instances[0].simulateOpen();
     client.send({ type: "chat_message", content: "Test", role: "user" });
     expect(MockWebSocket.instances[0].send).toHaveBeenCalled();
+  });
+
+  it("sends pairing_token from client identity, not from the page URL", () => {
+    window.history.replaceState({}, "", "/?pairing_token=from-url&session=other");
+    const client = new RealtimeClient({
+      sessionId: "repair-001",
+      deviceId: "phone-stable-01",
+      deviceType: "phone",
+      deviceName: "Android",
+      pairingToken: "stored-token",
+      onMessage: vi.fn(),
+      onConnectionChange: vi.fn(),
+    });
+    client.connect();
+    const url = MockWebSocket.instances[0].url;
+    expect(url).toContain("/ws/sessions/repair-001");
+    expect(url).toContain("device_id=phone-stable-01");
+    expect(url).toContain("pairing_token=stored-token");
+    expect(url).not.toContain("from-url");
+    expect(url).not.toContain("other");
+  });
+
+  it("enters UNAUTHORIZED state and stops reconnect on auth errors", () => {
+    const onConnectionChange = vi.fn();
+    const client = new RealtimeClient({
+      sessionId: "repair-001",
+      deviceId: "phone-1",
+      deviceType: "phone",
+      deviceName: "Android",
+      pairingToken: "revoked-token",
+      onMessage: vi.fn(),
+      onConnectionChange,
+    });
+    client.connect();
+    MockWebSocket.instances[0].simulateOpen();
+    MockWebSocket.instances[0].simulateMessage({
+      type: "error",
+      message: "UNAUTHORIZED",
+    });
+    expect(onConnectionChange).toHaveBeenCalledWith("UNAUTHORIZED");
+    expect(onConnectionChange).not.toHaveBeenCalledWith("RECONNECTING");
+  });
+
+  it("reconnects after connection loss and receives snapshot again", () => {
+    const onMessage = vi.fn();
+    const onConnectionChange = vi.fn();
+    const client = new RealtimeClient({
+      sessionId: "repair-001",
+      deviceId: "phone-1",
+      deviceType: "phone",
+      deviceName: "Android",
+      pairingToken: "stored-token",
+      onMessage,
+      onConnectionChange,
+    });
+    client.connect();
+    const first = MockWebSocket.instances[0];
+    first.simulateOpen();
+    first.simulateClose();
+    expect(onConnectionChange).toHaveBeenCalledWith("RECONNECTING");
+    vi.advanceTimersByTime(1000);
+    const second = MockWebSocket.instances[1];
+    second.simulateOpen();
+    second.simulateMessage({ type: "snapshot", payload: { session: { id: "repair-001" } } });
+    expect(onConnectionChange).toHaveBeenCalledWith("CONNECTED");
+    expect(onMessage).toHaveBeenCalled();
   });
 });

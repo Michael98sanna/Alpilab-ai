@@ -74,7 +74,7 @@ class ResultEnvelope(BaseModel):
 
 
 class AgentInboundMessage(BaseModel):
-    type: Literal["register", "heartbeat", "agent_test_result", "tool_execute_result"]
+    type: Literal["register", "heartbeat", "agent_test_result", "tool_execute_result", "detected_devices_update"]
     agent_id: str | None = None
     agent_name: str | None = None
     platform: AgentPlatform | None = None
@@ -88,6 +88,7 @@ class AgentInboundMessage(BaseModel):
     result: dict[str, Any] | None = None
     error: str | None = None
     timestamp: str | None = None
+    devices: list[dict[str, Any]] | None = None
 
 
 class AgentOutboundMessage(BaseModel):

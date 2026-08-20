@@ -16,6 +16,12 @@ ERROR_MESSAGES: dict[str, str] = {
     "PROCESS_START_FAILED": "Non riesco ad aprire 3uTools: avvio dell'applicazione fallito.",
     "TOOL_EXECUTION_FAILED": "Non riesco ad aprire 3uTools: esecuzione fallita.",
     "TOOL_EXECUTION_TIMEOUT": "Non riesco ad aprire 3uTools: il PC Agent non ha risposto in tempo.",
+    "ALPILAB_CHECK_UNAVAILABLE": "Alpilab Check non è disponibile sul PC in questo momento.",
+    "ALPILAB_CHECK_TIMEOUT": "Alpilab Check non ha risposto in tempo.",
+    "ALPILAB_CHECK_PROTOCOL_MISMATCH": "Versione bridge Alpilab Check non compatibile.",
+    "ALPILAB_CHECK_UNAUTHORIZED": "Non sono autorizzato a leggere i dati da Alpilab Check.",
+    "ALPILAB_CHECK_INVALID_RESPONSE": "Alpilab Check ha restituito una risposta non valida.",
+    "ALPILAB_CHECK_UPSTREAM_ERROR": "Alpilab Check ha restituito un errore.",
 }
 
 

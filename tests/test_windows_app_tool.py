@@ -116,9 +116,13 @@ def test_authorization_missing_capability() -> None:
 
 
 def test_disabled_tool_server() -> None:
+    original = default_tool_registry.get_executable("windows.3utools.open")
     disabled = WINDOWS_3UTOOLS_OPEN_TOOL.model_copy(update={"enabled": False})
     default_tool_registry.register_executable(disabled)
-    assert default_tool_registry.resolve_executable("windows.3utools.open") is None
+    try:
+        assert default_tool_registry.resolve_executable("windows.3utools.open") is None
+    finally:
+        default_tool_registry.register_executable(original or WINDOWS_3UTOOLS_OPEN_TOOL)
 
 
 def test_invalid_arguments_extra_keys() -> None:
@@ -164,6 +168,62 @@ def test_local_app_registry_config_parsing(tmp_path, monkeypatch) -> None:
     assert app is not None
     assert app.enabled is True
     assert app.dry_run is True
+
+
+def test_user_json_utf8_bom_is_source_of_truth(tmp_path, monkeypatch) -> None:
+    import json
+
+    from pc_agent.windows_apps.config import load_windows_apps_config
+
+    exe = tmp_path / "3uTools.exe"
+    exe.write_text("stub", encoding="utf-8")
+    payload = {
+        "windows_apps": {
+            "3utools": {
+                "enabled": True,
+                "executable": "3uTools.exe",
+                "executable_path": str(exe),
+                "dry_run": False,
+            }
+        }
+    }
+    config_file = tmp_path / "windows_apps.json"
+    config_file.write_bytes(b"\xef\xbb\xbf" + json.dumps(payload).encode("utf-8"))
+    monkeypatch.delenv("ALPILAB_WINAPP_3UTOOLS_ENABLED", raising=False)
+    monkeypatch.delenv("ALPILAB_WINAPP_3UTOOLS_DRY_RUN", raising=False)
+    monkeypatch.setenv("ALPILAB_WINAPP_3UTOOLS_ENABLED", "false")
+    monkeypatch.setenv("ALPILAB_WINAPP_3UTOOLS_DRY_RUN", "true")
+    loaded = load_windows_apps_config(str(config_file))
+    app = loaded["3utools"]
+    assert app.enabled is True
+    assert app.dry_run is False
+    assert app.executable_path == str(exe)
+
+
+def test_user_json_utf16_bom_is_readable(tmp_path, monkeypatch) -> None:
+    import json
+
+    from pc_agent.windows_apps.config import load_windows_apps_config
+
+    exe = tmp_path / "3uTools.exe"
+    exe.write_text("stub", encoding="utf-8")
+    payload = {
+        "windows_apps": {
+            "3utools": {
+                "enabled": True,
+                "executable": "3uTools.exe",
+                "executable_path": str(exe),
+                "dry_run": False,
+            }
+        }
+    }
+    config_file = tmp_path / "windows_apps.json"
+    config_file.write_text(json.dumps(payload), encoding="utf-16")
+    monkeypatch.delenv("ALPILAB_WINAPP_3UTOOLS_ENABLED", raising=False)
+    loaded = load_windows_apps_config(str(config_file))
+    app = loaded["3utools"]
+    assert app.enabled is True
+    assert app.dry_run is False
 
 
 def test_app_disabled_local(tmp_path) -> None:

@@ -5,7 +5,8 @@ export type ConnectionState =
   | "CONNECTED"
   | "DISCONNECTED"
   | "RECONNECTING"
-  | "ERROR";
+  | "ERROR"
+  | "UNAUTHORIZED";
 
 const DEFAULT_WS = "ws://127.0.0.1:8000";
 const DEFAULT_API = "http://127.0.0.1:8000";

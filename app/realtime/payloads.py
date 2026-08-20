@@ -80,6 +80,8 @@ class SessionSnapshotPayload(BaseModel):
     assistant_status: AssistantStatus = "IDLE"
     state_version: int = 0
     pc_agent: AgentPresencePayload | None = None
+    device_context: dict[str, Any] | None = None
+    detected_devices: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class SessionStateUpdatedPayload(BaseModel):
@@ -97,6 +99,19 @@ class StateUpdateRejectedPayload(BaseModel):
     state_version: int
 
 
+class RepairDevicePayload(BaseModel):
+    """Payload for REPAIR_DEVICE_* events."""
+
+    device_id: str
+    brand: str | None = None
+    model: str | None = None
+    variant: str | None = None
+    serial_number: str | None = None
+    imei: str | None = None
+    connection_type: str | None = None
+    source: str | None = None
+
+
 class ClientInboundMessage(BaseModel):
     type: Literal[
         "chat_message",
@@ -106,6 +121,8 @@ class ClientInboundMessage(BaseModel):
         "diagnosis_pause",
         "repair_context_update",
         "request_snapshot",
+        "associate_repair_device",
+        "unassociate_repair_device",
     ]
     content: str | None = None
     role: MessageRole = "user"
@@ -116,6 +133,7 @@ class ClientInboundMessage(BaseModel):
     device: str | None = None
     issue: str | None = None
     label: str | None = None
+    repair_device_id: str | None = None
 
 
 class WsEnvelope(BaseModel):

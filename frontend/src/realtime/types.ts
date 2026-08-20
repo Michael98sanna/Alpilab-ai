@@ -11,7 +11,12 @@ export type RealtimeEventType =
   | "DEVICE_HEARTBEAT"
   | "DIAGNOSTIC_UPDATED"
   | "DIAGNOSTIC_TEST_STARTED"
-  | "DIAGNOSTIC_TEST_COMPLETED";
+  | "DIAGNOSTIC_TEST_COMPLETED"
+  | "REPAIR_DEVICE_DETECTED"
+  | "REPAIR_DEVICE_LIST_UPDATED"
+  | "REPAIR_DEVICE_ASSOCIATED"
+  | "REPAIR_DEVICE_UNASSOCIATED"
+  | "REPAIR_DEVICE_DISCONNECTED";
 
 export interface RealtimeEventEnvelope {
   id: string;
@@ -58,6 +63,8 @@ export interface SessionSnapshot {
   }>;
   assistant_status: CoreState;
   state_version?: number;
+  detected_devices?: import("../types").DetectedDevice[];
+  device_context?: import("../types").DeviceContext | null;
   pc_agent?: {
     agent_id: string;
     agent_name: string;
@@ -74,6 +81,7 @@ export interface RealtimeClientOptions {
   deviceType: DeviceKind;
   deviceName: string;
   seedDemo?: boolean;
+  pairingToken?: string | null;
   onMessage: (msg: WsServerMessage) => void;
   onConnectionChange: (state: import("../config/env").ConnectionState) => void;
 }
@@ -85,7 +93,9 @@ export type OutboundMessage =
   | { type: "diagnostic_update"; test_id: string; value: string }
   | { type: "diagnosis_pause"; paused: boolean }
   | { type: "repair_context_update"; device?: string; issue?: string; label?: string }
-  | { type: "request_snapshot" };
+  | { type: "request_snapshot" }
+  | { type: "associate_repair_device"; repair_device_id: string }
+  | { type: "unassociate_repair_device" };
 
 export function mapDiagnosticStatus(status: string): DiagnosticStatus {
   const upper = status.toUpperCase();

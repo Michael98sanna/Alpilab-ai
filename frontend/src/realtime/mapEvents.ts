@@ -116,6 +116,38 @@ export function mapRealtimeEventToActions(event: RealtimeEventEnvelope): RepairA
         ];
       }
       return [];
+    case "REPAIR_DEVICE_DETECTED":
+    case "REPAIR_DEVICE_LIST_UPDATED":
+      if (Array.isArray(payload.detected_devices)) {
+        return [
+          {
+            type: "SET_DETECTED_DEVICES",
+            devices: payload.detected_devices as import("../types").DetectedDevice[],
+          },
+        ];
+      }
+      return [];
+    case "REPAIR_DEVICE_ASSOCIATED":
+      return [
+        {
+          type: "SET_DEVICE_CONTEXT",
+          context: payload as import("../types").DeviceContext,
+        },
+      ];
+    case "REPAIR_DEVICE_UNASSOCIATED":
+      return [{ type: "SET_DEVICE_CONTEXT", context: null }];
+    case "REPAIR_DEVICE_DISCONNECTED":
+      // device_context stays — only detected list changes (no separate action needed,
+      // the hub will send REPAIR_DEVICE_LIST_UPDATED after)
+      return [];
+    case "TOOL_EXECUTION_STARTED":
+      return [{ type: "SET_CORE_STATE", state: "WORKING" }];
+    case "TOOL_EXECUTION_COMPLETED": {
+      if (payload.success === true) {
+        return [];
+      }
+      return [{ type: "SET_CORE_STATE", state: "ERROR" }];
+    }
     default:
       return [];
   }

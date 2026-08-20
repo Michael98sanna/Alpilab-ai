@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-import os
+import logging
 from pathlib import Path
 
 from pc_agent.windows_apps.launcher import LaunchResult, ProcessLauncher, SubprocessLauncher
 from pc_agent.windows_apps.models import WindowsApplicationConfig
 from pc_agent.windows_apps.registry import LocalAppRegistry, local_app_registry
+
+logger = logging.getLogger("alpilab.pc_agent")
 
 
 class WindowsAppToolError(Exception):
@@ -30,8 +32,17 @@ class WindowsAppTool:
     def execute(self, tool_id: str) -> dict:
         app = self._registry.resolve_tool(tool_id)
         if app is None:
+            logger.warning("windows app tool_id=%s APP_NOT_REGISTERED", tool_id)
             raise WindowsAppToolError("APP_NOT_REGISTERED")
 
+        logger.info(
+            "windows app tool_id=%s app_id=%s enabled=%s dry_run=%s executable_path=%s",
+            tool_id,
+            app.app_id,
+            app.enabled,
+            app.dry_run,
+            app.executable_path,
+        )
         if not app.enabled:
             raise WindowsAppToolError("TOOL_DISABLED")
 

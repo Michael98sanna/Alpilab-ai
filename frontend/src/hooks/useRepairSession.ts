@@ -38,6 +38,8 @@ const defaultUiState = {
   savingTestId: null as string | null,
   stateError: null as string | null,
   pcAgent: null as import("../types").PcAgentStatus | null,
+  detectedDevices: [] as import("../types").DetectedDevice[],
+  deviceContext: null as import("../types").DeviceContext | null,
 };
 
 function buildInitialState(): RepairState {
@@ -279,11 +281,19 @@ function repairReducer(state: RepairState, action: Action): RepairState {
               agentVersion: snap.pc_agent.agent_version,
             }
           : null,
+        detectedDevices: snap.detected_devices ?? [],
+        deviceContext: snap.device_context ?? null,
       };
     }
 
     case "SET_PC_AGENT":
       return { ...state, pcAgent: action.agent };
+
+    case "SET_DETECTED_DEVICES":
+      return { ...state, detectedDevices: action.devices };
+
+    case "SET_DEVICE_CONTEXT":
+      return { ...state, deviceContext: action.context };
 
     case "APPLY_STATE_UPDATE": {
       if (action.stateVersion <= state.stateVersion) {
@@ -554,6 +564,28 @@ export function useRepairSession(loadScenarioOnInit = true) {
 
   const nextPendingTest = state.tests.find((t) => t.status === "PENDING");
 
+  // Local (non-realtime) association callbacks — operate directly on local state
+  const associateDevice = useCallback((deviceId: string) => {
+    const found = state.detectedDevices.find((d) => d.id === deviceId);
+    if (!found) return;
+    dispatch({
+      type: "SET_DEVICE_CONTEXT",
+      context: {
+        id: found.id,
+        brand: found.brand,
+        model: found.model,
+        serial_number: found.serial_number,
+        connection_type: found.connection_type,
+        source: found.source,
+        associated_at: new Date().toISOString(),
+      },
+    });
+  }, [state.detectedDevices]);
+
+  const unassociateDevice = useCallback(() => {
+    dispatch({ type: "SET_DEVICE_CONTEXT", context: null });
+  }, []);
+
   return {
     state,
     dispatch,
@@ -576,6 +608,8 @@ export function useRepairSession(loadScenarioOnInit = true) {
     closeToolPanel,
     nextPendingTest,
     hasActiveRepair: state.session.status !== "none",
+    associateDevice,
+    unassociateDevice,
   };
 }
 

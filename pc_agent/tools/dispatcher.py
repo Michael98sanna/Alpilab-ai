@@ -91,7 +91,17 @@ class LocalToolDispatcher:
                 success=False,
                 error=exc.code,
             )
-        except Exception:
+        except Exception as exc:
+            code = getattr(exc, "code", None)
+            if isinstance(code, str) and code:
+                return self._result(
+                    request_id=request_id,
+                    command_id=command_id,
+                    agent_id=agent_id,
+                    tool_id=tool_id,
+                    success=False,
+                    error=code,
+                )
             logger.exception("Tool handler failed tool_id=%s", tool_id)
             return self._result(
                 request_id=request_id,

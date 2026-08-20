@@ -87,6 +87,23 @@ class NaturalLanguageCommandParser:
         "alimentazione",
     )
 
+    _SEARCH_PRODUCTS = re.compile(
+        r"^(?:cerca|trova)\s+(.+?)\s+(?:nel\s+)?(?:listino|catalogo)\.?$",
+        re.I,
+    )
+    _GET_PRODUCT = re.compile(
+        r"^(?:mostra|apri|dammi)\s+(?:il\s+)?prodotto\s+([a-z0-9_\-]+)\.?$",
+        re.I,
+    )
+    _SEARCH_INVOICES = re.compile(
+        r"^(?:cerca|trova)\s+(.+?)\s+(?:nelle\s+)?fatture\.?$",
+        re.I,
+    )
+    _GET_INVOICE = re.compile(
+        r"^(?:mostra|apri|dammi)\s+(?:la\s+)?fattura\s+([a-z0-9_\-]+)\.?$",
+        re.I,
+    )
+
     def parse(self, text: str) -> NaturalLanguageParseResult:
         raw = text.strip()
         if not raw:
@@ -116,6 +133,10 @@ class NaturalLanguageCommandParser:
         app_target = self._extract_open_target(normalized)
         if app_target is not None:
             return self._resolve_open_target(app_target, raw)
+
+        check_intent = self._extract_alpilab_check_intent(normalized, raw)
+        if check_intent is not None:
+            return check_intent
 
         if self._looks_like_conversation(normalized):
             return NaturalLanguageParseResult(
@@ -186,3 +207,72 @@ class NaturalLanguageCommandParser:
         if "?" in normalized and not self._OPEN_VERB.match(normalized):
             return True
         return any(hint in normalized for hint in self._CONVERSATION_HINTS)
+
+    def _extract_alpilab_check_intent(
+        self, normalized: str, raw_text: str
+    ) -> NaturalLanguageParseResult | None:
+        m = self._SEARCH_PRODUCTS.match(normalized)
+        if m:
+            query = m.group(1).strip()
+            intent = Intent(
+                type=IntentType.OPEN_TOOL,
+                target="alpilab_check.search_products",
+                parameters={"query": query, "limit": 20},
+                raw_text=raw_text,
+                confidence=MATCH_CONFIDENCE,
+            )
+            return NaturalLanguageParseResult(
+                outcome=ParseOutcome.ACTION_COMMAND,
+                intent=intent,
+                confidence=MATCH_CONFIDENCE,
+            )
+
+        m = self._GET_PRODUCT.match(normalized)
+        if m:
+            product_id = m.group(1).strip()
+            intent = Intent(
+                type=IntentType.OPEN_TOOL,
+                target="alpilab_check.get_product",
+                parameters={"product_id": product_id},
+                raw_text=raw_text,
+                confidence=MATCH_CONFIDENCE,
+            )
+            return NaturalLanguageParseResult(
+                outcome=ParseOutcome.ACTION_COMMAND,
+                intent=intent,
+                confidence=MATCH_CONFIDENCE,
+            )
+
+        m = self._SEARCH_INVOICES.match(normalized)
+        if m:
+            query = m.group(1).strip()
+            intent = Intent(
+                type=IntentType.OPEN_TOOL,
+                target="alpilab_check.search_invoices",
+                parameters={"query": query, "limit": 20},
+                raw_text=raw_text,
+                confidence=MATCH_CONFIDENCE,
+            )
+            return NaturalLanguageParseResult(
+                outcome=ParseOutcome.ACTION_COMMAND,
+                intent=intent,
+                confidence=MATCH_CONFIDENCE,
+            )
+
+        m = self._GET_INVOICE.match(normalized)
+        if m:
+            invoice_id = m.group(1).strip()
+            intent = Intent(
+                type=IntentType.OPEN_TOOL,
+                target="alpilab_check.get_invoice",
+                parameters={"invoice_id": invoice_id},
+                raw_text=raw_text,
+                confidence=MATCH_CONFIDENCE,
+            )
+            return NaturalLanguageParseResult(
+                outcome=ParseOutcome.ACTION_COMMAND,
+                intent=intent,
+                confidence=MATCH_CONFIDENCE,
+            )
+
+        return None

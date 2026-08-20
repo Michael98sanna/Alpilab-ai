@@ -86,6 +86,13 @@ describe("HomePage V0.3.1 layout", () => {
     renderHome();
     expect(screen.getByTestId("session-devices-chip")).toBeInTheDocument();
   });
+
+  it("opens pairing dialog from Collega dispositivo", async () => {
+    const user = userEvent.setup();
+    renderHome();
+    await user.click(screen.getByTestId("pair-device"));
+    expect(screen.getByTestId("pairing-dialog")).toBeInTheDocument();
+  });
 });
 
 describe("HomePage V0.3.1 core states", () => {

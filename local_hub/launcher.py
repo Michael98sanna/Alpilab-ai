@@ -17,6 +17,8 @@ import uvicorn
 from app.hub.discovery import DEFAULT_HUB_NAME, HubAdvertiser
 from local_hub.paths import is_frozen, log_dir, sqlite_path
 from local_hub.user_config import load_hub_config
+from local_hub.windows_startup import ensure_windows_autostart
+from local_hub.alpilab_check_config import apply_alpilab_check_env
 
 logger = logging.getLogger("alpilab.local_hub")
 
@@ -125,6 +127,7 @@ def _configure_local_env(host: str, port: int, session_id: str) -> None:
         "ALPILAB_IDENTITY_PATH",
         str(Path.home() / ".alpilab" / "agent_identity.json"),
     )
+    apply_alpilab_check_env()
 
 
 def _ensure_windows_apps_file() -> None:
@@ -166,9 +169,12 @@ def _start_pc_agent() -> subprocess.Popen | None:
         return None
     env = os.environ.copy()
     logger.info("Starting PC Agent")
+    popen_kwargs: dict[str, Any] = {"env": env}
+    if sys.platform == "win32":
+        popen_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
     if is_frozen():
-        return subprocess.Popen([sys.executable, "--agent"], env=env)  # noqa: S603
-    return subprocess.Popen([sys.executable, "-m", "pc_agent"], env=env)  # noqa: S603
+        return subprocess.Popen([sys.executable, "--agent"], **popen_kwargs)  # noqa: S603
+    return subprocess.Popen([sys.executable, "-m", "pc_agent"], **popen_kwargs)  # noqa: S603
 
 
 def _open_desktop(url: str) -> None:
@@ -244,16 +250,13 @@ def main(argv: list[str] | None = None) -> None:
 
     log_path = log_dir() / "hub.log"
     _configure_hub_logging(log_path)
+    ensure_windows_autostart(bool(cfg.get("start_with_windows", True)))
     _configure_local_env(host, port, session_id)
     _ensure_windows_apps_file()
     if args.no_agent or not cfg.get("start_pc_agent", True):
         os.environ["ALPILAB_HUB_START_AGENT"] = "false"
 
-    advertiser = HubAdvertiser(port=port, name=name, lan_ip="127.0.0.1")
-    # Advertise the LAN address, keep Windows UI on loopback.
-    from app.hub.discovery import detect_lan_ip
-
-    advertiser.lan_ip = detect_lan_ip()
+    advertiser = HubAdvertiser(port=port, name=name)
     if not args.no_mdns and cfg.get("start_mdns", True):
         advertiser.start()
 
@@ -265,6 +268,7 @@ def main(argv: list[str] | None = None) -> None:
         port=port,
         log_level="info",
         lifespan="on",
+        access_log=False,
         log_config=hub_uvicorn_log_config(log_path),
     )
     server = uvicorn.Server(config)
