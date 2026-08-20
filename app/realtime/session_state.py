@@ -17,6 +17,7 @@ from app.realtime.payloads import (
 )
 
 from app.agent.payloads import AgentPresencePayload
+from app.conversation.alpilab_check_context import ProductSearchContext
 from app.schemas.device_context import DetectedDevice, DeviceContext
 
 
@@ -50,6 +51,7 @@ class RealtimeSessionData:
     pc_agent: AgentPresencePayload | None = None
     device_context: DeviceContext | None = None
     detected_devices: list[DetectedDevice] = field(default_factory=list)
+    product_search_context: ProductSearchContext | None = None
     created_at: datetime = field(default_factory=utc_now)
 
     def repair_context(self) -> RepairContextPayload:

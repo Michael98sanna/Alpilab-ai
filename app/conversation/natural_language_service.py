@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from app.agent.registry import agent_registry
 from app.agent.tool_executor import ToolExecutionError, tool_execution_service
@@ -13,7 +14,20 @@ from app.commands.natural_language_parser import (
     ParseOutcome,
 )
 from app.commands.tool_resolution import resolve_tool_id
+from app.conversation.alpilab_check_context import (
+    apply_product_search_context,
+    format_product_label,
+)
+from app.conversation.alpilab_check_followup import (
+    FollowUpOutcome,
+    resolve_product_followup,
+)
+from app.conversation.alpilab_check_messages import (
+    format_get_product_response,
+    format_search_products_response,
+)
 from app.conversation.user_messages import error_message, success_message
+from app.schemas.commands import Intent
 from app.security.tool_authorization import authorize_tool_execution
 from app.tools.registry import default_tool_registry
 
@@ -47,6 +61,53 @@ class NaturalLanguageCommandService:
         parsed = self._parser.parse(text)
 
         if parsed.outcome == ParseOutcome.CONVERSATION:
+            session = realtime_manager.get_session(session_id)
+            followup = resolve_product_followup(
+                text,
+                session.product_search_context if session else None,
+            )
+            if followup.outcome == FollowUpOutcome.ACTION and followup.intent is not None:
+                logger.info(
+                    "[INTENT] contextual follow-up target=%s product_index=%s",
+                    followup.intent.target,
+                    followup.product_index,
+                )
+                await self._dispatch_tool_intent(
+                    realtime_manager,
+                    session_id,
+                    device_id,
+                    followup.intent,
+                    followup_detail_focus=followup.detail_focus,
+                    followup_product_index=followup.product_index,
+                )
+                return
+            if followup.outcome == FollowUpOutcome.SELECTION and followup.message:
+                logger.info(
+                    "[INTENT] product selection product_index=%s",
+                    followup.product_index,
+                )
+                await self._reply(
+                    realtime_manager,
+                    session_id,
+                    device_id,
+                    followup.message,
+                )
+                await realtime_manager.set_assistant_status(
+                    session_id, "IDLE", source_device_id=device_id
+                )
+                return
+            if followup.outcome == FollowUpOutcome.CLARIFICATION and followup.message:
+                await self._reply(
+                    realtime_manager,
+                    session_id,
+                    device_id,
+                    followup.message,
+                )
+                await realtime_manager.set_assistant_status(
+                    session_id, "IDLE", source_device_id=device_id
+                )
+                return
+
             logger.info("[INTENT] CONVERSATION — local AI router (no tool dispatch)")
             await realtime_manager.set_assistant_status(
                 session_id,
@@ -114,7 +175,23 @@ class NaturalLanguageCommandService:
             )
             return
 
-        intent = parsed.intent
+        await self._dispatch_tool_intent(
+            realtime_manager,
+            session_id,
+            device_id,
+            parsed.intent,
+        )
+
+    async def _dispatch_tool_intent(
+        self,
+        realtime_manager: Any,
+        session_id: str,
+        device_id: str,
+        intent: Intent,
+        *,
+        followup_detail_focus: str | None = None,
+        followup_product_index: int | None = None,
+    ) -> None:
         logger.info(
             "[INTENT] %s target=%s confidence=%s",
             intent.type.value,
@@ -247,7 +324,29 @@ class NaturalLanguageCommandService:
             return
 
         if result.success:
-            msg = self._success_message_for_tool(tool_id, result.result)
+            if tool_id == "alpilab_check.search_products" and session is not None:
+                apply_product_search_context(session, result.result)
+
+            product_label = None
+            if (
+                followup_product_index is not None
+                and session is not None
+                and session.product_search_context is not None
+                and 0 <= followup_product_index < len(session.product_search_context.items)
+            ):
+                product_label = format_product_label(
+                    session.product_search_context.items[followup_product_index]
+                )
+
+            msg = self._success_message_for_tool(
+                tool_id,
+                result.result,
+                detail_focus=followup_detail_focus,
+                product_label=product_label,
+                product_search_context=(
+                    session.product_search_context if session is not None else None
+                ),
+            )
             logger.info("[RESULT] success=True tool=%s summary=%s", tool_id, msg)
             logger.info("[TOOL] %s", tool_id)
             await self._reply(realtime_manager, session_id, device_id, msg)
@@ -275,23 +374,29 @@ class NaturalLanguageCommandService:
             session_id, "ERROR", source_device_id=device_id
         )
 
-    def _success_message_for_tool(self, tool_id: str, payload: dict) -> str:
+    def _success_message_for_tool(
+        self,
+        tool_id: str,
+        payload: dict,
+        *,
+        detail_focus: str | None = None,
+        product_label: str | None = None,
+        product_search_context: Any = None,
+    ) -> str:
         if tool_id == "windows.3utools.open":
             dry_run = payload.get("mode") == "dry_run"
             return success_message(dry_run=dry_run)
         if tool_id == "alpilab_check.search_products":
-            items = payload.get("items") if isinstance(payload, dict) else None
-            if isinstance(items, list):
-                if not items:
-                    return "Non ho trovato prodotti nel listino per questa ricerca."
-                sample = [str(i.get("name") or i.get("id") or "n/d") for i in items[:3] if isinstance(i, dict)]
-                return f"Ho trovato {len(items)} prodotti nel listino: {', '.join(sample)}."
+            return format_search_products_response(
+                payload if isinstance(payload, dict) else {},
+                context=product_search_context,
+            )
         if tool_id == "alpilab_check.get_product":
-            if isinstance(payload, dict) and payload:
-                pid = payload.get("id", "n/d")
-                name = payload.get("name", "prodotto")
-                return f"Dettaglio prodotto {pid}: {name}."
-            return "Non ho trovato dettagli per il prodotto richiesto."
+            return format_get_product_response(
+                payload if isinstance(payload, dict) else {},
+                detail_focus=detail_focus,
+                product_label=product_label,
+            )
         if tool_id == "alpilab_check.search_invoices":
             items = payload.get("items") if isinstance(payload, dict) else None
             if isinstance(items, list):

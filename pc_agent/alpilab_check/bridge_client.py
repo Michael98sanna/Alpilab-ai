@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -25,8 +26,7 @@ _MAX_TIMEOUT_SEC = 30.0
 _DEFAULT_TIMEOUT_SEC = 4.0
 _SECRET_ENV = "ALPILAB_CHECK_BRIDGE_SECRET"
 _SECRET_PATH_ENV = "ALPILAB_CHECK_BRIDGE_SECRET_PATH"
-_SECRET_HEADER = "X-Alpilab-Check-Secret"
-_PROTOCOL_HEADER = "X-Alpilab-Check-Protocol-Version"
+_SECRET_HEADER = "X-Alpilab-Token"
 
 logger = logging.getLogger("alpilab.pc_agent")
 
@@ -113,34 +113,68 @@ class AlpilabCheckBridgeClient:
         return cls(BridgeClientConfig(secret=secret, timeout_sec=timeout))
 
     def health(self) -> dict[str, Any]:
-        payload = self._request_json("GET", "/health")
+        payload = self._request_json("GET", "/v1/health")
         protocol = payload.get("protocol_version")
         if protocol != _BRIDGE_PROTOCOL_VERSION:
             raise AlpilabCheckBridgeError(
                 ALPILAB_CHECK_PROTOCOL_MISMATCH,
                 f"unsupported protocol_version={protocol!r}",
             )
+        data = payload.get("data")
+        if isinstance(data, dict):
+            return data
         return payload
 
     def search_products(self, query: str, limit: int = 20) -> dict[str, Any]:
-        return self._request_json(
-            "POST",
-            "/search_products",
+        return self._call_tool(
+            "alpilab_check.search_products",
             {"query": query, "limit": limit},
         )
 
     def get_product(self, product_id: str) -> dict[str, Any]:
-        return self._request_json("POST", "/get_product", {"product_id": product_id})
+        # Bridge V1 contract uses "id"; keep Python API as product_id.
+        return self._call_tool(
+            "alpilab_check.get_product",
+            {"id": product_id},
+        )
 
     def search_invoices(self, query: str, limit: int = 20) -> dict[str, Any]:
-        return self._request_json(
-            "POST",
-            "/search_invoices",
+        return self._call_tool(
+            "alpilab_check.search_invoices",
             {"query": query, "limit": limit},
         )
 
     def get_invoice(self, invoice_id: str) -> dict[str, Any]:
-        return self._request_json("POST", "/get_invoice", {"invoice_id": invoice_id})
+        return self._call_tool(
+            "alpilab_check.get_invoice",
+            {"invoice_id": invoice_id},
+        )
+
+    def _call_tool(self, tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        body = {
+            "protocol_version": _BRIDGE_PROTOCOL_VERSION,
+            "tool": tool,
+            "request_id": uuid.uuid4().hex,
+            "arguments": arguments,
+        }
+        payload = self._request_json("POST", "/v1", body)
+        if payload.get("success") is False:
+            self._raise_from_envelope_error(payload)
+        data = payload.get("data")
+        if data is None:
+            return {}
+        if not isinstance(data, dict):
+            raise AlpilabCheckBridgeError(ALPILAB_CHECK_INVALID_RESPONSE)
+        return data
+
+    def _raise_from_envelope_error(self, payload: dict[str, Any]) -> None:
+        err = payload.get("error") if isinstance(payload.get("error"), dict) else {}
+        code = str(err.get("code") or "")
+        if code in {"UNAUTHORIZED"}:
+            raise AlpilabCheckBridgeError(ALPILAB_CHECK_UNAUTHORIZED)
+        if code in {"PROTOCOL_MISMATCH"}:
+            raise AlpilabCheckBridgeError(ALPILAB_CHECK_PROTOCOL_MISMATCH)
+        raise AlpilabCheckBridgeError(ALPILAB_CHECK_UPSTREAM_ERROR)
 
     def _request_json(
         self,
@@ -153,7 +187,6 @@ class AlpilabCheckBridgeClient:
         headers = {
             "Accept": "application/json",
             _SECRET_HEADER: self._secret,
-            _PROTOCOL_HEADER: _BRIDGE_PROTOCOL_VERSION,
         }
         if body is not None:
             data = json.dumps(body).encode("utf-8")

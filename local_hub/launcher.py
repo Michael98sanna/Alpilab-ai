@@ -18,6 +18,7 @@ from app.hub.discovery import DEFAULT_HUB_NAME, HubAdvertiser
 from local_hub.paths import is_frozen, log_dir, sqlite_path
 from local_hub.user_config import load_hub_config
 from local_hub.windows_startup import ensure_windows_autostart
+from local_hub.alpilab_check_config import apply_alpilab_check_env
 
 logger = logging.getLogger("alpilab.local_hub")
 
@@ -126,6 +127,7 @@ def _configure_local_env(host: str, port: int, session_id: str) -> None:
         "ALPILAB_IDENTITY_PATH",
         str(Path.home() / ".alpilab" / "agent_identity.json"),
     )
+    apply_alpilab_check_env()
 
 
 def _ensure_windows_apps_file() -> None:
