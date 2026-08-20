@@ -72,15 +72,6 @@ export function HomePage() {
 
   const handleOpenProgram = useCallback(
     async (program: LabProgram): Promise<ProgramActionResult> => {
-      if (program.id === "alpilab_check") {
-        setSection("chat");
-        return {
-          ok: true,
-          message:
-            "Usa la chat: es. «Cerca S24 nel listino» (bridge Alpilab Check).",
-        };
-      }
-
       if (!canExecuteProgram(program) || program.toolId !== "windows.3utools.open") {
         return { ok: false, message: "Non ancora configurato" };
       }
@@ -135,12 +126,6 @@ export function HomePage() {
         pcAgent={mode === "realtime" ? state.pcAgent : null}
       />
 
-      <MainSectionNav
-        active={section}
-        onChange={setSection}
-        diagnosticsEnabled={hasActiveRepair}
-      />
-
       {showContext && <RepairContextBanner session={state.session} />}
 
       {showDevicePanel && (
@@ -179,20 +164,6 @@ export function HomePage() {
               />
 
               <AlpilabStatusBar state={state.coreState} />
-
-              <div className={styles.inputArea}>
-                <ChatInput
-                  onSend={sendMessage}
-                  onVoice={simulateVoice}
-                  coreState={state.coreState}
-                  placeholder={
-                    state.onboardingStep === "idle" && !hasActiveRepair
-                      ? "Cosa dobbiamo riparare?"
-                      : "Scrivi un messaggio..."
-                  }
-                  disabled={state.coreState === "THINKING"}
-                />
-              </div>
             </div>
           </main>
         )}
@@ -220,6 +191,29 @@ export function HomePage() {
               busyProgramId={busyProgramId}
             />
           </main>
+        )}
+      </div>
+
+      <div className={styles.bottomChrome} data-testid="bottom-chrome">
+        <MainSectionNav
+          active={section}
+          onChange={setSection}
+          diagnosticsEnabled={hasActiveRepair}
+        />
+        {section === "chat" && (
+          <div className={styles.inputArea}>
+            <ChatInput
+              onSend={sendMessage}
+              onVoice={simulateVoice}
+              coreState={state.coreState}
+              placeholder={
+                state.onboardingStep === "idle" && !hasActiveRepair
+                  ? "Cosa dobbiamo riparare?"
+                  : "Scrivi un messaggio..."
+              }
+              disabled={state.coreState === "THINKING"}
+            />
+          </div>
         )}
       </div>
 

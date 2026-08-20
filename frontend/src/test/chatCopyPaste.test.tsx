@@ -70,7 +70,7 @@ describe("chat message copy UX (desktop)", () => {
     );
   });
 
-  it("opens message context menu with Copia and Seleziona tutto", () => {
+  it("opens message context menu with only Copia", () => {
     const ref = createRef<HTMLDivElement>();
     render(
       <ChatTimeline
@@ -85,31 +85,15 @@ describe("chat message copy UX (desktop)", () => {
     fireEvent.contextMenu(bubble, { clientX: 40, clientY: 60 });
     expect(screen.getByTestId("message-context-menu")).toBeInTheDocument();
     expect(screen.getByTestId("context-menu-copy")).toHaveTextContent("Copia");
-    expect(screen.getByTestId("context-menu-select-all")).toHaveTextContent(
-      "Seleziona tutto",
-    );
+    expect(screen.queryByTestId("context-menu-select-all")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("context-menu-cut")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("context-menu-paste")).not.toBeInTheDocument();
   });
 
-  it("disables Copia when nothing is selected", () => {
-    const ref = createRef<HTMLDivElement>();
-    render(
-      <ChatTimeline
-        messages={sampleMessages}
-        containerRef={ref}
-        onScroll={() => {}}
-        showNewMessages={false}
-        onJumpToLatest={() => {}}
-      />,
-    );
-    fireEvent.contextMenu(screen.getAllByTestId("message-user")[0]);
-    expect(screen.getByTestId("context-menu-copy")).toBeDisabled();
-  });
-
-  it("copies selected text via system clipboard helper", async () => {
+  it("Copia from menu writes the full message", async () => {
     const writeSpy = vi
       .spyOn(clipboard, "writeClipboardText")
       .mockResolvedValue(true);
-    vi.spyOn(clipboard, "getDomSelectionText").mockReturnValue("Ciao");
     const ref = createRef<HTMLDivElement>();
     render(
       <ChatTimeline
@@ -124,8 +108,51 @@ describe("chat message copy UX (desktop)", () => {
     expect(screen.getByTestId("context-menu-copy")).not.toBeDisabled();
     fireEvent.click(screen.getByTestId("context-menu-copy"));
     await waitFor(() => {
-      expect(writeSpy).toHaveBeenCalledWith("Ciao");
+      expect(writeSpy).toHaveBeenCalledWith("Ciao laboratorio");
     });
+    expect(await screen.findByTestId("message-copied-hint")).toHaveTextContent(
+      "✓ Copiato",
+    );
+  });
+
+  it("double click copies the full message", async () => {
+    const writeSpy = vi
+      .spyOn(clipboard, "writeClipboardText")
+      .mockResolvedValue(true);
+    const ref = createRef<HTMLDivElement>();
+    render(
+      <ChatTimeline
+        messages={sampleMessages}
+        containerRef={ref}
+        onScroll={() => {}}
+        showNewMessages={false}
+        onJumpToLatest={() => {}}
+      />,
+    );
+    fireEvent.doubleClick(screen.getAllByTestId("message-user")[0]);
+    await waitFor(() => {
+      expect(writeSpy).toHaveBeenCalledWith("Ciao laboratorio");
+    });
+    expect(await screen.findByTestId("message-copied-hint")).toHaveTextContent(
+      "✓ Copiato",
+    );
+  });
+
+  it("manual Ctrl+C is not intercepted by timeline handlers", () => {
+    const ref = createRef<HTMLDivElement>();
+    render(
+      <ChatTimeline
+        messages={sampleMessages}
+        containerRef={ref}
+        onScroll={() => {}}
+        showNewMessages={false}
+        onJumpToLatest={() => {}}
+      />,
+    );
+    const bubble = screen.getAllByTestId("message-user")[0];
+    const prevented = fireEvent.keyDown(bubble, { key: "c", ctrlKey: true });
+    // keyDown returns false if preventDefault was called
+    expect(prevented).toBe(true);
   });
 
   it("does not open custom menu when mobile/native mode", () => {

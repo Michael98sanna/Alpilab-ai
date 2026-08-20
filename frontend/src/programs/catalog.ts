@@ -40,12 +40,12 @@ export const LAB_PROGRAMS: LabProgram[] = [
   {
     id: "alpilab_check",
     name: "Alpilab Check",
-    icon: "🟢",
-    description: "Listino e fatture locali via bridge V1 (usa la chat)",
-    status: "operational",
+    icon: "🟡",
+    description: "Software Alpilab Check (listino via bridge in chat; apertura app non configurata)",
+    status: "configured",
     toolId: null,
-    voiceHint: "Cerca prodotto nel listino",
-    actionLabel: "Apri chat",
+    voiceHint: "Apri Alpilab Check",
+    actionLabel: "Apri",
   },
   {
     id: "thermal_camera",

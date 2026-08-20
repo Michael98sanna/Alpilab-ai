@@ -38,6 +38,29 @@ describe("HomePage V0.7 layout", () => {
     expect(screen.getByTestId("core-status-label")).toHaveTextContent("ALPILAB AI");
   });
 
+  it("keeps section nav above composer in bottom chrome", () => {
+    renderHome();
+    const chrome = screen.getByTestId("bottom-chrome");
+    const chromeKids = Array.from(chrome.children);
+    const navIdx = chromeKids.findIndex(
+      (el) => el.getAttribute("data-testid") === "main-section-nav",
+    );
+    const inputIdx = chromeKids.findIndex((el) =>
+      el.querySelector?.('[data-testid="chat-composer"]'),
+    );
+    expect(navIdx).toBe(0);
+    expect(inputIdx).toBeGreaterThan(navIdx);
+
+    const chatColumn = screen.getByTestId("chat-section")
+      .firstElementChild as HTMLElement;
+    expect(
+      chatColumn.querySelector('[data-testid="alpilab-status-bar"]'),
+    ).toBeTruthy();
+    expect(
+      chatColumn.querySelector('[data-testid="chat-composer"]'),
+    ).toBeNull();
+  });
+
   it("shows compact repair context banner when scenario loaded", () => {
     renderHome();
     const ctx = screen.getByTestId("repair-context");
@@ -79,7 +102,10 @@ describe("HomePage V0.7 sections", () => {
     );
     expect(screen.getByTestId("program-alpilab_check")).toHaveAttribute(
       "data-status",
-      "operational",
+      "configured",
+    );
+    expect(screen.getByTestId("program-action-alpilab_check")).toHaveTextContent(
+      "Apri",
     );
     expect(screen.getByTestId("program-thermal_camera")).toHaveAttribute(
       "data-status",
@@ -109,13 +135,20 @@ describe("HomePage V0.7 sections", () => {
     spy.mockRestore();
   });
 
-  it("routes Alpilab Check to chat without fake execute", async () => {
+  it("Alpilab Check Apri does not navigate to chat and stays not configured", async () => {
     const user = userEvent.setup();
     const spy = vi.spyOn(toolsApi, "executeRegisteredTool");
     renderHome();
     await user.click(screen.getByTestId("section-programs"));
+    expect(screen.getByTestId("program-action-alpilab_check")).toHaveTextContent(
+      "Apri",
+    );
     await user.click(screen.getByTestId("program-action-alpilab_check"));
-    expect(screen.getByTestId("chat-section")).toBeInTheDocument();
+    expect(screen.getByTestId("program-feedback-alpilab_check")).toHaveTextContent(
+      "Non ancora configurato",
+    );
+    expect(screen.getByTestId("programs-section")).toBeInTheDocument();
+    expect(screen.queryByTestId("chat-section")).not.toBeInTheDocument();
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });

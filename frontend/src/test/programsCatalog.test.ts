@@ -10,8 +10,9 @@ describe("programs catalog V0.7", () => {
     const byId = Object.fromEntries(LAB_PROGRAMS.map((p) => [p.id, p]));
     expect(byId["3utools"].status).toBe("operational");
     expect(byId["3utools"].toolId).toBe("windows.3utools.open");
-    expect(byId.alpilab_check.status).toBe("operational");
+    expect(byId.alpilab_check.status).toBe("configured");
     expect(byId.alpilab_check.toolId).toBeNull();
+    expect(byId.alpilab_check.actionLabel).toBe("Apri");
     expect(byId.thermal_camera.status).toBe("configured");
     expect(byId.microscope.status).toBe("configured");
     expect(byId.zxw.status).toBe("future");

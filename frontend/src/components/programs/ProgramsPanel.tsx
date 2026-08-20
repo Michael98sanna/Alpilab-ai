@@ -63,19 +63,13 @@ export function ProgramsPanel({
         {LAB_PROGRAMS.map((program) => {
           const busy = busyProgramId === program.id;
           const executable = canExecuteProgram(program);
-          const checkChat =
-            program.id === "alpilab_check" && program.status === "operational";
-          const notConfigured =
-            program.status === "configured" && !executable;
           const isFuture = program.status === "future";
           const actionDisabled = busy || isFuture;
           const buttonLabel = busy
             ? "Avvio…"
-            : notConfigured
-              ? "Non ancora configurato"
-              : isFuture
-                ? "Integrazione futura"
-                : program.actionLabel;
+            : isFuture
+              ? "Integrazione futura"
+              : program.actionLabel;
 
           return (
             <li
@@ -102,7 +96,7 @@ export function ProgramsPanel({
               <div className={styles.actions}>
                 <Button
                   size="small"
-                  variant={executable || checkChat ? "primary" : "ghost"}
+                  variant={executable ? "primary" : "ghost"}
                   disabled={actionDisabled}
                   onClick={() => void handleAction(program)}
                   aria-label={`${buttonLabel} ${program.name}`}

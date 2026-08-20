@@ -56,6 +56,14 @@
   -webkit-user-select: text;
 }
 
+.copiedHint {
+  display: inline-block;
+  margin-top: var(--space-xs);
+  font-size: 0.75rem;
+  color: var(--color-ok);
+  font-weight: 600;
+}
+
 .user {
   align-self: flex-end;
   background: var(--color-surface-hover);
