@@ -13,8 +13,9 @@ export function MessageList({ messages, coreState }: MessageListProps) {
         <div
           key={msg.id}
           className={`${styles.message} ${styles[msg.role]}`}
+          data-selectable="true"
         >
-          {msg.content}
+          <span className={styles.content}>{msg.content}</span>
           <span className={styles.time}>{msg.timestamp}</span>
         </div>
       ))}

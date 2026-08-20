@@ -43,6 +43,17 @@
   border-radius: var(--radius-md);
   font-size: 0.9rem;
   line-height: 1.45;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.content {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .user {

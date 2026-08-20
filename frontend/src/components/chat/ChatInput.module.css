@@ -20,6 +20,8 @@
   resize: none;
   font-family: var(--font-sans);
   line-height: 1.4;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .input::placeholder {
