@@ -5,8 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
 from app.agent.payloads import AgentCapabilities
+from app.main import app
 from app.security.tool_authorization import authorize_tool_execution
 from app.tools.executable import (
     WINDOWS_MICROSCOPE_OPEN_TOOL,
@@ -18,6 +20,11 @@ from pc_agent.windows_apps.launcher import MockProcessLauncher
 from pc_agent.windows_apps.models import WindowsApplicationConfig
 from pc_agent.windows_apps.registry import LocalAppRegistry
 from pc_agent.windows_apps.tool import WindowsAppTool, WindowsAppToolError
+
+
+@pytest.fixture
+def client() -> TestClient:
+    return TestClient(app)
 
 
 @pytest.mark.parametrize(
@@ -50,7 +57,7 @@ def test_lab_program_launches_only_registered_local_executable(
 ) -> None:
     executable = tmp_path / exe_name
     executable.write_bytes(b"MZ")
-    app = WindowsApplicationConfig(
+    app_cfg = WindowsApplicationConfig(
         app_id=app_id,
         name=app_id,
         executable=exe_name,
@@ -59,7 +66,7 @@ def test_lab_program_launches_only_registered_local_executable(
         dry_run=False,
     )
     registry = LocalAppRegistry()
-    registry.set_apps({app_id: app})
+    registry.set_apps({app_id: app_cfg})
     launcher = MockProcessLauncher()
 
     result = WindowsAppTool(registry=registry, launcher=launcher).execute(tool_id)
@@ -87,3 +94,21 @@ def test_lab_program_executable_missing_returns_real_error() -> None:
         WindowsAppTool(registry=registry, launcher=MockProcessLauncher()).execute(
             "windows.thermal_camera.open"
         )
+
+
+@pytest.mark.parametrize(
+    "tool_id",
+    ["windows.thermal_camera.open", "windows.microscope.open"],
+)
+def test_rest_execute_routes_exist_for_lab_programs(
+    client: TestClient, tool_id: str
+) -> None:
+    """Missing POST routes previously returned HTTP 405 from the UI."""
+    resp = client.post(
+        f"/api/v1/sessions/repair-x/agents/missing/tools/{tool_id}/execute"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is False
+    assert body["tool_id"] == tool_id
+    assert body["error"]

@@ -15,8 +15,10 @@ describe("programs catalog V0.7", () => {
     expect(byId.alpilab_check.actionLabel).toBe("Apri");
     expect(byId.thermal_camera.status).toBe("operational");
     expect(byId.thermal_camera.toolId).toBe("windows.thermal_camera.open");
+    expect(byId.thermal_camera.icon).toBe("🟢");
     expect(byId.microscope.status).toBe("operational");
     expect(byId.microscope.toolId).toBe("windows.microscope.open");
+    expect(byId.microscope.icon).toBe("🟢");
     expect(byId.zxw.status).toBe("future");
     expect(byId.borneo.status).toBe("future");
   });

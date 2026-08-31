@@ -54,7 +54,7 @@ export const LAB_PROGRAMS: LabProgram[] = [
   {
     id: "thermal_camera",
     name: "Termocamera",
-    icon: "🟡",
+    icon: "🟢",
     description: "Software diagnostico termocamera",
     status: "operational",
     toolId: "windows.thermal_camera.open",
@@ -64,7 +64,7 @@ export const LAB_PROGRAMS: LabProgram[] = [
   {
     id: "microscope",
     name: "Microscopio",
-    icon: "🟡",
+    icon: "🟢",
     description: "Software microscopio",
     status: "operational",
     toolId: "windows.microscope.open",

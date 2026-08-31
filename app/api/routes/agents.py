@@ -90,6 +90,16 @@ async def execute_alpilab_check_open(session_id: str, agent_id: str) -> ToolExec
     return await _execute_tool(session_id, agent_id, "windows.alpilab_check.open")
 
 
+async def execute_thermal_camera_open(
+    session_id: str, agent_id: str
+) -> ToolExecuteResponse:
+    return await _execute_tool(session_id, agent_id, "windows.thermal_camera.open")
+
+
+async def execute_microscope_open(session_id: str, agent_id: str) -> ToolExecuteResponse:
+    return await _execute_tool(session_id, agent_id, "windows.microscope.open")
+
+
 async def _execute_tool(session_id: str, agent_id: str, tool_id: str) -> ToolExecuteResponse:
     try:
         result = await tool_execution_service.execute_tool(

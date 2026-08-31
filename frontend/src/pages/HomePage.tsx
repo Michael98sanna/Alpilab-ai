@@ -97,27 +97,9 @@ export function HomePage() {
             return { ok: true, message: `✓ ${program.name} già aperto` };
           }
           return { ok: true, message: `✓ ${program.name} avviato` };
-
-          if (result.result.already_running === true) {
-            return {
-              ok: true,
-              message:
-                toolId === "windows.alpilab_check.open"
-                  ? "✓ Alpilab Check già aperto"
-                  : "✓ 3uTools già aperto",
-            };
-          }
-          return {
-            ok: true,
-            message:
-              toolId === "windows.alpilab_check.open"
-                ? "✓ Alpilab Check avviato"
-                : "✓ 3uTools avviato",
-          };
         }
         const err = result.error || "";
-        const label =
-          toolId === "windows.alpilab_check.open" ? "Alpilab Check" : "3uTools";
+        const label = program.name;
         if (err === "APP_NOT_REGISTERED" || err === "TOOL_DISABLED") {
           return { ok: false, message: "Non ancora configurato" };
         }

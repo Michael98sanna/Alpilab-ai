@@ -21,7 +21,9 @@ from app.api.routes.agents import (
     ToolListResponse,
     execute_3utools_open,
     execute_alpilab_check_open,
+    execute_microscope_open,
     execute_safe_test,
+    execute_thermal_camera_open,
     get_agents_status,
     list_executable_tools,
     send_agent_test,
@@ -175,6 +177,28 @@ async def post_alpilab_check_open_execute(
     session_id: str, agent_id: str
 ) -> ToolExecuteResponse:
     return await execute_alpilab_check_open(session_id, agent_id)
+
+
+@app.post(
+    "/api/v1/sessions/{session_id}/agents/{agent_id}/tools/windows.thermal_camera.open/execute",
+    response_model=ToolExecuteResponse,
+    tags=["agents"],
+)
+async def post_thermal_camera_open_execute(
+    session_id: str, agent_id: str
+) -> ToolExecuteResponse:
+    return await execute_thermal_camera_open(session_id, agent_id)
+
+
+@app.post(
+    "/api/v1/sessions/{session_id}/agents/{agent_id}/tools/windows.microscope.open/execute",
+    response_model=ToolExecuteResponse,
+    tags=["agents"],
+)
+async def post_microscope_open_execute(
+    session_id: str, agent_id: str
+) -> ToolExecuteResponse:
+    return await execute_microscope_open(session_id, agent_id)
 
 
 # Legacy AI route (foundation compatibility)
