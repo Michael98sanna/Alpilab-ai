@@ -114,7 +114,7 @@ WINDOWS_BORNEO_OPEN_TOOL = ExecutableToolSpec(
     tool_id="windows.borneo.open",
     name="Open Borneo",
     description=(
-        "Open the locally configured Borneo Schematics shortcut/app on the PC Agent. "
+        "Open the locally configured Borneo Schematics application on the PC Agent. "
         "Auto-login uses Borneo's own saved credentials when enabled there."
     ),
     version="1.0",

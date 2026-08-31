@@ -37,7 +37,7 @@ KNOWN_APPS: dict[str, dict[str, str]] = {
     },
     "borneo": {
         "name": "Borneo",
-        "executable": "Borneo Schematics.lnk",
+        "executable": "Borneo Schematics.exe",
         "env_prefix": "ALPILAB_WINAPP_BORNEO",
     },
 }

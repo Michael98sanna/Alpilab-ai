@@ -592,15 +592,15 @@ async def test_handle_user_message_opens_borneo(tmp_path, monkeypatch) -> None:
     from app.conversation.natural_language_service import NaturalLanguageCommandService
     from app.realtime.session_manager import RealtimeSessionManager
 
-    shortcut = tmp_path / "Borneo Schematics.lnk"
-    shortcut.write_bytes(b"LNK")
+    shortcut = tmp_path / "Borneo Schematics.exe"
+    shortcut.write_bytes(b"MZ")
     configure_dispatcher({"windows_apps": True, "safe_test": True})
     local_app_registry.set_apps(
         {
             "borneo": WindowsApplicationConfig(
                 app_id="borneo",
                 name="Borneo",
-                executable="Borneo Schematics.lnk",
+                executable="Borneo Schematics.exe",
                 executable_path=str(shortcut),
                 enabled=True,
                 dry_run=True,

@@ -59,7 +59,7 @@ def test_lab_programs_require_authorized_windows_apps(spec) -> None:
     [
         ("windows.thermal_camera.open", "thermal_camera", "MIIR.exe"),
         ("windows.microscope.open", "microscope", "Mosaic2.3.exe"),
-        ("windows.borneo.open", "borneo", "Borneo Schematics.lnk"),
+        ("windows.borneo.open", "borneo", "Borneo Schematics.exe"),
     ],
 )
 def test_lab_program_launches_only_registered_local_executable(
@@ -104,6 +104,21 @@ def test_lab_program_executable_missing_returns_real_error() -> None:
         WindowsAppTool(registry=registry, launcher=MockProcessLauncher()).execute(
             "windows.thermal_camera.open"
         )
+
+
+@pytest.mark.skipif(
+    not Path(r"C:\Users\MichaelLab\Desktop\Borneo Schematics.lnk").is_file(),
+    reason="Local Borneo shortcut not present",
+)
+def test_resolve_borneo_shortcut_to_install_exe() -> None:
+    from pc_agent.windows_apps.launcher import resolve_launch_target
+
+    target = resolve_launch_target(
+        r"C:\Users\MichaelLab\Desktop\Borneo Schematics.lnk"
+    )
+    assert target.executable_path.name.lower() == "borneo schematics.exe"
+    assert target.image_name.lower() == "borneo schematics.exe"
+    assert "borneo schematics" in str(target.working_directory).lower()
 
 
 @pytest.mark.parametrize(

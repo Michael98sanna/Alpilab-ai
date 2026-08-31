@@ -20,8 +20,8 @@
     },
     "borneo": {
       "enabled": false,
-      "executable": "Borneo Schematics.lnk",
-      "executable_path": "C:\\Users\\YOUR_USER\\Desktop\\Borneo Schematics.lnk",
+      "executable": "Borneo Schematics.exe",
+      "executable_path": "C:\\Borneo Schematics\\Borneo Schematics.exe",
       "dry_run": true
     }
   }
