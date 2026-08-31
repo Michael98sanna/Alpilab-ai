@@ -110,15 +110,29 @@ def test_lab_program_executable_missing_returns_real_error() -> None:
     not Path(r"C:\Users\MichaelLab\Desktop\Borneo Schematics.lnk").is_file(),
     reason="Local Borneo shortcut not present",
 )
-def test_resolve_borneo_shortcut_to_install_exe() -> None:
+def test_borneo_exe_prefers_desktop_shortcut_for_launch() -> None:
     from pc_agent.windows_apps.launcher import resolve_launch_target
 
-    target = resolve_launch_target(
+    plan = resolve_launch_target(r"C:\Borneo Schematics\Borneo Schematics.exe")
+    assert plan.launch_via_shortcut is True
+    assert plan.launch_path.name.lower() == "borneo schematics.lnk"
+    assert plan.image_name.lower() == "borneo schematics.exe"
+    assert plan.working_directory is None
+
+
+@pytest.mark.skipif(
+    not Path(r"C:\Users\MichaelLab\Desktop\Borneo Schematics.lnk").is_file(),
+    reason="Local Borneo shortcut not present",
+)
+def test_resolve_borneo_shortcut_keeps_lnk_as_launch_path() -> None:
+    from pc_agent.windows_apps.launcher import resolve_launch_target
+
+    plan = resolve_launch_target(
         r"C:\Users\MichaelLab\Desktop\Borneo Schematics.lnk"
     )
-    assert target.executable_path.name.lower() == "borneo schematics.exe"
-    assert target.image_name.lower() == "borneo schematics.exe"
-    assert "borneo schematics" in str(target.working_directory).lower()
+    assert plan.launch_via_shortcut is True
+    assert plan.launch_path.suffix.lower() == ".lnk"
+    assert plan.image_name.lower() == "borneo schematics.exe"
 
 
 @pytest.mark.parametrize(

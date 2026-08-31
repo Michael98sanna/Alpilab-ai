@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -28,12 +29,22 @@ class LaunchResult:
 
 
 @dataclass(frozen=True)
-class ResolvedLaunchTarget:
-    """Concrete process to start after optional .lnk resolution."""
+class LaunchPlan:
+    """
+    How to open a configured Windows app.
 
-    executable_path: Path
-    working_directory: Path
+    For .lnk configs (or .exe with a matching Desktop shortcut), launch the
+    shortcut itself with no forced cwd — same as Explorer double-click.
+    That preserves WorkingDirectory and any app identity used for saved login
+    (important for WebView2 apps like Borneo).
+
+    already-running detection always uses the real .exe image name.
+    """
+
+    launch_path: Path
     image_name: str
+    working_directory: Path | None
+    launch_via_shortcut: bool
 
 
 def is_image_running(image_name: str) -> bool:
@@ -70,44 +81,48 @@ def is_image_running(image_name: str) -> bool:
     return name.lower() in out
 
 
-def resolve_launch_target(executable_path: str | Path) -> ResolvedLaunchTarget:
-    """
-    Resolve a configured path to the real executable + working directory.
-
-    For .lnk shortcuts, resolve TargetPath/WorkingDirectory so apps like Borneo
-    start from their install folder (required for saved login session) and so
-    already-running detection uses the real .exe image name.
-    """
+def resolve_launch_target(executable_path: str | Path) -> LaunchPlan:
+    """Build a launch plan from a trusted local config path (.exe or .lnk)."""
     path = Path(executable_path)
     if not path.is_file():
         raise RuntimeError(f"executable not found: {executable_path}")
 
-    resolved = path.resolve()
-    if resolved.suffix.lower() != ".lnk":
-        return ResolvedLaunchTarget(
-            executable_path=resolved,
-            working_directory=resolved.parent,
-            image_name=resolved.name,
+    configured = path.resolve()
+
+    if configured.suffix.lower() == ".lnk":
+        target, work = _resolve_windows_shortcut(configured)
+        image = target.name if target is not None and target.is_file() else configured.name
+        work_dir = None  # Explorer uses the shortcut's own WorkingDirectory
+        return LaunchPlan(
+            launch_path=configured,
+            image_name=image,
+            working_directory=work_dir,
+            launch_via_shortcut=True,
         )
 
-    target, working_directory = _resolve_windows_shortcut(resolved)
-    if target is None or not target.is_file():
-        # Last resort: open the .lnk itself, but do not force Desktop as cwd.
-        logger.warning(
-            "Could not resolve shortcut target; opening .lnk without forced cwd path=%s",
-            resolved,
-        )
-        return ResolvedLaunchTarget(
-            executable_path=resolved,
-            working_directory=resolved.parent,
-            image_name=resolved.name,
-        )
+    # Prefer a same-stem Desktop shortcut when present (Borneo login/profile).
+    desktop_shortcut = Path.home() / "Desktop" / f"{configured.stem}.lnk"
+    if desktop_shortcut.is_file():
+        target, _work = _resolve_windows_shortcut(desktop_shortcut)
+        # Only use the shortcut if it points at this same executable.
+        if target is not None and target.resolve() == configured:
+            logger.info(
+                "Preferring Desktop shortcut for launch exe=%s shortcut=%s",
+                configured,
+                desktop_shortcut,
+            )
+            return LaunchPlan(
+                launch_path=desktop_shortcut.resolve(),
+                image_name=configured.name,
+                working_directory=None,
+                launch_via_shortcut=True,
+            )
 
-    work = working_directory if working_directory and working_directory.is_dir() else target.parent
-    return ResolvedLaunchTarget(
-        executable_path=target,
-        working_directory=work,
-        image_name=target.name,
+    return LaunchPlan(
+        launch_path=configured,
+        image_name=configured.name,
+        working_directory=configured.parent,
+        launch_via_shortcut=False,
     )
 
 
@@ -115,8 +130,6 @@ def _resolve_windows_shortcut(lnk_path: Path) -> tuple[Path | None, Path | None]
     """Read TargetPath / WorkingDirectory from a .lnk via PowerShell COM (no shell)."""
     if sys.platform != "win32":
         return None, None
-
-    import os
 
     script = (
         "$s = New-Object -ComObject WScript.Shell; "
@@ -173,56 +186,84 @@ class SubprocessLauncher:
     """Launch executables with platform-appropriate safe APIs."""
 
     def start_executable(self, executable_path: str) -> LaunchResult:
-        target = resolve_launch_target(executable_path)
+        plan = resolve_launch_target(executable_path)
 
-        if is_image_running(target.image_name):
-            logger.info("Executable already running: %s", target.image_name)
+        if is_image_running(plan.image_name):
+            logger.info("Executable already running: %s", plan.image_name)
             return LaunchResult(started=False, already_running=True)
 
         if sys.platform == "win32":
-            return self._start_windows(target)
+            return self._start_windows(plan)
 
-        return self._start_subprocess(target)
+        return self._start_subprocess(plan)
 
-    def _start_windows(self, target: ResolvedLaunchTarget) -> LaunchResult:
-        """Use ShellExecuteW with the resolved install directory."""
+    def _start_windows(self, plan: LaunchPlan) -> LaunchResult:
+        """
+        Open like Explorer double-click.
+
+        For shortcuts: use os.startfile / ShellExecute on the .lnk with no cwd
+        override so Borneo keeps its normal login/session behavior.
+        """
+        launch_path = str(plan.launch_path)
+
+        if plan.launch_via_shortcut:
+            try:
+                # Closest equivalent to double-clicking the shortcut in Explorer.
+                os.startfile(launch_path)  # noqa: S606
+                logger.info(
+                    "Started via os.startfile shortcut=%s image=%s",
+                    launch_path,
+                    plan.image_name,
+                )
+                return LaunchResult(started=True)
+            except OSError as exc:
+                logger.warning(
+                    "os.startfile failed shortcut=%s error=%s; falling back to ShellExecuteW",
+                    launch_path,
+                    exc,
+                )
+
         import ctypes
 
-        # For unresolved .lnk fallback, pass NULL directory so Windows uses
-        # the shortcut's own WorkingDirectory (critical for Borneo login).
-        use_null_cwd = target.executable_path.suffix.lower() == ".lnk"
-        cwd = None if use_null_cwd else str(target.working_directory)
-        exe_path = str(target.executable_path)
-
+        cwd = None if plan.launch_via_shortcut else (
+            str(plan.working_directory) if plan.working_directory else None
+        )
         result = ctypes.windll.shell32.ShellExecuteW(  # type: ignore[attr-defined]
             None,
             "open",
-            exe_path,
+            launch_path,
             None,
             cwd,
             1,  # SW_SHOWNORMAL
         )
         if int(result) <= _SHELL_EXECUTE_SUCCESS_THRESHOLD:
             logger.warning(
-                "ShellExecuteW failed code=%s exe=%s cwd=%s",
+                "ShellExecuteW failed code=%s path=%s cwd=%s",
                 result,
-                exe_path,
+                launch_path,
                 cwd,
             )
-            return self._start_subprocess(target)
+            if plan.launch_via_shortcut:
+                raise RuntimeError(f"failed to open shortcut: {launch_path}")
+            return self._start_subprocess(plan)
 
         logger.info(
-            "Started via ShellExecuteW: %s cwd=%s image=%s",
-            exe_path,
-            cwd or "(shortcut-default)",
-            target.image_name,
+            "Started via ShellExecuteW: %s cwd=%s image=%s shortcut=%s",
+            launch_path,
+            cwd or "(default)",
+            plan.image_name,
+            plan.launch_via_shortcut,
         )
         return LaunchResult(started=True)
 
-    def _start_subprocess(self, target: ResolvedLaunchTarget) -> LaunchResult:
-        cwd = str(target.working_directory)
+    def _start_subprocess(self, plan: LaunchPlan) -> LaunchResult:
+        if plan.launch_via_shortcut:
+            raise RuntimeError("subprocess fallback cannot open .lnk shortcuts safely")
+
+        exe = plan.launch_path
+        cwd = str(plan.working_directory or exe.parent)
         popen_kwargs: dict = {
-            "args": [str(target.executable_path)],
+            "args": [str(exe)],
             "shell": False,
             "cwd": cwd,
         }
@@ -239,7 +280,7 @@ class SubprocessLauncher:
         try:
             process = subprocess.Popen(**popen_kwargs)  # noqa: S603
         except OSError as exc:
-            logger.exception("Failed to start executable: %s", target.executable_path)
+            logger.exception("Failed to start executable: %s", exe)
             raise RuntimeError(f"process start failed: {exc}") from exc
 
         return LaunchResult(started=True, pid=process.pid)
