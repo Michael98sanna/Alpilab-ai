@@ -431,6 +431,18 @@ class NaturalLanguageCommandService:
         if tool_id == "windows.3utools.open":
             dry_run = payload.get("mode") == "dry_run"
             return success_message(dry_run=dry_run)
+        if tool_id == "windows.thermal_camera.open":
+            if payload.get("already_running"):
+                return "Il software della termocamera è già aperto."
+            if payload.get("mode") == "dry_run":
+                return "Termocamera: verifica dry-run completata."
+            return "Software della termocamera avviato."
+        if tool_id == "windows.microscope.open":
+            if payload.get("already_running"):
+                return "Il software del microscopio è già aperto."
+            if payload.get("mode") == "dry_run":
+                return "Microscopio: verifica dry-run completata."
+            return "Software del microscopio avviato."
         if tool_id == "windows.alpilab_check.open":
             if payload.get("already_running"):
                 return "Alpilab Check è già aperto."

@@ -10,7 +10,9 @@ from app.tools.executable import (
     ExecutableToolSpec,
     SAFE_TEST_TOOL,
     WINDOWS_ALPILAB_CHECK_OPEN_TOOL,
+    WINDOWS_MICROSCOPE_OPEN_TOOL,
     WINDOWS_3UTOOLS_OPEN_TOOL,
+    WINDOWS_THERMAL_CAMERA_OPEN_TOOL,
 )
 
 
@@ -99,6 +101,8 @@ class ToolRegistry:
         self.register_executable(SAFE_TEST_TOOL)
         self.register_executable(WINDOWS_3UTOOLS_OPEN_TOOL)
         self.register_executable(WINDOWS_ALPILAB_CHECK_OPEN_TOOL)
+        self.register_executable(WINDOWS_THERMAL_CAMERA_OPEN_TOOL)
+        self.register_executable(WINDOWS_MICROSCOPE_OPEN_TOOL)
         self.register_executable(ALPILAB_CHECK_SEARCH_PRODUCTS_TOOL)
         self.register_executable(ALPILAB_CHECK_GET_PRODUCT_TOOL)
         self.register_executable(ALPILAB_CHECK_SEARCH_INVOICES_TOOL)

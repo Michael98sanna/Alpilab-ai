@@ -99,9 +99,11 @@ class SemanticIntentParser:
         "alpilabcheck": "windows.alpilab_check.open",
         "borneo": "borneo",
         "zxw": "zxw",
-        "termocamera": "thermal_camera",
+        "termocamera": "windows.thermal_camera.open",
+        "thermal camera": "windows.thermal_camera.open",
         "multimetro": "multimeter",
-        "microscopio": "microscope",
+        "microscopio": "windows.microscope.open",
+        "microscope": "windows.microscope.open",
         "alimentatore": "power_supply",
     }
 

@@ -13,15 +13,22 @@ describe("programs catalog V0.7", () => {
     expect(byId.alpilab_check.status).toBe("operational");
     expect(byId.alpilab_check.toolId).toBe("windows.alpilab_check.open");
     expect(byId.alpilab_check.actionLabel).toBe("Apri");
-    expect(byId.thermal_camera.status).toBe("configured");
-    expect(byId.microscope.status).toBe("configured");
+    expect(byId.thermal_camera.status).toBe("operational");
+    expect(byId.thermal_camera.toolId).toBe("windows.thermal_camera.open");
+    expect(byId.microscope.status).toBe("operational");
+    expect(byId.microscope.toolId).toBe("windows.microscope.open");
     expect(byId.zxw.status).toBe("future");
     expect(byId.borneo.status).toBe("future");
   });
 
-  it("only 3utools and alpilab_check are executable from UI", () => {
+  it("only configured applications are executable from UI", () => {
     const executable = LAB_PROGRAMS.filter(canExecuteProgram);
-    expect(executable.map((p) => p.id).sort()).toEqual(["3utools", "alpilab_check"]);
+    expect(executable.map((p) => p.id).sort()).toEqual([
+      "3utools",
+      "alpilab_check",
+      "microscope",
+      "thermal_camera",
+    ]);
   });
 
   it("status labels are user-facing", () => {

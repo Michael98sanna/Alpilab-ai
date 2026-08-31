@@ -94,6 +94,11 @@ export function HomePage() {
         const result = await executeRegisteredTool(sessionId, agentId, toolId);
         if (result.success) {
           if (result.result.already_running === true) {
+            return { ok: true, message: `✓ ${program.name} già aperto` };
+          }
+          return { ok: true, message: `✓ ${program.name} avviato` };
+
+          if (result.result.already_running === true) {
             return {
               ok: true,
               message:

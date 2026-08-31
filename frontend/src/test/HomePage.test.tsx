@@ -112,11 +112,11 @@ describe("HomePage V0.7 sections", () => {
     );
     expect(screen.getByTestId("program-thermal_camera")).toHaveAttribute(
       "data-status",
-      "configured",
+      "operational",
     );
     expect(screen.getByTestId("program-microscope")).toHaveAttribute(
       "data-status",
-      "configured",
+      "operational",
     );
     expect(screen.getByTestId("program-zxw")).toHaveAttribute("data-status", "future");
     expect(screen.getByTestId("program-borneo")).toHaveAttribute(
@@ -125,14 +125,14 @@ describe("HomePage V0.7 sections", () => {
     );
   });
 
-  it("shows not configured for thermal without executing tools", async () => {
+  it("does not execute the termocamera in mock mode", async () => {
     const user = userEvent.setup();
     const spy = vi.spyOn(toolsApi, "executeRegisteredTool");
     renderHome();
     await user.click(screen.getByTestId("section-programs"));
     await user.click(screen.getByTestId("program-action-thermal_camera"));
     expect(screen.getByTestId("program-feedback-thermal_camera")).toHaveTextContent(
-      "Non ancora configurato",
+      /realtime|PC Agent/i,
     );
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();

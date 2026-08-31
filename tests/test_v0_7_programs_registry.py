@@ -14,10 +14,10 @@ def test_existing_executable_tools_unchanged() -> None:
     assert "demo.safe_test" in ids
 
 
-def test_no_fake_thermal_or_microscope_executable_tools() -> None:
+def test_thermal_and_microscope_executable_tools_are_registered() -> None:
     ids = {t.tool_id for t in default_tool_registry.list_executable()}
-    assert "windows.thermal.open" not in ids
-    assert "windows.microscope.open" not in ids
+    assert "windows.thermal_camera.open" in ids
+    assert "windows.microscope.open" in ids
     assert "windows.zxw.open" not in ids
     assert "windows.borneo.open" not in ids
 

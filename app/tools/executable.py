@@ -86,6 +86,30 @@ WINDOWS_ALPILAB_CHECK_OPEN_TOOL = ExecutableToolSpec(
     allowed_argument_keys=frozenset(),
 )
 
+WINDOWS_THERMAL_CAMERA_OPEN_TOOL = ExecutableToolSpec(
+    tool_id="windows.thermal_camera.open",
+    name="Open Termocamera",
+    description="Open the locally configured MIIR thermal-camera software on the PC Agent",
+    version="1.0",
+    tool_type=ToolType.THERMAL_CAMERA,
+    risk_level=ActionRiskLevel.CONFIRM_REQUIRED,
+    required_capabilities=["windows_apps"],
+    enabled=True,
+    allowed_argument_keys=frozenset(),
+)
+
+WINDOWS_MICROSCOPE_OPEN_TOOL = ExecutableToolSpec(
+    tool_id="windows.microscope.open",
+    name="Open Microscopio",
+    description="Open the locally configured Mosaic microscope software on the PC Agent",
+    version="1.0",
+    tool_type=ToolType.MICROSCOPE,
+    risk_level=ActionRiskLevel.CONFIRM_REQUIRED,
+    required_capabilities=["windows_apps"],
+    enabled=True,
+    allowed_argument_keys=frozenset(),
+)
+
 ALPILAB_CHECK_SEARCH_PRODUCTS_TOOL = ExecutableToolSpec(
     tool_id="alpilab_check.search_products",
     name="Alpilab Check: Search Products",

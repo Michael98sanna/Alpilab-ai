@@ -56,8 +56,8 @@ export const LAB_PROGRAMS: LabProgram[] = [
     name: "Termocamera",
     icon: "🟡",
     description: "Software diagnostico termocamera",
-    status: "configured",
-    toolId: null,
+    status: "operational",
+    toolId: "windows.thermal_camera.open",
     voiceHint: "Apri il programma della termocamera",
     actionLabel: "Apri",
   },
@@ -66,8 +66,8 @@ export const LAB_PROGRAMS: LabProgram[] = [
     name: "Microscopio",
     icon: "🟡",
     description: "Software microscopio",
-    status: "configured",
-    toolId: null,
+    status: "operational",
+    toolId: "windows.microscope.open",
     voiceHint: "Apri il microscopio",
     actionLabel: "Apri",
   },
@@ -109,17 +109,21 @@ export function statusLabel(status: ProgramStatus): string {
 export function canExecuteProgram(program: LabProgram): boolean {
   return (
     program.status === "operational" &&
-    (program.toolId === "windows.3utools.open" ||
-      program.toolId === "windows.alpilab_check.open")
+    program.toolId !== null
   );
 }
 
 export type OpenableToolId =
   | "windows.3utools.open"
-  | "windows.alpilab_check.open";
+  | "windows.alpilab_check.open"
+  | "windows.thermal_camera.open"
+  | "windows.microscope.open";
 
 export function isOpenableToolId(toolId: string | null): toolId is OpenableToolId {
   return (
-    toolId === "windows.3utools.open" || toolId === "windows.alpilab_check.open"
+    toolId === "windows.3utools.open" ||
+    toolId === "windows.alpilab_check.open" ||
+    toolId === "windows.thermal_camera.open" ||
+    toolId === "windows.microscope.open"
   );
 }

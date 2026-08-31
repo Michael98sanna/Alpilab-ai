@@ -25,6 +25,16 @@ KNOWN_APPS: dict[str, dict[str, str]] = {
         "executable": "AlpilabCheck.exe",
         "env_prefix": "ALPILAB_WINAPP_ALPILAB_CHECK",
     },
+    "thermal_camera": {
+        "name": "Termocamera",
+        "executable": "MIIR.exe",
+        "env_prefix": "ALPILAB_WINAPP_THERMAL_CAMERA",
+    },
+    "microscope": {
+        "name": "Microscopio",
+        "executable": "Mosaic2.3.exe",
+        "env_prefix": "ALPILAB_WINAPP_MICROSCOPE",
+    },
 }
 
 

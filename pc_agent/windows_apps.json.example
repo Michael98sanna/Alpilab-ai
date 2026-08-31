@@ -5,6 +5,18 @@
       "executable": "3uTools.exe",
       "executable_path": "C:\\Program Files\\3uTools\\3uTools.exe",
       "dry_run": true
+    },
+    "thermal_camera": {
+      "enabled": false,
+      "executable": "MIIR.exe",
+      "executable_path": "C:\\Program Files (x86)\\MIIR\\MIIR.exe",
+      "dry_run": true
+    },
+    "microscope": {
+      "enabled": false,
+      "executable": "Mosaic2.3.exe",
+      "executable_path": "C:\\Program Files\\Mosaic2.0\\Mosaic2.3.exe",
+      "dry_run": true
     }
   }
 }

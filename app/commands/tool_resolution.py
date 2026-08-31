@@ -9,6 +9,8 @@ from app.schemas.enums import IntentType
 APPLICATION_TOOL_MAP: dict[str, str] = {
     "3utools": "windows.3utools.open",
     "alpilab_check": "windows.alpilab_check.open",
+    "thermal_camera": "windows.thermal_camera.open",
+    "microscope": "windows.microscope.open",
     "alpilab_check.search_products": "alpilab_check.search_products",
     "alpilab_check.get_product": "alpilab_check.get_product",
     "alpilab_check.search_invoices": "alpilab_check.search_invoices",
