@@ -14,12 +14,12 @@ def test_existing_executable_tools_unchanged() -> None:
     assert "demo.safe_test" in ids
 
 
-def test_thermal_and_microscope_executable_tools_are_registered() -> None:
+def test_thermal_microscope_and_borneo_executable_tools_are_registered() -> None:
     ids = {t.tool_id for t in default_tool_registry.list_executable()}
     assert "windows.thermal_camera.open" in ids
     assert "windows.microscope.open" in ids
+    assert "windows.borneo.open" in ids
     assert "windows.zxw.open" not in ids
-    assert "windows.borneo.open" not in ids
 
 
 def test_soft_catalog_still_lists_lab_software_names() -> None:
@@ -28,3 +28,4 @@ def test_soft_catalog_still_lists_lab_software_names() -> None:
     assert "Alpilab Check" in names
     assert "Termocamera" in names
     assert "Microscopio" in names
+    assert "Borneo" in names

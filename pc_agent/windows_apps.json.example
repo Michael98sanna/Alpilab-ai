@@ -17,6 +17,12 @@
       "executable": "Mosaic2.3.exe",
       "executable_path": "C:\\Program Files\\Mosaic2.0\\Mosaic2.3.exe",
       "dry_run": true
+    },
+    "borneo": {
+      "enabled": false,
+      "executable": "Borneo Schematics.lnk",
+      "executable_path": "C:\\Users\\YOUR_USER\\Desktop\\Borneo Schematics.lnk",
+      "dry_run": true
     }
   }
 }

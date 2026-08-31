@@ -443,6 +443,12 @@ class NaturalLanguageCommandService:
             if payload.get("mode") == "dry_run":
                 return "Microscopio: verifica dry-run completata."
             return "Software del microscopio avviato."
+        if tool_id == "windows.borneo.open":
+            if payload.get("already_running"):
+                return "Borneo è già aperto."
+            if payload.get("mode") == "dry_run":
+                return "Borneo: verifica dry-run completata."
+            return "Borneo avviato."
         if tool_id == "windows.alpilab_check.open":
             if payload.get("already_running"):
                 return "Alpilab Check è già aperto."

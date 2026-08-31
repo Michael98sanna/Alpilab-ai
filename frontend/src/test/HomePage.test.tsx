@@ -118,11 +118,11 @@ describe("HomePage V0.7 sections", () => {
       "data-status",
       "operational",
     );
-    expect(screen.getByTestId("program-zxw")).toHaveAttribute("data-status", "future");
     expect(screen.getByTestId("program-borneo")).toHaveAttribute(
       "data-status",
-      "future",
+      "operational",
     );
+    expect(screen.getByTestId("program-zxw")).toHaveAttribute("data-status", "future");
   });
 
   it("does not execute the termocamera in mock mode", async () => {

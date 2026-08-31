@@ -35,6 +35,11 @@ KNOWN_APPS: dict[str, dict[str, str]] = {
         "executable": "Mosaic2.3.exe",
         "env_prefix": "ALPILAB_WINAPP_MICROSCOPE",
     },
+    "borneo": {
+        "name": "Borneo",
+        "executable": "Borneo Schematics.lnk",
+        "env_prefix": "ALPILAB_WINAPP_BORNEO",
+    },
 }
 
 

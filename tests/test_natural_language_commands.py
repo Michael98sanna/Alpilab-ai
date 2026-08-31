@@ -216,7 +216,6 @@ def test_parser_open_3utools_variants(parser: NaturalLanguageCommandParser, text
 @pytest.mark.parametrize(
     "text",
     [
-        "Apri Borneo",
         "Apri ZXW",
         "Chiudi 3uTools",
         "Apri Chrome",
@@ -575,9 +574,93 @@ def test_e2e_conversation_no_tool_dispatch(client: TestClient, tmp_path) -> None
             assert ack["type"] == "heartbeat_ack"
 
 
-def test_e2e_unsupported_borneo(client: TestClient, tmp_path) -> None:
+def test_parser_open_borneo(parser: NaturalLanguageCommandParser) -> None:
+    result = parser.parse("Apri Borneo")
+    assert result.outcome == ParseOutcome.ACTION_COMMAND
+    assert result.intent is not None
+    assert result.intent.target == "borneo"
+    assert resolve_tool_id(result.intent) == "windows.borneo.open"
+
+
+@pytest.mark.asyncio
+async def test_handle_user_message_opens_borneo(tmp_path, monkeypatch) -> None:
+    from datetime import datetime, timezone
+
+    from app.agent.payloads import AgentCapabilities, ResultEnvelope
+    from app.agent.registry import RegisteredAgent
+    from app.conversation import natural_language_service as nls_mod
+    from app.conversation.natural_language_service import NaturalLanguageCommandService
+    from app.realtime.session_manager import RealtimeSessionManager
+
+    shortcut = tmp_path / "Borneo Schematics.lnk"
+    shortcut.write_bytes(b"LNK")
+    configure_dispatcher({"windows_apps": True, "safe_test": True})
+    local_app_registry.set_apps(
+        {
+            "borneo": WindowsApplicationConfig(
+                app_id="borneo",
+                name="Borneo",
+                executable="Borneo Schematics.lnk",
+                executable_path=str(shortcut),
+                enabled=True,
+                dry_run=True,
+            )
+        }
+    )
+    configure_windows_app_tool(
+        WindowsAppTool(registry=local_app_registry, launcher=MockProcessLauncher())
+    )
+
+    rt = RealtimeSessionManager()
+    rt.create_session("repair-nl-borneo", seed_demo=False)
+    agent_registry.register(
+        RegisteredAgent(
+            agent_id="agent-test-01",
+            session_id="repair-nl-borneo",
+            agent_name="PC",
+            platform="windows",
+            agent_version="0.4.0",
+            capabilities=AgentCapabilities(windows_apps=True, safe_test=True),
+            status="ONLINE",
+            connected_at=datetime.now(timezone.utc),
+            last_seen=datetime.now(timezone.utc),
+            send_json=lambda x: None,
+        )
+    )
+
+    captured: dict = {}
+
+    async def mock_execute(session_id, agent_id, tool_id, arguments=None, **kwargs):
+        captured["tool_id"] = tool_id
+        return ResultEnvelope(
+            request_id="req-borneo",
+            command_id="cmd-borneo",
+            agent_id=agent_id,
+            tool_id=tool_id,
+            success=True,
+            result={"mode": "dry_run", "validated": True},
+            timestamp="2026-01-01T00:00:00+00:00",
+        )
+
+    monkeypatch.setattr(nls_mod.tool_execution_service, "execute_tool", mock_execute)
+    from app.realtime import session_manager as sm_mod
+
+    monkeypatch.setattr(sm_mod, "realtime_manager", rt)
+
+    await NaturalLanguageCommandService().handle_user_message(
+        "repair-nl-borneo", "phone-01", "Apri Borneo"
+    )
+    assert captured.get("tool_id") == "windows.borneo.open"
+    session = rt.get_session("repair-nl-borneo")
+    assert session is not None
+    assistant_msgs = [m for m in session.messages if m.role == "assistant"]
+    assert len(assistant_msgs) == 1
+    assert "borneo" in assistant_msgs[0].content.lower()
+
+
+def test_e2e_unsupported_zxw(client: TestClient, tmp_path) -> None:
     _setup_3utools_dry_run(tmp_path)
-    session_id = "repair-nl-borneo"
+    session_id = "repair-nl-zxw"
 
     with _agent_connect(client, session_id) as ws_agent:
         _register(ws_agent)
@@ -586,7 +669,7 @@ def test_e2e_unsupported_borneo(client: TestClient, tmp_path) -> None:
         ) as ws_phone:
             ws_phone.receive_json()
             ws_phone.send_json(
-                {"type": "chat_message", "content": "Apri Borneo", "role": "user"}
+                {"type": "chat_message", "content": "Apri ZXW", "role": "user"}
             )
             assistant_text = None
             for _ in range(8):

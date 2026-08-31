@@ -21,6 +21,7 @@ from app.api.routes.agents import (
     ToolListResponse,
     execute_3utools_open,
     execute_alpilab_check_open,
+    execute_borneo_open,
     execute_microscope_open,
     execute_safe_test,
     execute_thermal_camera_open,
@@ -199,6 +200,17 @@ async def post_microscope_open_execute(
     session_id: str, agent_id: str
 ) -> ToolExecuteResponse:
     return await execute_microscope_open(session_id, agent_id)
+
+
+@app.post(
+    "/api/v1/sessions/{session_id}/agents/{agent_id}/tools/windows.borneo.open/execute",
+    response_model=ToolExecuteResponse,
+    tags=["agents"],
+)
+async def post_borneo_open_execute(
+    session_id: str, agent_id: str
+) -> ToolExecuteResponse:
+    return await execute_borneo_open(session_id, agent_id)
 
 
 # Legacy AI route (foundation compatibility)

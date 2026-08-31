@@ -11,6 +11,7 @@ from app.agent.payloads import AgentCapabilities
 from app.main import app
 from app.security.tool_authorization import authorize_tool_execution
 from app.tools.executable import (
+    WINDOWS_BORNEO_OPEN_TOOL,
     WINDOWS_MICROSCOPE_OPEN_TOOL,
     WINDOWS_THERMAL_CAMERA_OPEN_TOOL,
     validate_tool_arguments,
@@ -29,7 +30,11 @@ def client() -> TestClient:
 
 @pytest.mark.parametrize(
     "tool_id",
-    ["windows.thermal_camera.open", "windows.microscope.open"],
+    [
+        "windows.thermal_camera.open",
+        "windows.microscope.open",
+        "windows.borneo.open",
+    ],
 )
 def test_lab_programs_are_explicitly_registered(tool_id: str) -> None:
     assert default_tool_registry.get_executable(tool_id) is not None
@@ -37,7 +42,11 @@ def test_lab_programs_are_explicitly_registered(tool_id: str) -> None:
 
 @pytest.mark.parametrize(
     "spec",
-    [WINDOWS_THERMAL_CAMERA_OPEN_TOOL, WINDOWS_MICROSCOPE_OPEN_TOOL],
+    [
+        WINDOWS_THERMAL_CAMERA_OPEN_TOOL,
+        WINDOWS_MICROSCOPE_OPEN_TOOL,
+        WINDOWS_BORNEO_OPEN_TOOL,
+    ],
 )
 def test_lab_programs_require_authorized_windows_apps(spec) -> None:
     assert authorize_tool_execution(spec, AgentCapabilities(windows_apps=True)).allowed
@@ -50,6 +59,7 @@ def test_lab_programs_require_authorized_windows_apps(spec) -> None:
     [
         ("windows.thermal_camera.open", "thermal_camera", "MIIR.exe"),
         ("windows.microscope.open", "microscope", "Mosaic2.3.exe"),
+        ("windows.borneo.open", "borneo", "Borneo Schematics.lnk"),
     ],
 )
 def test_lab_program_launches_only_registered_local_executable(
@@ -98,7 +108,11 @@ def test_lab_program_executable_missing_returns_real_error() -> None:
 
 @pytest.mark.parametrize(
     "tool_id",
-    ["windows.thermal_camera.open", "windows.microscope.open"],
+    [
+        "windows.thermal_camera.open",
+        "windows.microscope.open",
+        "windows.borneo.open",
+    ],
 )
 def test_rest_execute_routes_exist_for_lab_programs(
     client: TestClient, tool_id: str

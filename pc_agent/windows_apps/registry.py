@@ -10,6 +10,7 @@ TOOL_ID_TO_APP_ID: dict[str, str] = {
     "windows.alpilab_check.open": "alpilab_check",
     "windows.thermal_camera.open": "thermal_camera",
     "windows.microscope.open": "microscope",
+    "windows.borneo.open": "borneo",
 }
 
 

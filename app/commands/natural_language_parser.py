@@ -67,7 +67,7 @@ class NaturalLanguageCommandParser:
         }
     )
 
-    _UNSUPPORTED_APPS = frozenset({"borneo", "zxw", "chrome", "firefox", "edge"})
+    _UNSUPPORTED_APPS = frozenset({"zxw", "chrome", "firefox", "edge"})
 
     _CONVERSATION_HINTS = (
         "non si accende",
@@ -203,6 +203,49 @@ class NaturalLanguageCommandParser:
             intent = Intent(
                 type=IntentType.OPEN_APPLICATION,
                 target="alpilab_check",
+                raw_text=raw_text,
+                confidence=MATCH_CONFIDENCE,
+            )
+            return NaturalLanguageParseResult(
+                outcome=ParseOutcome.ACTION_COMMAND,
+                intent=intent,
+                confidence=MATCH_CONFIDENCE,
+            )
+
+        if normalized_target in {
+            "thermal_camera",
+            "termocamera",
+            "thermal camera",
+        }:
+            intent = Intent(
+                type=IntentType.OPEN_APPLICATION,
+                target="thermal_camera",
+                raw_text=raw_text,
+                confidence=MATCH_CONFIDENCE,
+            )
+            return NaturalLanguageParseResult(
+                outcome=ParseOutcome.ACTION_COMMAND,
+                intent=intent,
+                confidence=MATCH_CONFIDENCE,
+            )
+
+        if normalized_target in {"microscope", "microscopio"}:
+            intent = Intent(
+                type=IntentType.OPEN_APPLICATION,
+                target="microscope",
+                raw_text=raw_text,
+                confidence=MATCH_CONFIDENCE,
+            )
+            return NaturalLanguageParseResult(
+                outcome=ParseOutcome.ACTION_COMMAND,
+                intent=intent,
+                confidence=MATCH_CONFIDENCE,
+            )
+
+        if normalized_target in {"borneo", "borneo schematics"}:
+            intent = Intent(
+                type=IntentType.OPEN_APPLICATION,
+                target="borneo",
                 raw_text=raw_text,
                 confidence=MATCH_CONFIDENCE,
             )

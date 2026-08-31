@@ -19,8 +19,10 @@ describe("programs catalog V0.7", () => {
     expect(byId.microscope.status).toBe("operational");
     expect(byId.microscope.toolId).toBe("windows.microscope.open");
     expect(byId.microscope.icon).toBe("🟢");
+    expect(byId.borneo.status).toBe("operational");
+    expect(byId.borneo.toolId).toBe("windows.borneo.open");
+    expect(byId.borneo.icon).toBe("🟢");
     expect(byId.zxw.status).toBe("future");
-    expect(byId.borneo.status).toBe("future");
   });
 
   it("only configured applications are executable from UI", () => {
@@ -28,6 +30,7 @@ describe("programs catalog V0.7", () => {
     expect(executable.map((p) => p.id).sort()).toEqual([
       "3utools",
       "alpilab_check",
+      "borneo",
       "microscope",
       "thermal_camera",
     ]);

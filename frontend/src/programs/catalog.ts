@@ -84,12 +84,12 @@ export const LAB_PROGRAMS: LabProgram[] = [
   {
     id: "borneo",
     name: "Borneo",
-    icon: "⚪",
-    description: "Software Borneo",
-    status: "future",
-    toolId: null,
+    icon: "🟢",
+    description: "Software Borneo Schematics",
+    status: "operational",
+    toolId: "windows.borneo.open",
     voiceHint: "Apri Borneo",
-    actionLabel: "Integrazione futura",
+    actionLabel: "Apri",
   },
 ];
 
@@ -117,13 +117,15 @@ export type OpenableToolId =
   | "windows.3utools.open"
   | "windows.alpilab_check.open"
   | "windows.thermal_camera.open"
-  | "windows.microscope.open";
+  | "windows.microscope.open"
+  | "windows.borneo.open";
 
 export function isOpenableToolId(toolId: string | null): toolId is OpenableToolId {
   return (
     toolId === "windows.3utools.open" ||
     toolId === "windows.alpilab_check.open" ||
     toolId === "windows.thermal_camera.open" ||
-    toolId === "windows.microscope.open"
+    toolId === "windows.microscope.open" ||
+    toolId === "windows.borneo.open"
   );
 }

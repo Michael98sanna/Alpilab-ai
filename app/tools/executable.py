@@ -110,6 +110,21 @@ WINDOWS_MICROSCOPE_OPEN_TOOL = ExecutableToolSpec(
     allowed_argument_keys=frozenset(),
 )
 
+WINDOWS_BORNEO_OPEN_TOOL = ExecutableToolSpec(
+    tool_id="windows.borneo.open",
+    name="Open Borneo",
+    description=(
+        "Open the locally configured Borneo Schematics shortcut/app on the PC Agent. "
+        "Auto-login uses Borneo's own saved credentials when enabled there."
+    ),
+    version="1.0",
+    tool_type=ToolType.SOFTWARE_BORNEO,
+    risk_level=ActionRiskLevel.CONFIRM_REQUIRED,
+    required_capabilities=["windows_apps"],
+    enabled=True,
+    allowed_argument_keys=frozenset(),
+)
+
 ALPILAB_CHECK_SEARCH_PRODUCTS_TOOL = ExecutableToolSpec(
     tool_id="alpilab_check.search_products",
     name="Alpilab Check: Search Products",
