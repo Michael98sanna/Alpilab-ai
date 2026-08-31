@@ -1,0 +1,21 @@
+.offlineIndicator {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 1000;
+  padding: 0.625rem 1rem;
+  border-radius: 0.625rem;
+  background: #b45309;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.offlineIndicator[data-variant="syncing"] {
+  background: #1d4ed8;
+}
+
+.offlineIndicator[data-variant="synced"] {
+  background: #15803d;
+}

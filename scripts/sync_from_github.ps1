@@ -57,6 +57,6 @@ Write-Host "HEAD: $head" -ForegroundColor Green
 Write-Host "Dati utente: $env:USERPROFILE\.alpilab\" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Poi, per il test EXE:" -ForegroundColor Cyan
-Write-Host "  .\scripts\build_windows_exe.ps1" -ForegroundColor White
-Write-Host "  doppio click su dist\ALPILAB AI.exe" -ForegroundColor White
+Write-Host "  .\scripts\BUILD_EXE.bat" -ForegroundColor White
+Write-Host "  doppio click su build\release\ALPILAB AI.exe" -ForegroundColor White
 Write-Host ""

@@ -42,14 +42,18 @@ from app.api import create_route_registry
 from app.core.config import settings
 from app.hub.routes import PairCompleteBody
 from app.pairing.service import PairingError
+from app.security.audit_middleware import register_audit_logging_middleware
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     import os
 
+    from app.models.database import init_db
     from app.realtime.session_manager import realtime_manager
     from app.session.factory import get_session_store, session_store_backend
+
+    init_db()
 
     if session_store_backend() == "sqlite":
         store = get_session_store()
@@ -74,6 +78,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+register_audit_logging_middleware(app)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])

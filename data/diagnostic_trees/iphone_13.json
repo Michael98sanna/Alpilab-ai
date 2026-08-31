@@ -1,0 +1,68 @@
+{
+  "device": "iPhone 13",
+  "initial_symptoms": ["display_broken", "battery_drain", "heating", "no_charge"],
+  "decision_tree": {
+    "symptom": "display_broken",
+    "tests": [
+      {
+        "id": "visual_inspection",
+        "label": "Ispezione visiva del display",
+        "description": "Controlla graffi, screpolature, scolorimenti",
+        "duration_sec": 60,
+        "risk_level": "low"
+      },
+      {
+        "id": "test_display_cable",
+        "label": "Test connettore display",
+        "description": "Apri il device e controlla il cavo display",
+        "duration_sec": 300,
+        "risk_level": "medium"
+      }
+    ],
+    "diagnosis_flow": {
+      "if_both_positive": "display_must_be_replaced",
+      "if_only_cable_negative": "cable_replacement_might_fix",
+      "confidence_score": 0.95
+    }
+  },
+  "decision_trees": {
+    "display_broken": {
+      "tests": [
+        {
+          "id": "visual_inspection",
+          "label": "Ispezione visiva del display",
+          "description": "Controlla graffi, screpolature, scolorimenti",
+          "duration_sec": 60,
+          "risk_level": "low"
+        },
+        {
+          "id": "test_display_cable",
+          "label": "Test connettore display",
+          "description": "Apri il device e controlla il cavo display",
+          "duration_sec": 300,
+          "risk_level": "medium"
+        }
+      ],
+      "diagnosis_flow": {
+        "if_both_positive": "display_must_be_replaced",
+        "if_only_cable_negative": "cable_replacement_might_fix",
+        "confidence_score": 0.95
+      }
+    },
+    "battery_drain": {
+      "tests": [
+        {
+          "id": "battery_health_check",
+          "label": "Verifica stato batteria",
+          "description": "Leggi capacità e cicli batteria",
+          "duration_sec": 120,
+          "risk_level": "low"
+        }
+      ],
+      "diagnosis_flow": {
+        "if_battery_degraded": "battery_replacement_recommended",
+        "confidence_score": 0.80
+      }
+    }
+  }
+}

@@ -29,6 +29,40 @@ class ToolRegistry:
     def get(self, tool_id: str) -> Tool | None:
         return self._tools.get(tool_id)
 
+    def get_tool(self, tool_id: str) -> Tool | None:
+        """Alias used by semantic intent parser."""
+        return self.get(tool_id)
+
+    def get_tool_label(self, tool_id: str) -> str:
+        """Human-readable label for executable or registered tools."""
+        spec = self.get_executable(tool_id)
+        if spec is not None:
+            return spec.name
+        tool = self.get(tool_id)
+        if tool is not None:
+            return tool.name
+        return tool_id
+
+    def get_all_tools(self) -> list[dict[str, str]]:
+        """Return matchable tools for semantic intent parsing."""
+        catalog: dict[str, dict[str, str]] = {}
+
+        for tool in self.list_tools():
+            catalog[tool.id] = {
+                "id": tool.id,
+                "label": tool.name,
+                "description": f"Apri {tool.name} per diagnostica smartphone",
+            }
+
+        for spec in self.list_executable():
+            catalog[spec.tool_id] = {
+                "id": spec.tool_id,
+                "label": spec.name,
+                "description": spec.description or spec.name,
+            }
+
+        return list(catalog.values())
+
     def list_tools(self) -> list[Tool]:
         return list(self._tools.values())
 

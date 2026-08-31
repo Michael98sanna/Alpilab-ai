@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HomePage } from "../pages/HomePage";
+import { OfflineQueueProvider } from "../hooks/useOfflineQueue";
 import { RealtimeProvider } from "../realtime/RealtimeProvider";
 import * as toolsApi from "../api/tools";
 
@@ -15,9 +16,11 @@ vi.mock("../config/env", () => ({
 
 function renderHome() {
   return render(
-    <RealtimeProvider>
-      <HomePage />
-    </RealtimeProvider>,
+    <OfflineQueueProvider>
+      <RealtimeProvider>
+        <HomePage />
+      </RealtimeProvider>
+    </OfflineQueueProvider>,
   );
 }
 

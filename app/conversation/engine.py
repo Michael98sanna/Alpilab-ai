@@ -13,7 +13,8 @@ from app.schemas.commands import ActionResult, Command
 from app.schemas.enums import IntentType, MessageChannel, SessionFlowState
 from app.schemas.session import ConversationMessage, RepairSessionContext
 from app.schemas.session_events import SessionEvent, SessionEventType
-from app.voice.interfaces import MockSpeechToText, VoiceInput
+from app.voice.interfaces import SpeechToText, TextToSpeech, VoiceInput
+from app.voice.sync_adapters import default_sync_stt, default_sync_tts
 
 
 class ConversationCommandEngine:
@@ -28,13 +29,15 @@ class ConversationCommandEngine:
         parser: MockCommandParser | None = None,
         command_engine: CommandEngine | None = None,
         ai_router: AIRouter | None = None,
-        stt: MockSpeechToText | None = None,
+        stt: SpeechToText | None = None,
+        tts: TextToSpeech | None = None,
         realtime: RealtimeSessionManager | None = None,
     ) -> None:
         self._parser = parser or MockCommandParser()
         self._commands = command_engine or CommandEngine()
         self._ai = ai_router or AIRouter()
-        self._stt = stt or MockSpeechToText()
+        self._stt = stt or default_sync_stt()
+        self._tts = tts or default_sync_tts()
         self._realtime = realtime or RealtimeSessionManager()
         self._messages: list[ConversationMessage] = []
         self._session_events: list[SessionEvent] = []
@@ -104,7 +107,13 @@ class ConversationCommandEngine:
         intent = self._parser.parse(transcript.text)
         if intent.type == IntentType.CONVERSATION:
             ai_text = self._ai.generate(AIRequest(prompt=transcript.text)).content
-            self._emit_ai_completed(repair_session_id, ai_text, client_device_id)
+            tts_output = self._tts.synthesize(ai_text)
+            self._emit_ai_completed(
+                repair_session_id,
+                ai_text,
+                client_device_id,
+                audio_reference=tts_output.audio_reference,
+            )
             return message, None, None, ai_text
 
         command = self._commands.build_command(repair_session_id, intent)
@@ -155,12 +164,20 @@ class ConversationCommandEngine:
         return message
 
     def _emit_ai_completed(
-        self, repair_session_id: str, content: str, client_device_id: str | None
+        self,
+        repair_session_id: str,
+        content: str,
+        client_device_id: str | None,
+        *,
+        audio_reference: str | None = None,
     ) -> None:
+        payload: dict[str, str] = {"content": content}
+        if audio_reference is not None:
+            payload["audio_reference"] = audio_reference
         self._realtime.emit(
             repair_session_id,
             RealtimeEventType.AI_RESPONSE_COMPLETED,
-            {"content": content},
+            payload,
             client_device_id,
         )
 

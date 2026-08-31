@@ -43,6 +43,14 @@ class AIRequest(BaseModel):
     system_prompt: str | None = None
     temperature: float | None = Field(default=None, ge=0.0, le=2.0)
     max_tokens: int | None = Field(default=None, ge=1)
+    symptom: str | None = Field(
+        default=None,
+        description="Optional symptom text for knowledge-base RAG retrieval.",
+    )
+    device: str | None = Field(
+        default=None,
+        description="Optional device model filter for RAG retrieval.",
+    )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

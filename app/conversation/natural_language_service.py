@@ -13,7 +13,9 @@ from app.commands.natural_language_parser import (
     NaturalLanguageCommandParser,
     ParseOutcome,
 )
-from app.commands.tool_resolution import resolve_tool_id
+from app.commands.intent_models import IntentType as SemanticIntentType
+from app.commands.intent_parser_v2 import HashEmbedder, SemanticIntentParser
+from app.commands.tool_resolution import APPLICATION_TOOL_MAP, resolve_tool_id
 from app.conversation.alpilab_check_context import (
     apply_product_search_context,
     format_product_label,
@@ -28,6 +30,7 @@ from app.conversation.alpilab_check_messages import (
 )
 from app.conversation.user_messages import error_message, success_message
 from app.schemas.commands import Intent
+from app.schemas.enums import IntentType as SchemaIntentType
 from app.security.tool_authorization import authorize_tool_execution
 from app.tools.registry import default_tool_registry
 
@@ -45,9 +48,13 @@ class NaturalLanguageCommandService:
         self,
         parser: NaturalLanguageCommandParser | None = None,
         command_engine: CommandEngine | None = None,
+        semantic_parser: SemanticIntentParser | None = None,
     ) -> None:
         self._parser = parser or NaturalLanguageCommandParser()
         self._command_engine = command_engine or CommandEngine()
+        self._semantic_parser = semantic_parser or SemanticIntentParser(
+            embedder=HashEmbedder()
+        )
 
     async def handle_user_message(
         self,
@@ -143,6 +150,44 @@ class NaturalLanguageCommandService:
             "THINKING",
             source_device_id=device_id,
         )
+
+        if parsed.outcome in {
+            ParseOutcome.AMBIGUOUS,
+            ParseOutcome.UNKNOWN_APPLICATION,
+        }:
+            semantic = self._semantic_parser.parse(text)
+            if semantic.intent == SemanticIntentType.CLARIFY:
+                options = semantic.options or []
+                options_text = "\n".join(
+                    f"- {opt.label} ({opt.confidence:.0%})" for opt in options
+                )
+                await self._reply(
+                    realtime_manager,
+                    session_id,
+                    device_id,
+                    f"Non sono sicuro. Quale intendi?\n{options_text}",
+                )
+                await realtime_manager.set_assistant_status(
+                    session_id, "IDLE", source_device_id=device_id
+                )
+                return
+
+            if semantic.intent == SemanticIntentType.OPEN_APPLICATION and semantic.tool_id:
+                target = self._semantic_target_for_tool(semantic.tool_id)
+                if target is not None:
+                    intent = Intent(
+                        type=SchemaIntentType.OPEN_APPLICATION,
+                        target=target,
+                        raw_text=text,
+                        confidence=semantic.confidence,
+                    )
+                    await self._dispatch_tool_intent(
+                        realtime_manager,
+                        session_id,
+                        device_id,
+                        intent,
+                    )
+                    return
 
         if parsed.outcome == ParseOutcome.AMBIGUOUS:
             await self._reply(
@@ -425,6 +470,13 @@ class NaturalLanguageCommandService:
             content,
             role="assistant",
         )
+
+    @staticmethod
+    def _semantic_target_for_tool(tool_id: str) -> str | None:
+        for target, mapped_tool_id in APPLICATION_TOOL_MAP.items():
+            if mapped_tool_id == tool_id:
+                return target
+        return None
 
 
 natural_language_service = NaturalLanguageCommandService()
