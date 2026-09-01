@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "../../config/env";
+import { getApiBaseUrl } from "../config/env";
 
 export interface DiagnosticCard {
   id: string;
