@@ -28,6 +28,7 @@ class AgentCapabilities(BaseModel):
     thermal_camera: bool = False
     multimeter: bool = False
     power_supply: bool = False
+    iphone_panic: bool = False
 
 
 class AgentRegistrationPayload(BaseModel):

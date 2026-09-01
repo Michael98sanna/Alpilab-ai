@@ -479,6 +479,29 @@ class NaturalLanguageCommandService:
                 iid = payload.get("id", "n/d")
                 return f"Dettaglio fattura {iid} recuperato."
             return "Non ho trovato dettagli per la fattura richiesta."
+        if tool_id == "iphone.panic_log.check":
+            status = payload.get("status")
+            if status == "no_device":
+                return "Nessun iPhone collegato o non riconosciuto."
+            if status == "no_panic":
+                return "iPhone rilevato, ma nessun panic log trovato."
+            if status == "success":
+                filename = payload.get("panic_log_filename", "panic log")
+                return f"Panic log trovato: {filename}."
+            return "Controllo panic log completato."
+        if tool_id == "iphone.panic_log.analyze":
+            status = payload.get("status")
+            if status == "success":
+                category = payload.get("panic_type", "unknown")
+                confidence = payload.get("confidence")
+                pct = f"{float(confidence) * 100:.0f}%" if confidence is not None else "n/d"
+                cached = " (cache)" if payload.get("cached") else ""
+                return f"Analisi panic completata: {category}, confidence {pct}{cached}."
+            if status == "no_device":
+                return "Nessun iPhone collegato o non riconosciuto."
+            if status == "no_panic":
+                return "Nessun panic log da analizzare."
+            return "Analisi panic log completata."
         return "Richiesta completata."
 
     async def _reply(self, realtime_manager, session_id: str, device_id: str, content: str) -> None:

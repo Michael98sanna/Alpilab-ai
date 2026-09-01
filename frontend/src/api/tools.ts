@@ -45,3 +45,57 @@ export async function executeRegisteredTool(
     result: body.result ?? {},
   };
 }
+
+async function executeIphonePanicTool(
+  sessionId: string,
+  agentId: string,
+  toolId: "iphone.panic_log.check" | "iphone.panic_log.analyze",
+  body: Record<string, unknown> = {},
+): Promise<ToolExecuteResult> {
+  const base = getApiBaseUrl().replace(/\/$/, "");
+  const url =
+    `${base}/api/v1/sessions/${encodeURIComponent(sessionId)}` +
+    `/agents/${encodeURIComponent(agentId)}` +
+    `/tools/${encodeURIComponent(toolId)}/execute`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    return {
+      success: false,
+      toolId,
+      error: `HTTP_${response.status}`,
+      result: {},
+    };
+  }
+  const payload = (await response.json()) as {
+    success?: boolean;
+    tool_id?: string;
+    error?: string | null;
+    result?: Record<string, unknown>;
+  };
+  return {
+    success: Boolean(payload.success),
+    toolId: payload.tool_id || toolId,
+    error: payload.error ?? null,
+    result: payload.result ?? {},
+  };
+}
+
+export function executeIphonePanicCheck(
+  sessionId: string,
+  agentId: string,
+): Promise<ToolExecuteResult> {
+  return executeIphonePanicTool(sessionId, agentId, "iphone.panic_log.check");
+}
+
+export function executeIphonePanicAnalyze(
+  sessionId: string,
+  agentId: string,
+  params: { force_reanalyze: boolean },
+): Promise<ToolExecuteResult> {
+  return executeIphonePanicTool(sessionId, agentId, "iphone.panic_log.analyze", params);
+}

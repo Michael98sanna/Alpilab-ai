@@ -103,6 +103,14 @@ class NaturalLanguageCommandParser:
         r"^(?:mostra|apri|dammi)\s+(?:la\s+)?fattura\s+([a-z0-9_\-]+)\.?$",
         re.I,
     )
+    _PANIC_CHECK = re.compile(
+        r"^(?:controlla|verifica|trova|c'e un|ce un|guarda)\s+(?:l'|il\s+)?(?:ultimo\s+)?panic(?:\s+log)?(?:\s+(?:dell'?|del\s+)?iphone(?:\s+collegato)?)?\.?$",
+        re.I,
+    )
+    _PANIC_ANALYZE = re.compile(
+        r"^(?:analizza|fammi un'?analisi(?: del)?|interpreta)\s+(?:l'|il\s+)?(?:ultimo\s+)?panic(?:\s+log)?(?:\s+(?:dell'?|del\s+)?iphone(?:\s+collegato)?)?\.?$",
+        re.I,
+    )
 
     def parse(self, text: str) -> NaturalLanguageParseResult:
         raw = text.strip()
@@ -137,6 +145,10 @@ class NaturalLanguageCommandParser:
         check_intent = self._extract_alpilab_check_intent(normalized, raw)
         if check_intent is not None:
             return check_intent
+
+        panic_intent = self._extract_iphone_panic_intent(normalized, raw)
+        if panic_intent is not None:
+            return panic_intent
 
         if self._looks_like_conversation(normalized):
             return NaturalLanguageParseResult(
@@ -324,6 +336,39 @@ class NaturalLanguageCommandParser:
                 type=IntentType.OPEN_TOOL,
                 target="alpilab_check.get_invoice",
                 parameters={"invoice_id": invoice_id},
+                raw_text=raw_text,
+                confidence=MATCH_CONFIDENCE,
+            )
+            return NaturalLanguageParseResult(
+                outcome=ParseOutcome.ACTION_COMMAND,
+                intent=intent,
+                confidence=MATCH_CONFIDENCE,
+            )
+
+        return None
+
+    def _extract_iphone_panic_intent(
+        self, normalized: str, raw_text: str
+    ) -> NaturalLanguageParseResult | None:
+        if self._PANIC_ANALYZE.match(normalized):
+            intent = Intent(
+                type=IntentType.OPEN_TOOL,
+                target="iphone_panic_analyze",
+                parameters={"force_reanalyze": False},
+                raw_text=raw_text,
+                confidence=MATCH_CONFIDENCE,
+            )
+            return NaturalLanguageParseResult(
+                outcome=ParseOutcome.ACTION_COMMAND,
+                intent=intent,
+                confidence=MATCH_CONFIDENCE,
+            )
+
+        if self._PANIC_CHECK.match(normalized):
+            intent = Intent(
+                type=IntentType.OPEN_TOOL,
+                target="iphone_panic_check",
+                parameters={},
                 raw_text=raw_text,
                 confidence=MATCH_CONFIDENCE,
             )

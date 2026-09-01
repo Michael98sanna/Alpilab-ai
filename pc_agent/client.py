@@ -49,6 +49,7 @@ class AgentClient:
                 "thermal_camera": config.capabilities_thermal_camera,
                 "multimeter": config.capabilities_multimeter,
                 "power_supply": config.capabilities_power_supply,
+                "iphone_panic": config.capabilities_iphone_panic,
             }
         )
 
@@ -132,6 +133,7 @@ class AgentClient:
                 "thermal_camera": self.config.capabilities_thermal_camera,
                 "multimeter": self.config.capabilities_multimeter,
                 "power_supply": self.config.capabilities_power_supply,
+                "iphone_panic": self.config.capabilities_iphone_panic,
             },
             "status": "ONLINE",
         }

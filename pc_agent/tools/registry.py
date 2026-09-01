@@ -9,6 +9,7 @@ from pc_agent.tools.alpilab_check_handlers import (
     handle_search_invoices,
     handle_search_products,
 )
+from pc_agent.tools.iphone_panic.handlers import handle_panic_analyze, handle_panic_check
 from pc_agent.tools.windows_handlers import make_windows_app_handler
 from pc_agent.windows_apps.registry import TOOL_ID_TO_APP_ID
 
@@ -19,6 +20,8 @@ ALPILAB_CHECK_SEARCH_PRODUCTS_TOOL_ID = "alpilab_check.search_products"
 ALPILAB_CHECK_GET_PRODUCT_TOOL_ID = "alpilab_check.get_product"
 ALPILAB_CHECK_SEARCH_INVOICES_TOOL_ID = "alpilab_check.search_invoices"
 ALPILAB_CHECK_GET_INVOICE_TOOL_ID = "alpilab_check.get_invoice"
+IPHONE_PANIC_LOG_CHECK_TOOL_ID = "iphone.panic_log.check"
+IPHONE_PANIC_LOG_ANALYZE_TOOL_ID = "iphone.panic_log.analyze"
 
 
 class LocalToolRegistry:
@@ -83,6 +86,22 @@ class LocalToolRegistry:
                 required_capability="alpilab_check",
                 allowed_argument_keys=frozenset({"invoice_id"}),
                 handler=handle_get_invoice,
+            )
+        )
+        self.register(
+            LocalToolSpec(
+                tool_id=IPHONE_PANIC_LOG_CHECK_TOOL_ID,
+                required_capability="iphone_panic",
+                allowed_argument_keys=frozenset(),
+                handler=handle_panic_check,
+            )
+        )
+        self.register(
+            LocalToolSpec(
+                tool_id=IPHONE_PANIC_LOG_ANALYZE_TOOL_ID,
+                required_capability="iphone_panic",
+                allowed_argument_keys=frozenset({"force_reanalyze"}),
+                handler=handle_panic_analyze,
             )
         )
 

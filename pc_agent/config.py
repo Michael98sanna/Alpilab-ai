@@ -45,6 +45,7 @@ class AgentConfig:
     capabilities_thermal_camera: bool
     capabilities_multimeter: bool
     capabilities_power_supply: bool
+    capabilities_iphone_panic: bool
     capabilities_safe_test: bool
 
     @classmethod
@@ -80,6 +81,8 @@ class AgentConfig:
             capabilities_multimeter=os.getenv("ALPILAB_CAP_MULTIMETER", "false").lower()
             in {"1", "true", "yes"},
             capabilities_power_supply=os.getenv("ALPILAB_CAP_POWER_SUPPLY", "false").lower()
+            in {"1", "true", "yes"},
+            capabilities_iphone_panic=os.getenv("ALPILAB_CAP_IPHONE_PANIC", "true").lower()
             in {"1", "true", "yes"},
             capabilities_safe_test=os.getenv("ALPILAB_CAP_SAFE_TEST", "true").lower()
             in {"1", "true", "yes"},

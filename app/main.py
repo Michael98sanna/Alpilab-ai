@@ -17,11 +17,14 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes.agents import (
     AgentStatusResponse,
     AgentTestResponse,
+    ToolExecuteRequest,
     ToolExecuteResponse,
     ToolListResponse,
     execute_3utools_open,
     execute_alpilab_check_open,
     execute_borneo_open,
+    execute_iphone_panic_analyze,
+    execute_iphone_panic_check,
     execute_microscope_open,
     execute_safe_test,
     execute_thermal_camera_open,
@@ -211,6 +214,28 @@ async def post_borneo_open_execute(
     session_id: str, agent_id: str
 ) -> ToolExecuteResponse:
     return await execute_borneo_open(session_id, agent_id)
+
+
+@app.post(
+    "/api/v1/sessions/{session_id}/agents/{agent_id}/tools/iphone.panic_log.check/execute",
+    response_model=ToolExecuteResponse,
+    tags=["agents"],
+)
+async def post_iphone_panic_check_execute(
+    session_id: str, agent_id: str
+) -> ToolExecuteResponse:
+    return await execute_iphone_panic_check(session_id, agent_id)
+
+
+@app.post(
+    "/api/v1/sessions/{session_id}/agents/{agent_id}/tools/iphone.panic_log.analyze/execute",
+    response_model=ToolExecuteResponse,
+    tags=["agents"],
+)
+async def post_iphone_panic_analyze_execute(
+    session_id: str, agent_id: str, body: ToolExecuteRequest | None = None
+) -> ToolExecuteResponse:
+    return await execute_iphone_panic_analyze(session_id, agent_id, body)
 
 
 # Legacy AI route (foundation compatibility)

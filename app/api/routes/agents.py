@@ -43,6 +43,10 @@ class ToolListResponse(BaseModel):
     tools: list[dict] = Field(default_factory=list)
 
 
+class ToolExecuteRequest(BaseModel):
+    force_reanalyze: bool = False
+
+
 def get_agents_status(session_id: str | None = None) -> AgentStatusResponse:
     agents = agent_registry.list_agents(session_id)
     online = [a for a in agents if a.status == "ONLINE"]
@@ -104,13 +108,37 @@ async def execute_borneo_open(session_id: str, agent_id: str) -> ToolExecuteResp
     return await _execute_tool(session_id, agent_id, "windows.borneo.open")
 
 
-async def _execute_tool(session_id: str, agent_id: str, tool_id: str) -> ToolExecuteResponse:
+async def execute_iphone_panic_check(session_id: str, agent_id: str) -> ToolExecuteResponse:
+    return await _execute_tool(session_id, agent_id, "iphone.panic_log.check")
+
+
+async def execute_iphone_panic_analyze(
+    session_id: str,
+    agent_id: str,
+    body: ToolExecuteRequest | None = None,
+) -> ToolExecuteResponse:
+    request = body or ToolExecuteRequest()
+    return await _execute_tool(
+        session_id,
+        agent_id,
+        "iphone.panic_log.analyze",
+        {"force_reanalyze": request.force_reanalyze},
+    )
+
+
+async def _execute_tool(
+    session_id: str,
+    agent_id: str,
+    tool_id: str,
+    arguments: dict | None = None,
+) -> ToolExecuteResponse:
+    args = arguments if arguments is not None else {}
     try:
         result = await tool_execution_service.execute_tool(
             session_id,
             agent_id,
             tool_id,
-            {},
+            args,
         )
     except ToolExecutionError as exc:
         return ToolExecuteResponse(

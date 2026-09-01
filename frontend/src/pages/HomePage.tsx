@@ -9,6 +9,7 @@ import {
   type ProgramActionResult,
 } from "../components/programs/ProgramsPanel";
 import { DiagnosticPanel } from "../components/repair/DiagnosticPanel";
+import { IphonePanicPanel } from "../components/repair/IphonePanicPanel";
 import { RepairContextBanner } from "../components/repair/RepairContextBanner";
 import { DeviceSelectionPanel } from "../components/repair/DeviceSelectionPanel";
 import { AppHeader } from "../components/session/AppHeader";
@@ -181,6 +182,7 @@ export function HomePage() {
 
         {section === "diagnostics" && hasActiveRepair && (
           <main className={styles.main} data-testid="diagnostics-section">
+            <IphonePanicPanel />
             <DiagnosticPanel
               tests={state.tests}
               nextTest={nextPendingTest}

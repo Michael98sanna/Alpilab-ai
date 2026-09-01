@@ -15,6 +15,10 @@ from app.tools.executable import (
     WINDOWS_3UTOOLS_OPEN_TOOL,
     WINDOWS_THERMAL_CAMERA_OPEN_TOOL,
 )
+from app.tools.iphone_panic import (
+    IPHONE_PANIC_LOG_ANALYZE_TOOL,
+    IPHONE_PANIC_LOG_CHECK_TOOL,
+)
 
 
 class ToolRegistry:
@@ -109,6 +113,8 @@ class ToolRegistry:
         self.register_executable(ALPILAB_CHECK_GET_PRODUCT_TOOL)
         self.register_executable(ALPILAB_CHECK_SEARCH_INVOICES_TOOL)
         self.register_executable(ALPILAB_CHECK_GET_INVOICE_TOOL)
+        self.register_executable(IPHONE_PANIC_LOG_CHECK_TOOL)
+        self.register_executable(IPHONE_PANIC_LOG_ANALYZE_TOOL)
 
     def _seed_defaults(self) -> None:
         defaults = [

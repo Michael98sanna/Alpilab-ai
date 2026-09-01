@@ -16,6 +16,8 @@ APPLICATION_TOOL_MAP: dict[str, str] = {
     "alpilab_check.get_product": "alpilab_check.get_product",
     "alpilab_check.search_invoices": "alpilab_check.search_invoices",
     "alpilab_check.get_invoice": "alpilab_check.get_invoice",
+    "iphone_panic_check": "iphone.panic_log.check",
+    "iphone_panic_analyze": "iphone.panic_log.analyze",
 }
 
 SUPPORTED_OPEN_TARGETS = frozenset(APPLICATION_TOOL_MAP.keys())
@@ -27,4 +29,6 @@ def resolve_tool_id(intent: Intent) -> str | None:
         return None
     if not intent.target:
         return None
+    if intent.type == IntentType.OPEN_TOOL and intent.target in APPLICATION_TOOL_MAP:
+        return APPLICATION_TOOL_MAP.get(intent.target)
     return APPLICATION_TOOL_MAP.get(intent.target)

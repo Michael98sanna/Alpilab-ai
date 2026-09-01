@@ -1,0 +1,75 @@
+rules:
+  - id: smc_sensor_0x800
+    name: SMC Sensor Array 0x800
+    category: hardware_flex
+    component: charge_port_flex
+    severity: high
+    confidence_base: 0.85
+    description: Charge port / dock flex sensor fault in SMC sensor array
+    triggers:
+      panic_string_contains:
+        - "SMC PANIC"
+        - "0x800"
+    recommendations:
+      - "Verificare flex porta carica e connettore dock"
+      - "Controllare integrità del flat charge port"
+
+  - id: nand_storage
+    name: NAND / Storage Fault
+    category: storage
+    component: nand_flash
+    severity: high
+    confidence_base: 0.8
+    description: NAND or NVMe storage communication failure
+    triggers:
+      panic_string_contains:
+        - "NAND"
+        - "nvme"
+    recommendations:
+      - "Verificare integrità NAND e linee PCIe storage"
+      - "Considerare riballing o sostituzione storage"
+
+  - id: thermal_power
+    name: Thermal / Power Fault
+    category: thermal_power
+    component: thermal_management
+    severity: medium
+    confidence_base: 0.75
+    description: Thermal shutdown or power management panic
+    triggers:
+      panic_string_contains:
+        - "Thermal"
+        - "PMU"
+    recommendations:
+      - "Verificare dissipation termica e short su linee power"
+      - "Controllare consumi anomali a riposo"
+
+  - id: baseband
+    name: Baseband Crash
+    category: baseband
+    component: baseband_modem
+    severity: high
+    confidence_base: 0.78
+    description: Baseband or modem subsystem failure
+    triggers:
+      panic_string_contains:
+        - "baseband"
+        - "CommCenter"
+    recommendations:
+      - "Verificare antenna flex e modulo baseband"
+      - "Aggiornare o ripristinare firmware baseband se applicabile"
+
+  - id: battery_data
+    name: Battery Data Line
+    category: battery
+    component: battery_flex
+    severity: medium
+    confidence_base: 0.72
+    description: Battery fuel gauge or data line communication fault
+    triggers:
+      panic_string_contains:
+        - "battery"
+        - "AppleSmartBattery"
+    recommendations:
+      - "Verificare connettore batteria e flex T2/SMC"
+      - "Misurare linee data batteria e autenticazione"
