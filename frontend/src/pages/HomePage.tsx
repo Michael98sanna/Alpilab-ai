@@ -21,7 +21,9 @@ import { useAppSession } from "../realtime/RealtimeProvider";
 import { isPcLoopbackUi } from "../realtime/sessionStorage";
 import type { LabProgram, ProgramId } from "../programs/catalog";
 import { canExecuteProgram, isOpenableToolId } from "../programs/catalog";
+import { createDiagnosticCard } from "../api/diagnosticCards";
 import styles from "./HomePage.module.css";
+import { deviceDisplayName, hasIphoneConnected } from "../utils/deviceKind";
 
 export function HomePage() {
   const {
@@ -55,6 +57,10 @@ export function HomePage() {
   const [devicePanelDismissed, setDevicePanelDismissed] = useState(false);
   const [busyProgramId, setBusyProgramId] = useState<ProgramId | null>(null);
   const showPairing = isPcLoopbackUi();
+  const iphoneConnected = hasIphoneConnected(
+    state.deviceContext,
+    state.detectedDevices,
+  );
 
   const showDevicePanel =
     !devicePanelDismissed &&
@@ -71,6 +77,20 @@ export function HomePage() {
       setSection("chat");
     }
   }, [section, hasActiveRepair]);
+
+  useEffect(() => {
+    const ctx = state.deviceContext;
+    if (!sessionId || !ctx) {
+      return;
+    }
+    void createDiagnosticCard({
+      session_id: sessionId,
+      device_id: ctx.id,
+      device_name: deviceDisplayName(ctx.brand, ctx.model, ctx.id),
+    }).catch(() => {
+      /* idempotent — card may already exist */
+    });
+  }, [sessionId, state.deviceContext?.id, state.deviceContext?.brand, state.deviceContext?.model]);
 
   const handleOpenProgram = useCallback(
     async (program: LabProgram): Promise<ProgramActionResult> => {
@@ -177,24 +197,15 @@ export function HomePage() {
               />
 
               <AlpilabStatusBar state={state.coreState} />
+
+              {hasActiveRepair && <DiagnosticCardPanel sessionId={sessionId} />}
             </div>
           </main>
         )}
 
         {section === "diagnostics" && hasActiveRepair && (
-          <main className={styles.main} data-testid="diagnostics-section">
-            <DiagnosticCardPanel
-              sessionId={sessionId}
-              defaultDeviceId={state.deviceContext?.id}
-              defaultDeviceName={
-                state.deviceContext
-                  ? [state.deviceContext.brand, state.deviceContext.model]
-                      .filter(Boolean)
-                      .join(" ") || state.deviceContext.id
-                  : undefined
-              }
-            />
-            <IphonePanicPanel />
+          <main className={styles.diagnosticsMain} data-testid="diagnostics-section">
+            {iphoneConnected && <IphonePanicPanel />}
             <DiagnosticPanel
               tests={state.tests}
               nextTest={nextPendingTest}

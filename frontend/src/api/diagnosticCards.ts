@@ -36,8 +36,11 @@ function apiBase(): string {
   return getApiBaseUrl().replace(/\/$/, "");
 }
 
-export async function fetchActiveDiagnosticCards(): Promise<DiagnosticCard[]> {
-  const res = await fetch(`${apiBase()}/api/v1/diagnostic-cards`);
+export async function fetchActiveDiagnosticCards(
+  sessionId?: string,
+): Promise<DiagnosticCard[]> {
+  const query = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : "";
+  const res = await fetch(`${apiBase()}/api/v1/diagnostic-cards${query}`);
   if (!res.ok) {
     throw new Error(`Failed to load diagnostic cards (${res.status})`);
   }

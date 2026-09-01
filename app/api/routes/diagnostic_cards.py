@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.models.database import get_db
@@ -38,10 +38,13 @@ def _card_payload(card) -> dict:
 
 
 @router.get("")
-def list_active_cards(db: Session = Depends(get_db)) -> dict:
+def list_active_cards(
+    session_id: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+) -> dict:
     """Lista tutte le schede diagnostiche attive."""
     service = DiagnosticCardService(db)
-    cards = service.get_active_cards()
+    cards = service.get_active_cards(session_id=session_id)
     return {
         "count": len(cards),
         "cards": [_card_payload(card) for card in cards],

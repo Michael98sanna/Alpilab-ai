@@ -525,6 +525,34 @@ class RealtimeSessionManager:
         await self.send_event_ws(session_id, event)
         self._persist_session(session_id)
 
+    def _ensure_diagnostic_card(
+        self,
+        session_id: str,
+        device_id: str,
+        device_name: str,
+    ) -> None:
+        """Create a diagnostic card when a device is associated (idempotent)."""
+        from app.models.database import SessionLocal
+        from app.services.diagnostic_card_service import DiagnosticCardService
+
+        db = SessionLocal()
+        try:
+            DiagnosticCardService(db).get_or_create_card(
+                session_id=session_id,
+                device_id=device_id,
+                device_name=device_name,
+            )
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "Failed to ensure diagnostic card session=%s device=%s",
+                session_id,
+                device_id,
+            )
+        finally:
+            db.close()
+
     async def associate_repair_device(
         self,
         session_id: str,
@@ -544,6 +572,7 @@ class RealtimeSessionManager:
         session.device_context = DeviceContext.from_detected(detected, associated_at=now)
         session.device = detected.display_name
         session.state_version += 1
+        self._ensure_diagnostic_card(session_id, detected.id, detected.display_name)
         event = self.emit(
             session_id,
             RealtimeEventType.REPAIR_DEVICE_ASSOCIATED,

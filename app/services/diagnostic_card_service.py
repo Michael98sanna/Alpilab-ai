@@ -47,14 +47,12 @@ class DiagnosticCardService:
         logger.info("Created diagnostic card %s for %s", card.id, device_name)
         return card
 
-    def get_active_cards(self) -> list[DiagnosticCard]:
-        """Ritorna tutte le schede attive."""
-        return (
-            self.db.query(DiagnosticCard)
-            .filter(DiagnosticCard.status == "active")
-            .order_by(DiagnosticCard.updated_at.desc())
-            .all()
-        )
+    def get_active_cards(self, session_id: str | None = None) -> list[DiagnosticCard]:
+        """Ritorna tutte le schede attive, opzionalmente filtrate per sessione."""
+        query = self.db.query(DiagnosticCard).filter(DiagnosticCard.status == "active")
+        if session_id:
+            query = query.filter(DiagnosticCard.session_id == session_id)
+        return query.order_by(DiagnosticCard.updated_at.desc()).all()
 
     def get_card(self, card_id: str) -> DiagnosticCard | None:
         """Carica una scheda."""

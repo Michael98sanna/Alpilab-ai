@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   archiveDiagnosticCard,
-  createDiagnosticCard,
   fetchActiveDiagnosticCards,
   fetchDiagnosticCard,
   type DiagnosticCard,
@@ -11,27 +10,22 @@ import {
 import styles from "./DiagnosticCardPanel.module.css";
 
 interface DiagnosticCardPanelProps {
-  sessionId?: string;
-  defaultDeviceId?: string;
-  defaultDeviceName?: string;
+  sessionId: string;
 }
 
-export function DiagnosticCardPanel({
-  sessionId,
-  defaultDeviceId,
-  defaultDeviceName,
-}: DiagnosticCardPanelProps) {
+export function DiagnosticCardPanel({ sessionId }: DiagnosticCardPanelProps) {
   const [activeCards, setActiveCards] = useState<DiagnosticCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<DiagnosticCard | null>(null);
   const [summary, setSummary] = useState<DiagnosticCardSummary | null>(null);
   const [conversation, setConversation] = useState<DiagnosticMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const loadActiveCards = useCallback(async () => {
     try {
       setError(null);
-      const cards = await fetchActiveDiagnosticCards();
+      const cards = await fetchActiveDiagnosticCards(sessionId);
       setActiveCards(cards);
       if (cards.length > 0) {
         setSelectedCard((current) => {
@@ -44,12 +38,13 @@ export function DiagnosticCardPanel({
         setSelectedCard(null);
         setSummary(null);
         setConversation([]);
+        setExpanded(false);
       }
     } catch (err) {
       console.error("Error loading cards:", err);
       setError("Impossibile caricare le schede diagnostiche.");
     }
-  }, []);
+  }, [sessionId]);
 
   useEffect(() => {
     void loadActiveCards();
@@ -60,7 +55,7 @@ export function DiagnosticCardPanel({
   }, [loadActiveCards]);
 
   useEffect(() => {
-    if (!selectedCard) {
+    if (!selectedCard || !expanded) {
       return;
     }
     let cancelled = false;
@@ -89,7 +84,7 @@ export function DiagnosticCardPanel({
     return () => {
       cancelled = true;
     };
-  }, [selectedCard?.id]);
+  }, [selectedCard?.id, expanded]);
 
   const handleArchive = async (cardId: string, outcome: string) => {
     try {
@@ -105,23 +100,9 @@ export function DiagnosticCardPanel({
     }
   };
 
-  const handleCreateCard = async () => {
-    if (!sessionId || !defaultDeviceId) {
-      setError("Associa un device per creare una scheda diagnostica.");
-      return;
-    }
-    try {
-      await createDiagnosticCard({
-        device_id: defaultDeviceId,
-        device_name: defaultDeviceName || defaultDeviceId,
-        session_id: sessionId,
-      });
-      await loadActiveCards();
-    } catch (err) {
-      console.error("Error creating card:", err);
-      setError("Creazione scheda non riuscita.");
-    }
-  };
+  if (activeCards.length === 0) {
+    return null;
+  }
 
   return (
     <div className={styles.container}>
@@ -130,12 +111,16 @@ export function DiagnosticCardPanel({
           <div
             key={card.id}
             className={`${styles.tab} ${selectedCard?.id === card.id ? styles.active : ""}`}
-            onClick={() => setSelectedCard(card)}
+            onClick={() => {
+              setSelectedCard(card);
+              setExpanded(true);
+            }}
             role="tab"
             tabIndex={0}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
                 setSelectedCard(card);
+                setExpanded(true);
               }
             }}
           >
@@ -156,14 +141,18 @@ export function DiagnosticCardPanel({
             </button>
           </div>
         ))}
-        <button type="button" className={styles.newCardBtn} onClick={() => void handleCreateCard()}>
-          + Nuovo
+        <button
+          type="button"
+          className={styles.toggleBtn}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {expanded ? "Nascondi" : "Dettagli"}
         </button>
       </div>
 
       {error && <div className={styles.error}>{error}</div>}
 
-      {selectedCard && !loading && summary && (
+      {expanded && selectedCard && !loading && summary && (
         <div className={styles.content}>
           <div className={styles.section}>
             <h3>📋 Riassunto Rapido</h3>
@@ -233,12 +222,7 @@ export function DiagnosticCardPanel({
         </div>
       )}
 
-      {loading && <div className={styles.loading}>⏳ Caricamento...</div>}
-      {!selectedCard && !loading && (
-        <div className={styles.empty}>
-          <p>Nessuna scheda attiva — avvia una conversazione o crea una nuova scheda.</p>
-        </div>
-      )}
+      {expanded && loading && <div className={styles.loading}>⏳ Caricamento...</div>}
     </div>
   );
 }
