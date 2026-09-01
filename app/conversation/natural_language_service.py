@@ -531,6 +531,7 @@ class NaturalLanguageCommandService:
     ) -> None:
         from app.conversation.diagnostic_card_sync import record_assistant_message
 
+        session = realtime_manager.get_session(session_id)
         await realtime_manager.add_chat_message(
             session_id,
             device_id,
@@ -543,6 +544,7 @@ class NaturalLanguageCommandService:
             findings=findings,
             session_id=session_id,
             device_id=device_id,
+            session=session,
         )
 
     @staticmethod

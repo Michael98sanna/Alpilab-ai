@@ -112,6 +112,14 @@ def test_get_or_create_card_per_device(db_session: Session) -> None:
     assert again.id == first.id
 
 
+def test_get_active_cards_filtered_by_session(db_session: Session) -> None:
+    service = DiagnosticCardService(db_session)
+    service.create_card("iPhone14,2", "Phone A", "session-a")
+    service.create_card("SM-G991B", "Phone B", "session-b")
+    assert len(service.get_active_cards(session_id="session-a")) == 1
+    assert service.get_active_cards(session_id="session-a")[0].device_name == "Phone A"
+
+
 def test_index_in_knowledge_base(db_session: Session) -> None:
     service = DiagnosticCardService(db_session)
     card = service.create_card("iPhone14,2", "Test Phone", "session-kb")

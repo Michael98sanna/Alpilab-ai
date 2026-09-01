@@ -95,6 +95,14 @@ export type OutboundMessage =
   | { type: "repair_context_update"; device?: string; issue?: string; label?: string }
   | { type: "request_snapshot" }
   | { type: "associate_repair_device"; repair_device_id: string }
+  | {
+      type: "activate_repair_device";
+      repair_device_id: string;
+      device_name?: string;
+      brand?: string;
+      model?: string;
+    }
+  | { type: "associate_manual_repair_device"; brand: string; model: string }
   | { type: "unassociate_repair_device" };
 
 export function mapDiagnosticStatus(status: string): DiagnosticStatus {

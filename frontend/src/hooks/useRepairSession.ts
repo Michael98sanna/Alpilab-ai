@@ -586,6 +586,66 @@ export function useRepairSession(loadScenarioOnInit = true) {
     dispatch({ type: "SET_DEVICE_CONTEXT", context: null });
   }, []);
 
+  const activateRepairDevice = useCallback(
+    (params: {
+      repair_device_id: string;
+      device_name: string;
+      brand?: string | null;
+      model?: string | null;
+    }) => {
+      const detected = state.detectedDevices.find(
+        (device) => device.id === params.repair_device_id,
+      );
+      if (detected) {
+        dispatch({
+          type: "SET_DEVICE_CONTEXT",
+          context: {
+            id: detected.id,
+            brand: detected.brand,
+            model: detected.model,
+            serial_number: detected.serial_number,
+            connection_type: detected.connection_type,
+            source: detected.source,
+            associated_at: new Date().toISOString(),
+          },
+        });
+        return;
+      }
+      dispatch({
+        type: "SET_DEVICE_CONTEXT",
+        context: {
+          id: params.repair_device_id,
+          brand: params.brand ?? null,
+          model: params.model ?? null,
+          serial_number: null,
+          connection_type: params.repair_device_id.startsWith("manual-")
+            ? "manual"
+            : "unknown",
+          source: params.repair_device_id.startsWith("manual-") ? "manual" : "unknown",
+          associated_at: new Date().toISOString(),
+        },
+      });
+    },
+    [state.detectedDevices],
+  );
+
+  const associateManualDevice = useCallback((brand: string, model: string) => {
+    const repairDeviceId = `manual-${Date.now().toString(36)}`;
+    dispatch({
+      type: "SET_DEVICE_CONTEXT",
+      context: {
+        id: repairDeviceId,
+        brand: brand.trim() || null,
+        model: model.trim() || null,
+        serial_number: null,
+        connection_type: "manual",
+        source: "manual",
+        associated_at: new Date().toISOString(),
+      },
+    });
+    return repairDeviceId;
+  }, []);
+
   return {
     state,
     dispatch,
@@ -610,6 +670,8 @@ export function useRepairSession(loadScenarioOnInit = true) {
     hasActiveRepair: state.session.status !== "none",
     associateDevice,
     unassociateDevice,
+    activateRepairDevice,
+    associateManualDevice,
   };
 }
 

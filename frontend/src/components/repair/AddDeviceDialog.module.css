@@ -1,0 +1,137 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.dialog {
+  background: var(--color-bg, #fff);
+  border-radius: 12px;
+  width: min(420px, 100%);
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.header {
+  padding: 16px 20px 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px 12px;
+  border-bottom: 1px solid var(--color-border, #e0e0e0);
+}
+
+.tab {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.tabActive {
+  background: var(--color-bg-secondary, #f5f5f5);
+  font-weight: 600;
+}
+
+.body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.deviceList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deviceItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: 8px;
+}
+
+.deviceLabel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.deviceName {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.deviceMeta {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.field input {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.empty {
+  font-size: 13px;
+  opacity: 0.65;
+  margin: 0;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--color-border, #e0e0e0);
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: #b71c1c;
+}

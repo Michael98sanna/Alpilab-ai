@@ -12,6 +12,15 @@ from app.services.diagnostic_card_service import DiagnosticCardService
 logger = logging.getLogger(__name__)
 
 
+def _resolve_repair_device_id(
+    session: RealtimeSessionData | None,
+    fallback_device_id: str,
+) -> str:
+    if session and session.device_context:
+        return session.device_context.id
+    return fallback_device_id
+
+
 def _resolve_device_name(session: RealtimeSessionData | None, device_id: str) -> str:
     if session is None:
         return device_id
@@ -33,13 +42,14 @@ def record_user_message(
     session: RealtimeSessionData | None = None,
 ) -> str | None:
     """Persist user message on the diagnostic card for this session/device."""
+    repair_device_id = _resolve_repair_device_id(session, device_id)
     db = SessionLocal()
     try:
         service = DiagnosticCardService(db)
         card = service.get_or_create_card(
             session_id=session_id,
-            device_id=device_id,
-            device_name=_resolve_device_name(session, device_id),
+            device_id=repair_device_id,
+            device_name=_resolve_device_name(session, repair_device_id),
         )
         service.add_message(card.id, "user", text)
         if session and session.issue and not card.current_symptom:
@@ -63,6 +73,7 @@ def record_assistant_message(
     findings: dict[str, Any] | None = None,
     session_id: str | None = None,
     device_id: str | None = None,
+    session: RealtimeSessionData | None = None,
 ) -> None:
     """Persist assistant reply and optional diagnostic findings."""
     if not content.strip():
@@ -72,7 +83,8 @@ def record_assistant_message(
         service = DiagnosticCardService(db)
         resolved_card_id = card_id
         if not resolved_card_id and session_id and device_id:
-            card = service.get_card_by_session_and_device(session_id, device_id)
+            repair_device_id = _resolve_repair_device_id(session, device_id)
+            card = service.get_card_by_session_and_device(session_id, repair_device_id)
             resolved_card_id = card.id if card else None
         if not resolved_card_id:
             return

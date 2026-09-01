@@ -122,6 +122,8 @@ class ClientInboundMessage(BaseModel):
         "repair_context_update",
         "request_snapshot",
         "associate_repair_device",
+        "associate_manual_repair_device",
+        "activate_repair_device",
         "unassociate_repair_device",
     ]
     content: str | None = None
@@ -134,6 +136,9 @@ class ClientInboundMessage(BaseModel):
     issue: str | None = None
     label: str | None = None
     repair_device_id: str | None = None
+    brand: str | None = None
+    model: str | None = None
+    device_name: str | None = None
 
 
 class WsEnvelope(BaseModel):

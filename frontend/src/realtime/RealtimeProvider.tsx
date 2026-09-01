@@ -32,6 +32,13 @@ interface SessionContextValue extends RepairSessionApi {
   deviceId: string;
   associateDevice: (deviceId: string) => void;
   unassociateDevice: () => void;
+  activateRepairDevice: (params: {
+    repair_device_id: string;
+    device_name: string;
+    brand?: string | null;
+    model?: string | null;
+  }) => void;
+  associateManualDevice: (brand: string, model: string) => string;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -169,6 +176,32 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     sendRealtime({ type: "associate_repair_device", repair_device_id: deviceId });
   }, [sendRealtime]);
 
+  const activateRepairDevice = useCallback(
+    (params: {
+      repair_device_id: string;
+      device_name: string;
+      brand?: string | null;
+      model?: string | null;
+    }) => {
+      sendRealtime({
+        type: "activate_repair_device",
+        repair_device_id: params.repair_device_id,
+        device_name: params.device_name,
+        brand: params.brand ?? undefined,
+        model: params.model ?? undefined,
+      });
+    },
+    [sendRealtime],
+  );
+
+  const associateManualDevice = useCallback(
+    (brand: string, model: string) => {
+      sendRealtime({ type: "associate_manual_repair_device", brand, model });
+      return `manual-${Date.now().toString(36)}`;
+    },
+    [sendRealtime],
+  );
+
   const unassociateDevice = useCallback(() => {
     sendRealtime({ type: "unassociate_repair_device" });
   }, [sendRealtime]);
@@ -187,6 +220,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       resumeDiagnosis: isRealtime ? resumeDiagnosisRealtime : session.resumeDiagnosis,
       associateDevice,
       unassociateDevice,
+      activateRepairDevice: isRealtime
+        ? activateRepairDevice
+        : session.activateRepairDevice,
+      associateManualDevice: isRealtime
+        ? associateManualDevice
+        : session.associateManualDevice,
     }),
     [
       session,
@@ -200,6 +239,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       resumeDiagnosisRealtime,
       associateDevice,
       unassociateDevice,
+      activateRepairDevice,
+      associateManualDevice,
     ],
   );
 

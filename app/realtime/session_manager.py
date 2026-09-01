@@ -582,6 +582,77 @@ class RealtimeSessionManager:
         await self.send_event_ws(session_id, event)
         self._persist_session(session_id)
 
+    async def activate_repair_device(
+        self,
+        session_id: str,
+        repair_device_id: str,
+        *,
+        device_name: str | None = None,
+        brand: str | None = None,
+        model: str | None = None,
+        source_client_device_id: str | None = None,
+    ) -> None:
+        """Set active repair device from an existing card (detected or manual)."""
+        from app.schemas.device_context import DeviceContext
+
+        session = self.get_session(session_id)
+        if not session:
+            raise ValueError("session not found")
+        detected = next(
+            (d for d in session.detected_devices if d.id == repair_device_id),
+            None,
+        )
+        now = utc_now()
+        if detected is not None:
+            session.device_context = DeviceContext.from_detected(detected, associated_at=now)
+            display_name = detected.display_name
+        else:
+            is_manual = repair_device_id.startswith("manual-")
+            session.device_context = DeviceContext(
+                id=repair_device_id,
+                brand=(brand or "").strip() or None,
+                model=(model or "").strip() or None,
+                source="manual" if is_manual else "unknown",
+                connection_type="manual" if is_manual else "unknown",
+                associated_at=now,
+            )
+            display_name = (device_name or session.device_context.display_name).strip()
+        session.device = display_name or repair_device_id
+        session.state_version += 1
+        self._ensure_diagnostic_card(session_id, repair_device_id, session.device)
+        event = self.emit(
+            session_id,
+            RealtimeEventType.REPAIR_DEVICE_ASSOCIATED,
+            payload=session.device_context.model_dump(mode="json"),
+            source_client_device_id=source_client_device_id,
+        )
+        await self.send_event_ws(session_id, event)
+        self._persist_session(session_id)
+
+    async def associate_manual_repair_device(
+        self,
+        session_id: str,
+        brand: str,
+        model: str,
+        source_client_device_id: str | None = None,
+    ) -> str:
+        """Create and associate a manual repair device entry."""
+        brand_text = brand.strip()
+        model_text = model.strip()
+        if not brand_text and not model_text:
+            raise ValueError("brand or model required")
+        repair_device_id = f"manual-{uuid4().hex[:12]}"
+        display_name = " ".join(part for part in (brand_text, model_text) if part)
+        await self.activate_repair_device(
+            session_id,
+            repair_device_id,
+            device_name=display_name,
+            brand=brand_text or None,
+            model=model_text or None,
+            source_client_device_id=source_client_device_id,
+        )
+        return repair_device_id
+
     async def unassociate_repair_device(
         self,
         session_id: str,
@@ -683,6 +754,34 @@ class RealtimeSessionManager:
                 )
             await self.associate_repair_device(
                 session_id, message.repair_device_id, source_client_device_id=device_id,
+            )
+            return "ack"
+        if message.type == "activate_repair_device":
+            if not message.repair_device_id:
+                raise StateUpdateRejected(
+                    "repair_device_id required",
+                    request_type="activate_repair_device",
+                )
+            await self.activate_repair_device(
+                session_id,
+                message.repair_device_id,
+                device_name=message.device_name,
+                brand=message.brand,
+                model=message.model,
+                source_client_device_id=device_id,
+            )
+            return "ack"
+        if message.type == "associate_manual_repair_device":
+            if not message.brand and not message.model:
+                raise StateUpdateRejected(
+                    "brand or model required",
+                    request_type="associate_manual_repair_device",
+                )
+            await self.associate_manual_repair_device(
+                session_id,
+                brand=message.brand or "",
+                model=message.model or "",
+                source_client_device_id=device_id,
             )
             return "ack"
         if message.type == "unassociate_repair_device":
