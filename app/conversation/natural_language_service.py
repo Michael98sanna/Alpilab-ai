@@ -64,11 +64,20 @@ class NaturalLanguageCommandService:
     ) -> None:
         from app.realtime.session_manager import realtime_manager
 
+        session = realtime_manager.get_session(session_id)
+        from app.conversation.diagnostic_card_sync import record_user_message
+
+        active_card_id = record_user_message(
+            session_id,
+            device_id,
+            text,
+            session=session,
+        )
+
         logger.info("[COMMAND] Received natural language command session=%s", session_id)
         parsed = self._parser.parse(text)
 
         if parsed.outcome == ParseOutcome.CONVERSATION:
-            session = realtime_manager.get_session(session_id)
             followup = resolve_product_followup(
                 text,
                 session.product_search_context if session else None,
@@ -125,7 +134,13 @@ class NaturalLanguageCommandService:
             from ai.schemas import AIRequest
 
             reply = AIRouter().generate(AIRequest(prompt=text)).content
-            await self._reply(realtime_manager, session_id, device_id, reply)
+            await self._reply(
+                realtime_manager,
+                session_id,
+                device_id,
+                reply,
+                diagnostic_card_id=active_card_id,
+            )
             await realtime_manager.set_assistant_status(
                 session_id,
                 "SPEAKING",
@@ -504,12 +519,30 @@ class NaturalLanguageCommandService:
             return "Analisi panic log completata."
         return "Richiesta completata."
 
-    async def _reply(self, realtime_manager, session_id: str, device_id: str, content: str) -> None:
+    async def _reply(
+        self,
+        realtime_manager,
+        session_id: str,
+        device_id: str,
+        content: str,
+        *,
+        diagnostic_card_id: str | None = None,
+        findings: dict | None = None,
+    ) -> None:
+        from app.conversation.diagnostic_card_sync import record_assistant_message
+
         await realtime_manager.add_chat_message(
             session_id,
             device_id,
             content,
             role="assistant",
+        )
+        record_assistant_message(
+            diagnostic_card_id,
+            content,
+            findings=findings,
+            session_id=session_id,
+            device_id=device_id,
         )
 
     @staticmethod

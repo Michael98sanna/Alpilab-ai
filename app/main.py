@@ -33,6 +33,7 @@ from app.api.routes.agents import (
     send_agent_test,
 )
 from app.api.routes.ai import generate_text
+from app.api.routes.diagnostic_cards import router as diagnostic_cards_router
 from app.api.routes.health import get_health
 from app.api.routes.realtime import (
     CreateSessionRequest,
@@ -81,11 +82,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
 register_audit_logging_middleware(app)
+
+app.include_router(diagnostic_cards_router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])

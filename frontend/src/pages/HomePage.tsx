@@ -8,6 +8,7 @@ import {
   ProgramsPanel,
   type ProgramActionResult,
 } from "../components/programs/ProgramsPanel";
+import { DiagnosticCardPanel } from "../components/diagnostic/DiagnosticCardPanel";
 import { DiagnosticPanel } from "../components/repair/DiagnosticPanel";
 import { IphonePanicPanel } from "../components/repair/IphonePanicPanel";
 import { RepairContextBanner } from "../components/repair/RepairContextBanner";
@@ -182,6 +183,17 @@ export function HomePage() {
 
         {section === "diagnostics" && hasActiveRepair && (
           <main className={styles.main} data-testid="diagnostics-section">
+            <DiagnosticCardPanel
+              sessionId={sessionId}
+              defaultDeviceId={state.deviceContext?.id}
+              defaultDeviceName={
+                state.deviceContext
+                  ? [state.deviceContext.brand, state.deviceContext.model]
+                      .filter(Boolean)
+                      .join(" ") || state.deviceContext.id
+                  : undefined
+              }
+            />
             <IphonePanicPanel />
             <DiagnosticPanel
               tests={state.tests}
