@@ -30,6 +30,7 @@ interface SessionContextValue extends RepairSessionApi {
   mode: AppMode;
   sessionId: string;
   deviceId: string;
+  requestSnapshot: () => void;
   associateDevice: (deviceId: string) => void;
   unassociateDevice: () => void;
   activateRepairDevice: (params: {
@@ -53,7 +54,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const pairingToken = loadPairingToken();
   const pcLoopback = isPcLoopbackUi();
 
-  const session = useRepairSession(!isRealtime);
+  const session = useRepairSession(false);
   const { isOnline, addToQueue, syncQueue, registerSyncHandler } = useOfflineQueue();
   const clientRef = useRef<RealtimeClient | null>(null);
   const dispatchRef = useRef(session.dispatch);
@@ -115,13 +116,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       deviceType,
       deviceName,
       pairingToken: pcLoopback ? null : pairingToken,
-      seedDemo: pcLoopback && deviceType === "pc",
+      seedDemo: false,
       onMessage: (msg) => {
         if (msg.type === "event" && msg.event?.event_type === "SESSION_STATE_UPDATED") {
           const incoming = Number(msg.event.payload.state_version);
           if (shouldRequestSnapshot(stateVersionRef.current, incoming)) {
             clientRef.current?.send({ type: "request_snapshot" });
-            return;
           }
         }
         const actions = mapWsMessageToActions(msg);
@@ -172,6 +172,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     sendRealtime({ type: "diagnosis_pause", paused: false });
   }, [sendRealtime]);
 
+  const requestSnapshot = useCallback(() => {
+    sendRealtime({ type: "request_snapshot" });
+  }, [sendRealtime]);
+
   const associateDevice = useCallback((deviceId: string) => {
     sendRealtime({ type: "associate_repair_device", repair_device_id: deviceId });
   }, [sendRealtime]);
@@ -212,6 +216,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       mode,
       sessionId,
       deviceId,
+      requestSnapshot: isRealtime ? requestSnapshot : () => {},
       sendMessage: isRealtime ? sendMessageRealtime : session.sendMessage,
       submitMeasurement: isRealtime
         ? submitMeasurementRealtime
@@ -233,6 +238,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       sessionId,
       deviceId,
       isRealtime,
+      requestSnapshot,
       sendMessageRealtime,
       submitMeasurementRealtime,
       pauseDiagnosisRealtime,

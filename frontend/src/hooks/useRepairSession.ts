@@ -667,7 +667,7 @@ export function useRepairSession(loadScenarioOnInit = true) {
     openTool,
     closeToolPanel,
     nextPendingTest,
-    hasActiveRepair: state.session.status !== "none",
+    hasActiveRepair: state.onboardingStep !== "idle" || state.messages.length > 0,
     associateDevice,
     unassociateDevice,
     activateRepairDevice,

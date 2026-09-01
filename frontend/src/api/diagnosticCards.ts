@@ -44,8 +44,8 @@ export async function fetchActiveDiagnosticCards(
   if (!res.ok) {
     throw new Error(`Failed to load diagnostic cards (${res.status})`);
   }
-  const data = (await res.json()) as { cards: DiagnosticCard[] };
-  return data.cards;
+  const data = (await res.json()) as { cards?: DiagnosticCard[] };
+  return data.cards ?? [];
 }
 
 export async function fetchDiagnosticCard(cardId: string): Promise<{

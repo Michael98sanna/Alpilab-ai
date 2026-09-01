@@ -11,11 +11,10 @@ import {
   type ProgramActionResult,
 } from "../components/programs/ProgramsPanel";
 import { AddDeviceDialog } from "../components/repair/AddDeviceDialog";
+import { DiagnosticCardPanel } from "../components/diagnostic/DiagnosticCardPanel";
 import { DiagnosticPanel } from "../components/repair/DiagnosticPanel";
 import { IphonePanicPanel } from "../components/repair/IphonePanicPanel";
 import { RepairCardsSidebar } from "../components/repair/RepairCardsSidebar";
-import { RepairContextBanner } from "../components/repair/RepairContextBanner";
-import { DeviceSelectionPanel } from "../components/repair/DeviceSelectionPanel";
 import { AppHeader } from "../components/session/AppHeader";
 import { PairingDialog } from "../components/session/PairingDialog";
 import { Button } from "../components/ui/Button";
@@ -36,30 +35,24 @@ export function HomePage() {
     sendMessage,
     simulateVoice,
     submitMeasurement,
-    startNewRepair,
     loadScenario,
     pauseDiagnosis,
     resumeDiagnosis,
     toggleSessionDevices,
     nextPendingTest,
     hasActiveRepair,
+    requestSnapshot,
     associateDevice,
-    unassociateDevice,
     activateRepairDevice,
     associateManualDevice,
   } = useAppSession();
 
-  const repairContextReady = Boolean(state.session.device && state.session.issue);
-  const showContext =
-    hasActiveRepair &&
-    (state.onboardingStep === "complete" || repairContextReady);
-
   const [section, setSection] = useState<AppSection>("chat");
   const [pairingOpen, setPairingOpen] = useState(false);
   const [addDeviceOpen, setAddDeviceOpen] = useState(false);
-  const [devicePanelDismissed, setDevicePanelDismissed] = useState(false);
   const [busyProgramId, setBusyProgramId] = useState<ProgramId | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const {
     cards,
@@ -81,10 +74,10 @@ export function HomePage() {
     state.detectedDevices,
   );
 
-  const showDevicePanel =
-    !hasActiveRepair &&
-    !devicePanelDismissed &&
-    (state.detectedDevices.length > 0 || state.deviceContext !== null);
+  const isIdle =
+    state.onboardingStep === "idle" &&
+    state.messages.length === 0 &&
+    cards.length === 0;
 
   const existingDeviceIds = useMemo(
     () => cards.map((card) => card.device_id),
@@ -92,22 +85,6 @@ export function HomePage() {
   );
 
   useEffect(() => {
-    if (state.detectedDevices.length > 0) {
-      setDevicePanelDismissed(false);
-    }
-  }, [state.detectedDevices.length]);
-
-  useEffect(() => {
-    if (section === "diagnostics" && !hasActiveRepair) {
-      setSection("chat");
-    }
-  }, [section, hasActiveRepair]);
-
-  useEffect(() => {
-    if (!hasActiveRepair) {
-      setActiveCardId(null);
-      return;
-    }
     if (cards.length === 0) {
       setActiveCardId(null);
       return;
@@ -116,9 +93,12 @@ export function HomePage() {
       if (current && cards.some((card) => card.id === current)) {
         return current;
       }
+      if (state.messages.length > 0) {
+        return null;
+      }
       return cards[0]?.id ?? null;
     });
-  }, [hasActiveRepair, cards]);
+  }, [cards, state.messages.length]);
 
   useEffect(() => {
     if (!activeCardId) {
@@ -134,11 +114,34 @@ export function HomePage() {
     });
   }, [activeCardId, cards, activateRepairDevice]);
 
+  useEffect(() => {
+    if (section !== "diagnostics") {
+      return;
+    }
+    if (mode !== "realtime" || state.connectionState !== "CONNECTED") {
+      return;
+    }
+    if (state.tests.length > 0) {
+      return;
+    }
+    if (!hasActiveRepair && cards.length === 0) {
+      return;
+    }
+    requestSnapshot();
+  }, [
+    section,
+    mode,
+    state.connectionState,
+    state.tests.length,
+    hasActiveRepair,
+    cards.length,
+    requestSnapshot,
+  ]);
+
   const handleSelectCard = useCallback(
     async (card: DiagnosticCard) => {
       setActiveCardId(card.id);
       await loadCardMessages(card.id);
-      setSection("chat");
     },
     [loadCardMessages],
   );
@@ -154,14 +157,14 @@ export function HomePage() {
       });
       const nextCards = await loadCards();
       const created = nextCards.find((card) => card.device_id === deviceId);
-      if (created) {
+      if (created && state.messages.length === 0) {
         setActiveCardId(created.id);
         await loadCardMessages(created.id);
       }
       setSection("chat");
       setAddDeviceOpen(false);
     },
-    [sessionId, loadCards, loadCardMessages],
+    [sessionId, loadCards, loadCardMessages, state.messages.length],
   );
 
   const handleAssociateDetected = useCallback(
@@ -189,7 +192,7 @@ export function HomePage() {
             const created =
               nextCards.find((card) => !previousIds.has(card.id)) ??
               nextCards.find((card) => card.device_id.startsWith("manual-"));
-            if (created) {
+            if (created && state.messages.length === 0) {
               void handleSelectCard(created);
             }
           });
@@ -210,6 +213,7 @@ export function HomePage() {
       handleSelectCard,
       loadCards,
       mode,
+      state.messages.length,
     ],
   );
 
@@ -281,7 +285,7 @@ export function HomePage() {
   return (
     <div className={styles.layout}>
       <AppHeader
-        devices={showContext ? state.devices : []}
+        devices={hasActiveRepair ? state.devices : []}
         sessionDevicesExpanded={state.sessionDevicesExpanded}
         onToggleSessionDevices={toggleSessionDevices}
         onVoiceClick={simulateVoice}
@@ -291,95 +295,91 @@ export function HomePage() {
         pcAgent={mode === "realtime" ? state.pcAgent : null}
       />
 
-      {showContext && <RepairContextBanner session={state.session} />}
-
-      {showDevicePanel && (
-        <DeviceSelectionPanel
-          detectedDevices={state.detectedDevices}
-          deviceContext={state.deviceContext}
-          onAssociate={associateDevice}
-          onUnassociate={unassociateDevice}
-          onDismiss={() => setDevicePanelDismissed(true)}
-        />
-      )}
-
       <div className={styles.body}>
-        {section === "chat" && (
-          <main className={styles.main} data-testid="chat-section">
-            <div className={styles.chatLayout}>
-              {hasActiveRepair && (
-                <RepairCardsSidebar
-                  cards={cards}
-                  activeCardId={activeCardId}
-                  loading={loadingCards}
-                  onSelectCard={(card) => {
-                    void handleSelectCard(card);
-                  }}
-                  onAddDevice={() => setAddDeviceOpen(true)}
-                />
-              )}
+        {(section === "chat" || section === "diagnostics") && (
+          <RepairCardsSidebar
+            open={sidebarOpen}
+            cards={cards}
+            activeCardId={activeCardId}
+            loading={loadingCards}
+            onToggle={() => setSidebarOpen((value) => !value)}
+            onSelectCard={(card) => {
+              void handleSelectCard(card);
+            }}
+            onAddDevice={() => setAddDeviceOpen(true)}
+          />
+        )}
 
+        <div className={styles.mainContent}>
+          {section === "chat" && (
+            <main className={styles.main} data-testid="chat-section">
               <div className={styles.chatColumn}>
-                {!showContext && (
-                  <div className={styles.chatActions}>
-                    <Button variant="primary" onClick={startNewRepair}>
-                      Nuova riparazione
-                    </Button>
-                    {mode !== "realtime" && (
-                      <Button variant="ghost" size="small" onClick={loadScenario}>
-                        Demo scenario
-                      </Button>
+                {isIdle ? (
+                  <div className={styles.emptyWorkspace} data-testid="empty-workspace">
+                    <h2 className={styles.emptyTitle}>Benvenuto in ALPILAB AI</h2>
+                    <p className={styles.emptyHint}>
+                      Inizia scrivendo in chat oppure apri le schede a sinistra e aggiungi
+                      un dispositivo (USB o manuale).
+                    </p>
+                    {import.meta.env.DEV && mode === "mock" && (
+                      <div className={styles.emptyActions}>
+                        <Button variant="ghost" size="small" onClick={loadScenario}>
+                          Demo scenario
+                        </Button>
+                      </div>
                     )}
                   </div>
+                ) : (
+                  <ChatTimeline
+                    messages={displayMessages}
+                    containerRef={containerRef}
+                    onScroll={onScroll}
+                    showNewMessages={showNewMessages}
+                    onJumpToLatest={() => scrollToBottom("smooth")}
+                  />
                 )}
-
-                <ChatTimeline
-                  messages={displayMessages}
-                  containerRef={containerRef}
-                  onScroll={onScroll}
-                  showNewMessages={showNewMessages}
-                  onJumpToLatest={() => scrollToBottom("smooth")}
-                />
 
                 <AlpilabStatusBar state={state.coreState} />
               </div>
-            </div>
-          </main>
-        )}
+            </main>
+          )}
 
-        {section === "diagnostics" && hasActiveRepair && (
-          <main className={styles.diagnosticsMain} data-testid="diagnostics-section">
-            {iphoneConnected && <IphonePanicPanel />}
-            <DiagnosticPanel
-              tests={state.tests}
-              nextTest={nextPendingTest}
-              onSubmitMeasurement={submitMeasurement}
-              onPause={pauseDiagnosis}
-              onResume={resumeDiagnosis}
-              isPaused={state.session.status === "paused"}
-              isSaving={state.savingTestId === nextPendingTest?.id}
-              variant="sheet"
-              showHeader
-            />
-          </main>
-        )}
+          {section === "diagnostics" && (
+            <main className={styles.diagnosticsMain} data-testid="diagnostics-section">
+              {iphoneConnected && <IphonePanicPanel />}
+              <DiagnosticPanel
+                tests={state.tests}
+                nextTest={nextPendingTest}
+                onSubmitMeasurement={submitMeasurement}
+                onPause={pauseDiagnosis}
+                onResume={resumeDiagnosis}
+                isPaused={state.session.status === "paused"}
+                isSaving={state.savingTestId === nextPendingTest?.id}
+                variant="page"
+                showHeader
+              />
+              <DiagnosticCardPanel
+                sessionId={sessionId}
+                cards={cards}
+                selectedCardId={activeCardId}
+                layout="page"
+              />
+            </main>
+          )}
 
-        {section === "programs" && (
-          <main className={styles.main} data-testid="programs-section">
-            <ProgramsPanel
-              onOpenProgram={handleOpenProgram}
-              busyProgramId={busyProgramId}
-            />
-          </main>
-        )}
+          {section === "programs" && (
+            <main className={styles.main} data-testid="programs-section">
+              <ProgramsPanel
+                onOpenProgram={handleOpenProgram}
+                busyProgramId={busyProgramId}
+              />
+            </main>
+          )}
+        </div>
       </div>
 
       <div className={styles.bottomChrome} data-testid="bottom-chrome">
-        <MainSectionNav
-          active={section}
-          onChange={setSection}
-          diagnosticsEnabled={hasActiveRepair}
-        />
+        <MainSectionNav active={section} onChange={setSection} />
         {section === "chat" && (
           <div className={styles.inputArea}>
             <ChatInput
@@ -389,15 +389,15 @@ export function HomePage() {
               onVoice={simulateVoice}
               coreState={state.coreState}
               placeholder={
-                !hasActiveRepair
+                isIdle
                   ? "Cosa dobbiamo riparare?"
                   : activeCardId
-                    ? "Scrivi per questo dispositivo..."
-                    : "Aggiungi un dispositivo per iniziare..."
+                    ? "Scrivi per questo dispositivo…"
+                    : cards.length > 0
+                      ? "Scrivi in chat o seleziona una scheda a sinistra…"
+                      : "Scrivi un messaggio…"
               }
-              disabled={
-                state.coreState === "THINKING" || (hasActiveRepair && !activeCardId)
-              }
+              disabled={state.coreState === "THINKING"}
             />
           </div>
         )}

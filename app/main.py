@@ -65,9 +65,8 @@ async def lifespan(_app: FastAPI):
     if session_store_backend() == "sqlite":
         store = get_session_store()
         realtime_manager.attach_persistence(store)
-        realtime_manager.get_or_create_session(
-            os.getenv("ALPILAB_DEFAULT_SESSION", "repair-001")
-        )
+        default_session = os.getenv("ALPILAB_DEFAULT_SESSION", "repair-001")
+        realtime_manager.clear_session_workspace(default_session)
     yield
 
 

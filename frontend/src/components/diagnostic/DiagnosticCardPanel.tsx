@@ -11,48 +11,79 @@ import styles from "./DiagnosticCardPanel.module.css";
 
 interface DiagnosticCardPanelProps {
   sessionId: string;
+  cards?: DiagnosticCard[];
+  selectedCardId?: string | null;
+  layout?: "tabs" | "page";
 }
 
-export function DiagnosticCardPanel({ sessionId }: DiagnosticCardPanelProps) {
-  const [activeCards, setActiveCards] = useState<DiagnosticCard[]>([]);
+export function DiagnosticCardPanel({
+  sessionId,
+  cards: externalCards,
+  selectedCardId = null,
+  layout = "tabs",
+}: DiagnosticCardPanelProps) {
+  const [activeCards, setActiveCards] = useState<DiagnosticCard[]>(externalCards ?? []);
   const [selectedCard, setSelectedCard] = useState<DiagnosticCard | null>(null);
   const [summary, setSummary] = useState<DiagnosticCardSummary | null>(null);
   const [conversation, setConversation] = useState<DiagnosticMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(layout === "page");
+
+  const cards = externalCards ?? activeCards;
 
   const loadActiveCards = useCallback(async () => {
+    if (externalCards) {
+      return;
+    }
     try {
       setError(null);
-      const cards = await fetchActiveDiagnosticCards(sessionId);
-      setActiveCards(cards);
-      if (cards.length > 0) {
-        setSelectedCard((current) => {
-          if (current && cards.some((card) => card.id === current.id)) {
-            return current;
-          }
-          return cards[0];
-        });
-      } else {
-        setSelectedCard(null);
-        setSummary(null);
-        setConversation([]);
-        setExpanded(false);
-      }
+      const nextCards = await fetchActiveDiagnosticCards(sessionId);
+      setActiveCards(nextCards);
     } catch (err) {
       console.error("Error loading cards:", err);
       setError("Impossibile caricare le schede diagnostiche.");
     }
-  }, [sessionId]);
+  }, [externalCards, sessionId]);
 
   useEffect(() => {
+    if (externalCards) {
+      setActiveCards(externalCards);
+    }
+  }, [externalCards]);
+
+  useEffect(() => {
+    if (externalCards) {
+      return;
+    }
     void loadActiveCards();
     const timer = window.setInterval(() => {
       void loadActiveCards();
     }, 15000);
     return () => window.clearInterval(timer);
-  }, [loadActiveCards]);
+  }, [externalCards, loadActiveCards]);
+
+  useEffect(() => {
+    if (layout === "page") {
+      const match = cards.find((card) => card.id === selectedCardId) ?? null;
+      setSelectedCard(match);
+      setExpanded(true);
+      return;
+    }
+    if (cards.length > 0) {
+      setSelectedCard((current) => {
+        if (current && cards.some((card) => card.id === current.id)) {
+          return current;
+        }
+        return cards[0];
+      });
+    } else {
+      setSelectedCard(null);
+      setSummary(null);
+      setConversation([]);
+      setExpanded(false);
+    }
+  }, [cards, layout, selectedCardId]);
 
   useEffect(() => {
     if (!selectedCard || !expanded) {
@@ -69,6 +100,7 @@ export function DiagnosticCardPanel({ sessionId }: DiagnosticCardPanelProps) {
         setSummary(data.summary);
         setConversation(data.conversation);
         setSelectedCard(data.card);
+        setError(null);
       } catch (err) {
         console.error("Error loading card:", err);
         if (!cancelled) {
@@ -93,21 +125,64 @@ export function DiagnosticCardPanel({ sessionId }: DiagnosticCardPanelProps) {
         final_diagnosis: summary?.hypothesis || "TBD",
         solution: "See conversation history",
       });
-      await loadActiveCards();
+      if (!externalCards) {
+        await loadActiveCards();
+      }
     } catch (err) {
       console.error("Error archiving card:", err);
       setError("Archiviazione non riuscita.");
     }
   };
 
-  if (activeCards.length === 0) {
+  if (layout === "page") {
+    if (cards.length === 0) {
+      return (
+        <section className={styles.pageEmpty} data-testid="diagnostics-card-empty">
+          <h2 className={styles.pageEmptyTitle}>Nessuna scheda diagnostica</h2>
+          <p className={styles.pageEmptyHint}>
+            Aggiungi un dispositivo dal pannello a sinistra oppure inizia dalla chat e
+            associa un device in seguito.
+          </p>
+        </section>
+      );
+    }
+
+    if (!selectedCardId) {
+      return (
+        <section className={styles.pageEmpty} data-testid="diagnostics-card-empty">
+          <h2 className={styles.pageEmptyTitle}>Seleziona una scheda</h2>
+          <p className={styles.pageEmptyHint}>
+            Scegli un dispositivo dal pannello schede per vedere sintomi, ipotesi e
+            conversazione diagnostica.
+          </p>
+        </section>
+      );
+    }
+
+    return (
+      <div className={styles.pageContainer} data-testid="diagnostics-card-panel">
+        {error && <div className={styles.error}>{error}</div>}
+        {loading && <div className={styles.loading}>Caricamento scheda…</div>}
+        {!loading && summary && selectedCard && (
+          <CardDetailContent
+            summary={summary}
+            conversation={conversation}
+            selectedCard={selectedCard}
+            onArchive={handleArchive}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (cards.length === 0) {
     return null;
   }
 
   return (
     <div className={styles.container}>
       <div className={styles.tabBar}>
-        {activeCards.map((card) => (
+        {cards.map((card) => (
           <div
             key={card.id}
             className={`${styles.tab} ${selectedCard?.id === card.id ? styles.active : ""}`}
@@ -153,76 +228,97 @@ export function DiagnosticCardPanel({ sessionId }: DiagnosticCardPanelProps) {
       {error && <div className={styles.error}>{error}</div>}
 
       {expanded && selectedCard && !loading && summary && (
-        <div className={styles.content}>
-          <div className={styles.section}>
-            <h3>📋 Riassunto Rapido</h3>
-            <div className={styles.summaryGrid}>
-              <div className={styles.summaryItem}>
-                <strong>Sintomo:</strong>
-                <p>{summary.current_symptom || "-"}</p>
-              </div>
-              <div className={styles.summaryItem}>
-                <strong>Ipotesi:</strong>
-                <p>{summary.hypothesis || "-"}</p>
-              </div>
-              <div className={styles.summaryItem}>
-                <strong>Confidenza:</strong>
-                <p>{(summary.confidence * 100).toFixed(0)}%</p>
-              </div>
-              <div className={styles.summaryItem}>
-                <strong>Fase:</strong>
-                <p>{summary.diagnostic_stage}</p>
-              </div>
-              <div className={styles.summaryItem}>
-                <strong>Messaggi:</strong>
-                <p>{summary.messages_count}</p>
-              </div>
-              <div className={styles.summaryItem}>
-                <strong>Aggiornato:</strong>
-                <p>{new Date(summary.updated).toLocaleString("it-IT")}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.section}>
-            <h3>💬 Conversazione</h3>
-            <div className={styles.messages}>
-              {conversation.length === 0 && (
-                <p className={styles.emptyInline}>Nessun messaggio salvato.</p>
-              )}
-              {conversation.map((msg) => (
-                <div
-                  key={`${msg.timestamp}-${msg.role}-${msg.content.slice(0, 24)}`}
-                  className={`${styles.message} ${styles[msg.role] ?? ""}`}
-                >
-                  <strong>{msg.role === "user" ? "👤" : "🤖"}</strong>
-                  <p>{msg.content}</p>
-                  <small>{new Date(msg.timestamp).toLocaleString("it-IT")}</small>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.btnSuccess}
-              onClick={() => void handleArchive(selectedCard.id, "success")}
-            >
-              ✅ Riparazione Riuscita
-            </button>
-            <button
-              type="button"
-              className={styles.btnFail}
-              onClick={() => void handleArchive(selectedCard.id, "failed")}
-            >
-              ❌ Riparazione Non Riuscita
-            </button>
-          </div>
-        </div>
+        <CardDetailContent
+          summary={summary}
+          conversation={conversation}
+          selectedCard={selectedCard}
+          onArchive={handleArchive}
+        />
       )}
 
       {expanded && loading && <div className={styles.loading}>⏳ Caricamento...</div>}
+    </div>
+  );
+}
+
+function CardDetailContent({
+  summary,
+  conversation,
+  selectedCard,
+  onArchive,
+}: {
+  summary: DiagnosticCardSummary;
+  conversation: DiagnosticMessage[];
+  selectedCard: DiagnosticCard;
+  onArchive: (cardId: string, outcome: string) => void;
+}) {
+  return (
+    <div className={styles.content}>
+      <div className={styles.section}>
+        <h3>{selectedCard.device_name}</h3>
+        <div className={styles.summaryGrid}>
+          <div className={styles.summaryItem}>
+            <strong>Sintomo</strong>
+            <p>{summary.current_symptom || "—"}</p>
+          </div>
+          <div className={styles.summaryItem}>
+            <strong>Ipotesi</strong>
+            <p>{summary.hypothesis || "—"}</p>
+          </div>
+          <div className={styles.summaryItem}>
+            <strong>Confidenza</strong>
+            <p>{(summary.confidence * 100).toFixed(0)}%</p>
+          </div>
+          <div className={styles.summaryItem}>
+            <strong>Fase</strong>
+            <p>{summary.diagnostic_stage}</p>
+          </div>
+          <div className={styles.summaryItem}>
+            <strong>Messaggi</strong>
+            <p>{summary.messages_count}</p>
+          </div>
+          <div className={styles.summaryItem}>
+            <strong>Aggiornato</strong>
+            <p>{new Date(summary.updated).toLocaleString("it-IT")}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.section}>
+        <h3>Conversazione diagnostica</h3>
+        <div className={styles.messages}>
+          {conversation.length === 0 && (
+            <p className={styles.emptyInline}>Nessun messaggio salvato per questo device.</p>
+          )}
+          {conversation.map((msg) => (
+            <div
+              key={`${msg.timestamp}-${msg.role}-${msg.content.slice(0, 24)}`}
+              className={`${styles.message} ${styles[msg.role] ?? ""}`}
+            >
+              <strong>{msg.role === "user" ? "Tu" : "ALPILAB"}</strong>
+              <p>{msg.content}</p>
+              <small>{new Date(msg.timestamp).toLocaleString("it-IT")}</small>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={styles.btnSuccess}
+          onClick={() => void onArchive(selectedCard.id, "success")}
+        >
+          Riparazione riuscita
+        </button>
+        <button
+          type="button"
+          className={styles.btnFail}
+          onClick={() => void onArchive(selectedCard.id, "failed")}
+        >
+          Riparazione non riuscita
+        </button>
+      </div>
     </div>
   );
 }

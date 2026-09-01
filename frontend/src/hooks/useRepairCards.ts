@@ -30,7 +30,7 @@ export function useRepairCards(sessionId: string, activeCardId: string | null) {
     setLoadingCards(true);
     try {
       const nextCards = await fetchActiveDiagnosticCards(sessionId);
-      setCards(nextCards);
+      setCards(nextCards ?? []);
       return nextCards;
     } catch (error) {
       console.error("Failed to load repair cards:", error);

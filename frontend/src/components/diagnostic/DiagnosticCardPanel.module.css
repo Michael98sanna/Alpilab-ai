@@ -1,10 +1,43 @@
+.pageContainer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pageEmpty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.pageEmptyTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--color-text);
+}
+
+.pageEmptyHint {
+  margin: 0;
+  max-width: 24rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
 .container {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   max-height: 40vh;
-  background: var(--color-bg-secondary, #f5f5f5);
-  border-top: 1px solid var(--color-border, #e0e0e0);
+  background: var(--color-bg-elevated);
+  border-top: 1px solid var(--color-border);
   overflow: hidden;
 }
 
@@ -14,7 +47,7 @@
   padding: 12px;
   border-bottom: 1px solid var(--color-border, #e0e0e0);
   overflow-x: auto;
-  background: var(--color-bg, #fff);
+  background: var(--color-bg-elevated);
 }
 
 .tab {
@@ -23,7 +56,7 @@
   align-items: center;
   padding: 8px 12px;
   border-radius: 6px;
-  background: var(--color-bg-secondary, #f5f5f5);
+  background: var(--color-surface);
   border: 2px solid transparent;
   cursor: pointer;
   min-width: 140px;
@@ -31,9 +64,9 @@
 }
 
 .tab.active {
-  background: #2196f3;
-  color: white;
-  border-color: #1976d2;
+  background: var(--color-info);
+  color: var(--color-bg);
+  border-color: var(--color-info);
 }
 
 .tabContent {
@@ -73,7 +106,7 @@
 .newCardBtn,
 .toggleBtn {
   padding: 8px 12px;
-  background: var(--color-bg-secondary, #f5f5f5);
+  background: var(--color-surface);
   color: inherit;
   border: 1px solid var(--color-border, #e0e0e0);
   border-radius: 6px;
@@ -94,7 +127,7 @@
 }
 
 .section {
-  background: var(--color-bg, #fff);
+  background: var(--color-bg-elevated);
   padding: 16px;
   border-radius: 8px;
 }
@@ -112,7 +145,7 @@
 
 .summaryItem {
   padding: 8px;
-  background: var(--color-bg-secondary, #f5f5f5);
+  background: var(--color-surface);
   border-radius: 4px;
 }
 
@@ -140,18 +173,18 @@
 .message {
   padding: 12px;
   border-radius: 6px;
-  background: var(--color-bg-secondary, #f5f5f5);
+  background: var(--color-surface);
   font-size: 13px;
 }
 
 .message.user {
-  background: #e3f2fd;
-  margin-left: 30px;
+  background: rgba(56, 189, 248, 0.12);
+  margin-left: 1.5rem;
 }
 
 .message.assistant {
-  background: #e8f5e9;
-  margin-right: 30px;
+  background: rgba(34, 197, 94, 0.1);
+  margin-right: 1.5rem;
 }
 
 .message strong {

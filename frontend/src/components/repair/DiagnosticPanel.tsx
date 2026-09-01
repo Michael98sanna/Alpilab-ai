@@ -12,7 +12,7 @@ interface DiagnosticPanelProps {
   onResume: () => void;
   isPaused: boolean;
   isSaving?: boolean;
-  variant?: "sheet" | "side";
+  variant?: "sheet" | "side" | "page";
   showHeader?: boolean;
 }
 
@@ -61,7 +61,9 @@ export function DiagnosticPanel({
   const panelClass =
     variant === "side"
       ? `${styles.panel} ${styles.side}`
-      : `${styles.panel} ${styles.content}`;
+      : variant === "page"
+        ? styles.panel
+        : `${styles.panel} ${styles.content}`;
 
   return (
     <section

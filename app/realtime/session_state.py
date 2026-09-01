@@ -144,6 +144,15 @@ def default_demo_session(session_id: str) -> RealtimeSessionData:
     )
 
 
+def default_repair_diagnostics() -> list[DiagnosticTestPayload]:
+    """Standard measurement workflow shown in the Diagnosi panel."""
+    return [
+        DiagnosticTestPayload(id="t1", name="Battery voltage", status="PENDING"),
+        DiagnosticTestPayload(id="t2", name="USB communication", status="PENDING"),
+        DiagnosticTestPayload(id="t3", name="PP_VDD_MAIN", status="PENDING"),
+    ]
+
+
 def new_session(session_id: str | None = None) -> RealtimeSessionData:
     sid = session_id or str(uuid4())
     return RealtimeSessionData(session_id=sid, label=f"Repair {sid[:8]}")

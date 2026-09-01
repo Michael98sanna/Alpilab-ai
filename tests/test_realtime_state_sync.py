@@ -334,3 +334,67 @@ def test_duplicate_state_version_on_server(client: TestClient, manager: Realtime
         data = manager.get_session(session_id)
         assert data is not None
         assert data.state_version == version
+
+
+def test_first_chat_message_seeds_diagnostics(client: TestClient, manager: RealtimeSessionManager) -> None:
+    session_id = "repair-seed-chat"
+    manager.clear_session_workspace(session_id)
+    ws = client.websocket_connect(
+        f"/ws/sessions/{session_id}?device_id=pc-01&device_type=pc&device_name=PC"
+    ).__enter__()
+    try:
+        snap = _read_snapshot(ws)
+        assert snap["diagnostic_state"] == []
+
+        ws.send_json({"type": "chat_message", "content": "iPhone non si accende", "role": "user"})
+        ws.receive_json()  # CHAT_MESSAGE event
+        # NL service may emit additional events before SESSION_STATE_UPDATED
+        while True:
+            msg = ws.receive_json()
+            if (
+                msg.get("type") == "event"
+                and msg["event"]["event_type"] == "SESSION_STATE_UPDATED"
+                and "diagnostics" in msg["event"]["payload"].get("changes", {})
+            ):
+                update = msg
+                break
+        diagnostics = update["event"]["payload"]["changes"]["diagnostics"]
+        assert len(diagnostics) == 3
+        assert diagnostics[2]["id"] == "t3"
+        assert diagnostics[2]["status"] == "PENDING"
+
+        session = manager.get_session(session_id)
+        assert session is not None
+        assert len(session.diagnostics) == 3
+    finally:
+        ws.close()
+
+
+def test_request_snapshot_seeds_diagnostics_for_active_repair(
+    client: TestClient, manager: RealtimeSessionManager
+) -> None:
+    session_id = "repair-snapshot-seed"
+    manager.clear_session_workspace(session_id)
+    ws = client.websocket_connect(
+        f"/ws/sessions/{session_id}?device_id=pc-01&device_type=pc&device_name=PC"
+    ).__enter__()
+    try:
+        snap = _read_snapshot(ws)
+        assert snap["diagnostic_state"] == []
+
+        ws.send_json({"type": "chat_message", "content": "Schermo nero", "role": "user"})
+        while True:
+            msg = ws.receive_json()
+            if msg.get("type") == "ack":
+                break
+
+        ws.send_json({"type": "request_snapshot"})
+        while True:
+            msg = ws.receive_json()
+            if msg.get("type") == "snapshot":
+                diagnostics = msg["payload"]["diagnostic_state"]
+                break
+        assert len(diagnostics) == 3
+        assert diagnostics[0]["name"] == "Battery voltage"
+    finally:
+        ws.close()

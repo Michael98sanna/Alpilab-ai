@@ -81,7 +81,8 @@ export function resolveBackendWsUrl(): string {
 
 export function getAppMode(): AppMode {
   const mode = import.meta.env.VITE_APP_MODE?.toLowerCase();
-  return mode === "realtime" ? "realtime" : "mock";
+  if (mode === "mock") return "mock";
+  return "realtime";
 }
 
 export function getApiBaseUrl(): string {

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, within, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { UserEvent } from "@testing-library/user-event";
 import { HomePage } from "../pages/HomePage";
 import { OfflineQueueProvider } from "../hooks/useOfflineQueue";
 import { RealtimeProvider } from "../realtime/RealtimeProvider";
@@ -24,25 +25,47 @@ function renderHome() {
   );
 }
 
+async function loadDemoScenario(user: UserEvent) {
+  await user.click(screen.getByRole("button", { name: /Demo scenario/i }));
+}
+
+async function startRepairFromChat(user: UserEvent) {
+  const input = screen.getByLabelText("Messaggio");
+  await user.type(input, "iPhone 14 Pro");
+  await user.click(screen.getByLabelText("Invia messaggio"));
+}
+
 describe("HomePage V0.7 layout", () => {
-  it("renders header, section nav and chat timeline", () => {
+  it("renders header, section nav, sidebar and empty workspace at startup", () => {
     renderHome();
     expect(screen.getByRole("banner")).toHaveTextContent("ALPILAB AI");
     expect(screen.getByTestId("main-section-nav")).toBeInTheDocument();
     expect(screen.getByTestId("section-chat")).toBeInTheDocument();
     expect(screen.getByTestId("section-diagnostics")).toBeInTheDocument();
     expect(screen.getByTestId("section-programs")).toBeInTheDocument();
-    expect(screen.getByTestId("chat-timeline")).toBeInTheDocument();
+    expect(screen.getByTestId("repair-cards-sidebar")).toBeInTheDocument();
+    expect(screen.getByTestId("add-device-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-workspace")).toBeInTheDocument();
+    expect(screen.queryByTestId("chat-timeline")).not.toBeInTheDocument();
   });
 
-  it("shows centered sticky core above input", () => {
+  it("shows centered sticky core above input after repair starts", async () => {
+    const user = userEvent.setup();
     renderHome();
+    await startRepairFromChat(user);
     expect(screen.getByTestId("alpilab-status-bar")).toBeInTheDocument();
-    expect(screen.getByTestId("core-status-label")).toHaveTextContent("ALPILAB AI");
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("core-status-label")).toHaveTextContent("ALPILAB AI");
+      },
+      { timeout: 2000 },
+    );
   });
 
-  it("keeps section nav above composer in bottom chrome", () => {
+  it("keeps section nav above composer in bottom chrome", async () => {
+    const user = userEvent.setup();
     renderHome();
+    await startRepairFromChat(user);
     const chrome = screen.getByTestId("bottom-chrome");
     const chromeKids = Array.from(chrome.children);
     const navIdx = chromeKids.findIndex(
@@ -64,19 +87,6 @@ describe("HomePage V0.7 layout", () => {
     ).toBeNull();
   });
 
-  it("shows compact repair context banner when scenario loaded", () => {
-    renderHome();
-    const ctx = screen.getByTestId("repair-context");
-    expect(within(ctx).getByText("iPhone 13 Pro")).toBeInTheDocument();
-    expect(within(ctx).getByText("No Power")).toBeInTheDocument();
-  });
-
-  it("keeps diagnostics section closed by default (chat active)", () => {
-    renderHome();
-    expect(screen.queryByTestId("diagnostics-section")).not.toBeInTheDocument();
-    expect(screen.getByTestId("chat-section")).toBeInTheDocument();
-  });
-
   it("opens pairing dialog from Collega dispositivo", async () => {
     const user = userEvent.setup();
     renderHome();
@@ -86,7 +96,7 @@ describe("HomePage V0.7 layout", () => {
 });
 
 describe("HomePage V0.7 sections", () => {
-  it("opens Diagnosi when repair session is active", async () => {
+  it("opens Diagnosi section with diagnostic panel", async () => {
     const user = userEvent.setup();
     renderHome();
     await user.click(screen.getByTestId("section-diagnostics"));
@@ -174,6 +184,7 @@ describe("HomePage V0.7 core states", () => {
   it("shows STO PENSANDO... while processing a message", async () => {
     const user = userEvent.setup();
     renderHome();
+    await loadDemoScenario(user);
     const input = screen.getByLabelText("Messaggio");
     await user.type(input, "Test stato");
     await user.click(screen.getByLabelText("Invia messaggio"));
@@ -183,6 +194,7 @@ describe("HomePage V0.7 core states", () => {
   it("returns to ALPILAB AI after response", async () => {
     const user = userEvent.setup();
     renderHome();
+    await loadDemoScenario(user);
     const input = screen.getByLabelText("Messaggio");
     await user.type(input, "Test stato");
     await user.click(screen.getByLabelText("Invia messaggio"));
@@ -199,6 +211,7 @@ describe("HomePage V0.7 interactions", () => {
   it("allows sending a chat message", async () => {
     const user = userEvent.setup();
     renderHome();
+    await loadDemoScenario(user);
     const input = screen.getByLabelText("Messaggio");
     await user.type(input, "Test messaggio mock");
     await user.click(screen.getByLabelText("Invia messaggio"));
@@ -226,14 +239,17 @@ describe("HomePage desktop layout", () => {
     window.matchMedia = originalMatchMedia;
   });
 
-  it("keeps core centered in chat column", () => {
+  it("keeps core centered in chat column", async () => {
+    const user = userEvent.setup();
     renderHome();
+    await startRepairFromChat(user);
     expect(screen.getByTestId("core-status-center")).toBeInTheDocument();
   });
 
-  it("shows diagnostic panel via section nav", async () => {
+  it("shows diagnostic panel via section nav after demo load", async () => {
     const user = userEvent.setup();
     renderHome();
+    await loadDemoScenario(user);
     await user.click(screen.getByTestId("section-diagnostics"));
     expect(screen.getByTestId("diagnostics-expanded")).toBeInTheDocument();
   });

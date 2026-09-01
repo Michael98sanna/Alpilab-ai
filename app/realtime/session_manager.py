@@ -25,6 +25,7 @@ from app.realtime.session_state import (
     RealtimeSessionData,
     apply_demo_seed,
     default_demo_session,
+    default_repair_diagnostics,
     new_session,
     session_is_unseeded,
     utc_now,
@@ -218,6 +219,9 @@ class RealtimeSessionManager:
         session = self.get_session(session_id)
         if not session:
             raise ValueError("session not found")
+        if self._ensure_repair_diagnostics(session):
+            session.state_version += 1
+            self._persist_session(session_id)
         await self._send_ws(
             session_id,
             device_id,
@@ -344,6 +348,8 @@ class RealtimeSessionManager:
             source_client_device_id=device_id,
         )
         await self.send_event_ws(session_id, event, exclude_device_id=device_id)
+        if self._ensure_repair_diagnostics(session):
+            session.state_version += 1
         snapshot = session.snapshot()
         self._persist_session(session_id)
         return session, snapshot
@@ -392,6 +398,38 @@ class RealtimeSessionManager:
         )
         await self.send_event_ws(session_id, event, exclude_device_id=device_id)
 
+    def _seed_diagnostics_if_empty(self, session: RealtimeSessionData) -> bool:
+        if session.diagnostics:
+            return False
+        session.diagnostics = default_repair_diagnostics()
+        if not session.diagnosis_label:
+            session.diagnosis_label = "Diagnosis in progress"
+        return True
+
+    def _session_has_repair_activity(self, session: RealtimeSessionData) -> bool:
+        return bool(session.messages or session.device_context or session.device)
+
+    def _ensure_repair_diagnostics(self, session: RealtimeSessionData) -> bool:
+        """Seed standard tests when a repair is active but diagnostics were cleared."""
+        if session.diagnostics or not self._session_has_repair_activity(session):
+            return False
+        return self._seed_diagnostics_if_empty(session)
+
+    async def _broadcast_diagnostics_seed(
+        self,
+        session_id: str,
+        device_id: str,
+        session: RealtimeSessionData,
+    ) -> None:
+        await self._broadcast_state_update(
+            session_id,
+            device_id,
+            {
+                "diagnostics": [t.model_dump(mode="json") for t in session.diagnostics],
+                "repair_context": {"diagnosis_label": session.diagnosis_label},
+            },
+        )
+
     # --- Chat & status ---
 
     async def add_chat_message(
@@ -412,6 +450,7 @@ class RealtimeSessionManager:
             content=content.strip(),
             timestamp=utc_now().strftime("%H:%M"),
         )
+        seeded = role == "user" and self._seed_diagnostics_if_empty(session)
         session.messages.append(message)
         session.state_version += 1
         payload = message.model_dump(mode="json")
@@ -422,6 +461,8 @@ class RealtimeSessionManager:
             source_client_device_id=device_id,
         )
         await self.send_event_ws(session_id, event)
+        if seeded:
+            await self._broadcast_diagnostics_seed(session_id, device_id, session)
         self._persist_session(session_id)
         return message
 
@@ -553,6 +594,22 @@ class RealtimeSessionManager:
         finally:
             db.close()
 
+    def clear_session_workspace(self, session_id: str) -> None:
+        """Reset in-memory repair UI state while keeping the same session id."""
+        session = self.get_or_create_session(session_id, seed_demo=False)
+        session.messages.clear()
+        session.diagnostics.clear()
+        session.device = None
+        session.issue = None
+        session.device_context = None
+        session.detected_devices.clear()
+        session.product_search_context = None
+        session.label = "Repair Session"
+        session.diagnosis_label = ""
+        session.status = "active"
+        session.state_version += 1
+        self._persist_session(session_id)
+
     async def associate_repair_device(
         self,
         session_id: str,
@@ -571,6 +628,7 @@ class RealtimeSessionManager:
         now = utc_now()
         session.device_context = DeviceContext.from_detected(detected, associated_at=now)
         session.device = detected.display_name
+        seeded = self._seed_diagnostics_if_empty(session)
         session.state_version += 1
         self._ensure_diagnostic_card(session_id, detected.id, detected.display_name)
         event = self.emit(
@@ -580,6 +638,12 @@ class RealtimeSessionManager:
             source_client_device_id=source_client_device_id,
         )
         await self.send_event_ws(session_id, event)
+        if seeded:
+            await self._broadcast_diagnostics_seed(
+                session_id,
+                source_client_device_id or device_id,
+                session,
+            )
         self._persist_session(session_id)
 
     async def activate_repair_device(
@@ -618,6 +682,7 @@ class RealtimeSessionManager:
             )
             display_name = (device_name or session.device_context.display_name).strip()
         session.device = display_name or repair_device_id
+        seeded = self._seed_diagnostics_if_empty(session)
         session.state_version += 1
         self._ensure_diagnostic_card(session_id, repair_device_id, session.device)
         event = self.emit(
@@ -627,6 +692,12 @@ class RealtimeSessionManager:
             source_client_device_id=source_client_device_id,
         )
         await self.send_event_ws(session_id, event)
+        if seeded:
+            await self._broadcast_diagnostics_seed(
+                session_id,
+                source_client_device_id or repair_device_id,
+                session,
+            )
         self._persist_session(session_id)
 
     async def associate_manual_repair_device(
