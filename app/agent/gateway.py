@@ -59,6 +59,7 @@ class AgentGateway:
         )
         agent_registry.register(agent)
         self._set_session_pc_agent(session_id, agent.presence())
+        await realtime_manager.update_detected_devices(session_id, [])
         await self._broadcast_agent_event(
             session_id,
             RealtimeEventType.AGENT_CONNECTED,
@@ -80,6 +81,10 @@ class AgentGateway:
         presence.online = False
         presence.status = "OFFLINE"
         self._set_session_pc_agent(session_id, None)
+        try:
+            await realtime_manager.update_detected_devices(session_id, [])
+        except ValueError:
+            pass
         await self._broadcast_agent_event(
             session_id,
             RealtimeEventType.AGENT_DISCONNECTED,

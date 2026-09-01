@@ -227,12 +227,13 @@ class TestPersistenceRoundTrip:
         session.detected_devices = [det, _sample_detected_iphone()]
 
         payload = persistable_snapshot(session)
-        restored = snapshot_dict_to_session(payload)
+        assert payload["detected_devices"] == []
 
+        restored = snapshot_dict_to_session(payload)
         assert restored.device_context is not None
         assert restored.device_context.brand == "Samsung"
         assert restored.device_context.imei == "123456789012345"
-        assert len(restored.detected_devices) == 2
+        assert restored.detected_devices == []
 
     def test_persist_and_restore_without_device_context(self):
         session = new_session("s1")

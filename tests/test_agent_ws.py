@@ -168,6 +168,13 @@ def test_malformed_register_rejected(client: TestClient) -> None:
         assert err["type"] == "error"
 
 
+def _receive_event(ws, event_type: str) -> dict:
+    while True:
+        msg = ws.receive_json()
+        if msg.get("type") == "event" and msg["event"]["event_type"] == event_type:
+            return msg
+
+
 def test_agent_broadcast_to_session_client(client: TestClient) -> None:
     session_id = "repair-agent-broadcast"
     with client.websocket_connect(
@@ -176,9 +183,7 @@ def test_agent_broadcast_to_session_client(client: TestClient) -> None:
         ws_phone.receive_json()  # snapshot
         with _agent_connect(client, session_id) as ws_agent:
             _register(ws_agent)
-            evt = ws_phone.receive_json()
-            assert evt["type"] == "event"
-            assert evt["event"]["event_type"] == "AGENT_CONNECTED"
+            evt = _receive_event(ws_phone, "AGENT_CONNECTED")
             assert evt["event"]["payload"]["online"] is True
 
 
@@ -191,10 +196,9 @@ def test_agent_disconnect_broadcast(client: TestClient) -> None:
         ws_ctx = _agent_connect(client, session_id)
         ws_agent = ws_ctx.__enter__()
         _register(ws_agent)
-        ws_phone.receive_json()  # AGENT_CONNECTED
+        _receive_event(ws_phone, "AGENT_CONNECTED")
         ws_ctx.__exit__(None, None, None)
-        evt = ws_phone.receive_json()
-        assert evt["event"]["event_type"] == "AGENT_DISCONNECTED"
+        evt = _receive_event(ws_phone, "AGENT_DISCONNECTED")
         assert evt["event"]["payload"]["online"] is False
 
 
@@ -208,7 +212,7 @@ def test_snapshot_includes_pc_agent(client: TestClient) -> None:
         assert snap["payload"]["pc_agent"] is None
         with _agent_connect(client, session_id) as ws_agent:
             _register(ws_agent)
-            ws_pc.receive_json()  # AGENT_CONNECTED
+            _receive_event(ws_pc, "AGENT_CONNECTED")
             with client.websocket_connect(
                 f"/ws/sessions/{session_id}?device_id=pc-02&device_type=pc&device_name=PC2"
             ) as ws_pc2:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from app.realtime.payloads import ChatMessagePayload, DiagnosticTestPayload, SessionSnapshotPayload
 from app.realtime.session_state import RealtimeSessionData, utc_now
-from app.schemas.device_context import DetectedDevice, DeviceContext
+from app.schemas.device_context import DeviceContext
 
 
 def snapshot_dict_to_session(payload: dict) -> RealtimeSessionData:
@@ -19,7 +19,7 @@ def snapshot_dict_to_session(payload: dict) -> RealtimeSessionData:
         for d in snap.diagnostic_state
     ]
     device_context = DeviceContext.model_validate(snap.device_context) if snap.device_context else None
-    detected_devices = [DetectedDevice.model_validate(d) for d in snap.detected_devices]
+    # USB scan results are ephemeral — never restore a stale detected list after restart.
     return RealtimeSessionData(
         session_id=ctx.id,
         label=ctx.label,
@@ -33,7 +33,7 @@ def snapshot_dict_to_session(payload: dict) -> RealtimeSessionData:
         state_version=snap.state_version,
         pc_agent=None,
         device_context=device_context,
-        detected_devices=detected_devices,
+        detected_devices=[],
         created_at=utc_now(),
     )
 
@@ -42,4 +42,6 @@ def persistable_snapshot(session: RealtimeSessionData) -> dict:
     data = session.snapshot().model_dump(mode="json")
     data["participants"] = []
     data["pc_agent"] = None
+    # Do not persist live ADB/USB scan results across app restarts.
+    data["detected_devices"] = []
     return data
