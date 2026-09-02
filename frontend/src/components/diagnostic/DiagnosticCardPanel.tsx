@@ -7,6 +7,9 @@ import {
   type DiagnosticCardSummary,
   type DiagnosticMessage,
 } from "../../api/diagnosticCards";
+import { AIResponseMeta } from "../ai/AIResponseMeta";
+import { FeedbackPanel } from "../ai/FeedbackPanel";
+import type { BrainSource } from "../../api/aiBrain";
 import styles from "./DiagnosticCardPanel.module.css";
 
 interface DiagnosticCardPanelProps {
@@ -267,7 +270,7 @@ function CardDetailContent({
           </div>
           <div className={styles.summaryItem}>
             <strong>Confidenza</strong>
-            <p>{(summary.confidence * 100).toFixed(0)}%</p>
+            <p>{((summary.confidence ?? 0) * 100).toFixed(0)}%</p>
           </div>
           <div className={styles.summaryItem}>
             <strong>Fase</strong>
@@ -290,16 +293,44 @@ function CardDetailContent({
           {conversation.length === 0 && (
             <p className={styles.emptyInline}>Nessun messaggio salvato per questo device.</p>
           )}
-          {conversation.map((msg) => (
+          {conversation.map((msg) => {
+            const brain = msg.tool_calls?.brain;
+            const source = (brain?.source ?? "online") as BrainSource;
+            return (
             <div
-              key={`${msg.timestamp}-${msg.role}-${msg.content.slice(0, 24)}`}
+              key={`${msg.timestamp}-${msg.role}-${(msg.content ?? "").slice(0, 24)}`}
               className={`${styles.message} ${styles[msg.role] ?? ""}`}
             >
               <strong>{msg.role === "user" ? "Tu" : "ALPILAB"}</strong>
               <p>{msg.content}</p>
+              {msg.role === "assistant" && brain && (
+                <>
+                  <AIResponseMeta
+                    source={source}
+                    provider={brain.provider ?? "unknown"}
+                    model={brain.model}
+                    confidence={brain.confidence ?? 0}
+                    latencyMs={brain.latency_ms}
+                    kbHits={brain.kb_hits}
+                    usedOnline={brain.used_online}
+                    lowAccuracyWarning={brain.low_accuracy_warning}
+                    kbMode={brain.kb_mode}
+                    localModel={brain.local_model}
+                    validation={brain.validation}
+                  />
+                  <FeedbackPanel
+                    cardId={selectedCard.id}
+                    provider={brain.provider}
+                    preConfidence={brain.confidence}
+                    knowledgeEntryId={brain.knowledge_entry_id}
+                    source={source}
+                  />
+                </>
+              )}
               <small>{new Date(msg.timestamp).toLocaleString("it-IT")}</small>
             </div>
-          ))}
+          );
+          })}
         </div>
       </div>
 

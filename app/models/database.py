@@ -47,6 +47,41 @@ def init_db() -> None:
     from app.knowledge import models as knowledge_models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _apply_sqlite_migrations()
+    _purge_stale_route_events()
+
+
+def _purge_stale_route_events() -> None:
+    try:
+        from app.ai.learning_engine import LearningEngine
+
+        db = SessionLocal()
+        try:
+            LearningEngine(db).purge_old_route_events()
+        finally:
+            db.close()
+    except Exception:
+        logger = __import__("logging").getLogger(__name__)
+        logger.debug("Route event purge skipped", exc_info=True)
+
+
+def _apply_sqlite_migrations() -> None:
+    """Add columns/tables missing from older SQLite databases."""
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "knowledge_embeddings" in inspector.get_table_names():
+        columns = {col["name"] for col in inspector.get_columns("knowledge_embeddings")}
+        if "disputed" not in columns:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        "ALTER TABLE knowledge_embeddings "
+                        "ADD COLUMN disputed BOOLEAN NOT NULL DEFAULT 0"
+                    )
+                )
 
 
 def get_db() -> Generator[Session, None, None]:

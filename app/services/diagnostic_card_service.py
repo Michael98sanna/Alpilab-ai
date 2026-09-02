@@ -137,6 +137,7 @@ class DiagnosticCardService:
                 "role": message.role,
                 "content": message.content,
                 "timestamp": message.created_at.isoformat(),
+                "tool_calls": message.tool_calls,
             }
             for message in messages
         ]

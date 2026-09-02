@@ -1,0 +1,61 @@
+.panel {
+  margin-top: var(--space-sm);
+  padding: var(--space-sm);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+}
+
+.prompt {
+  margin: 0 0 var(--space-xs);
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.actions button,
+.correction button {
+  min-height: var(--touch-min);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.correction {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.correction textarea {
+  width: 100%;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: inherit;
+  resize: vertical;
+}
+
+.error {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-error);
+  font-size: 0.75rem;
+}
+
+.done {
+  margin: var(--space-sm) 0 0;
+  font-size: 0.8rem;
+  color: var(--color-ok);
+}

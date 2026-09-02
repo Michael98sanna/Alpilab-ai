@@ -1,0 +1,17 @@
+---
+description: Windows EXE build output path and cleanup convention
+globs: scripts/build_windows_exe.ps1, scripts/BUILD_EXE.bat, packaging/alpilab.spec
+alwaysApply: true
+---
+
+# Windows build — ALPILAB AI.exe
+
+Quando si genera la build Windows:
+
+- **Output canonico:** `build\release\ALPILAB AI.exe` (non `dist\`)
+- **Prima di compilare:** eliminare la build precedente in `build\release\`
+- **Script:** `.\scripts\build_windows_exe.ps1` oppure doppio click su `scripts\BUILD_EXE.bat`
+- **Non eseguire come amministratore** (PyInstaller)
+- **Non usare** `Desktop\ALPILAB AI` — tutto resta nel repo `Alpilab-ai`
+
+Se antivirus blocca: esclusione su `Alpilab-ai\` + build in `build\release\`.

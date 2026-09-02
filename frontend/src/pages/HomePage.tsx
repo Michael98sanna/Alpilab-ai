@@ -12,6 +12,7 @@ import {
 } from "../components/programs/ProgramsPanel";
 import { AddDeviceDialog } from "../components/repair/AddDeviceDialog";
 import { DiagnosticCardPanel } from "../components/diagnostic/DiagnosticCardPanel";
+import { MetricsDashboard } from "../components/ai/MetricsDashboard";
 import { DiagnosticPanel } from "../components/repair/DiagnosticPanel";
 import { IphonePanicPanel } from "../components/repair/IphonePanicPanel";
 import { RepairCardsSidebar } from "../components/repair/RepairCardsSidebar";
@@ -32,6 +33,7 @@ export function HomePage() {
     state,
     mode,
     sessionId,
+    dispatch,
     sendMessage,
     simulateVoice,
     submitMeasurement,
@@ -60,6 +62,7 @@ export function HomePage() {
     loadingCards,
     loadCards,
     loadCardMessages,
+    sendCardMessage,
     refreshCardMessages,
   } = useRepairCards(sessionId, activeCardId);
 
@@ -219,13 +222,23 @@ export function HomePage() {
 
   const handleSendMessage = useCallback(
     async (text: string) => {
+      if (activeCardId) {
+        dispatch({ type: "SET_CORE_STATE", state: "THINKING" });
+        try {
+          await sendCardMessage(activeCardId, text);
+          void loadCards();
+        } finally {
+          dispatch({ type: "SET_CORE_STATE", state: "IDLE" });
+        }
+        return;
+      }
       await sendMessage(text);
       window.setTimeout(() => {
         refreshCardMessages();
         void loadCards();
       }, 600);
     },
-    [sendMessage, refreshCardMessages, loadCards],
+    [activeCardId, dispatch, sendCardMessage, sendMessage, refreshCardMessages, loadCards],
   );
 
   const handleOpenProgram = useCallback(
@@ -364,6 +377,7 @@ export function HomePage() {
                 selectedCardId={activeCardId}
                 layout="page"
               />
+              <MetricsDashboard />
             </main>
           )}
 

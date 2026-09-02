@@ -5,6 +5,10 @@ Run:
     uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 """
 
+from app.config.env_loader import load_environment
+
+load_environment()
+
 from contextlib import asynccontextmanager
 import sys
 from pathlib import Path
@@ -34,6 +38,7 @@ from app.api.routes.agents import (
 )
 from app.api.routes.ai import generate_text
 from app.api.routes.diagnostic_cards import router as diagnostic_cards_router
+from app.api.routes.ai_brain import router as ai_brain_router
 from app.api.routes.health import get_health
 from app.api.routes.realtime import (
     CreateSessionRequest,
@@ -88,6 +93,7 @@ app.add_middleware(
 register_audit_logging_middleware(app)
 
 app.include_router(diagnostic_cards_router)
+app.include_router(ai_brain_router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])

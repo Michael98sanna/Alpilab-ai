@@ -32,8 +32,11 @@ def _write_startup_log(text: str) -> None:
 
 
 def main() -> None:
+    from app.config.env_loader import load_environment
     from local_hub.launcher import main as hub_main
     from local_hub.single_instance import acquire_single_instance_lock
+
+    load_environment()
 
     if "--agent" not in sys.argv[1:] and not acquire_single_instance_lock():
         _write_startup_log("instance already running\n")

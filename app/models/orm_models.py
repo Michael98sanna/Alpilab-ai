@@ -109,3 +109,93 @@ class ArchivedDiagnosticCard(Base):
     confidence = Column(Float, nullable=False, default=0.0)
     archived_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     indexed_in_kb = Column(Boolean, default=False, nullable=False)
+
+
+class KnowledgeEmbedding(Base):
+    """Semantic knowledge entry learned from confirmed repairs."""
+
+    __tablename__ = "knowledge_embeddings"
+
+    id = Column(String, primary_key=True)
+    source_card_id = Column(String, ForeignKey("diagnostic_cards.id"), nullable=True, index=True)
+    text = Column(String, nullable=False)
+    diagnosis = Column(String, nullable=False, default="")
+    solution = Column(String, nullable=False, default="")
+    embedding_json = Column(JSON, nullable=False, default=list)
+    diagnosis_type = Column(String, nullable=False, default="unknown", index=True)
+    device_type = Column(String, nullable=False, default="unknown", index=True)
+    confidence_score = Column(Float, nullable=False, default=0.85)
+    confirmation_count = Column(Integer, nullable=False, default=1)
+    usage_count = Column(Integer, nullable=False, default=0)
+    excluded = Column(Boolean, nullable=False, default=False)
+    disputed = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    last_used = Column(DateTime, nullable=True)
+
+
+class DiagnosisConfirmation(Base):
+    """User feedback on an AI diagnosis for continuous learning."""
+
+    __tablename__ = "diagnosis_confirmations"
+
+    id = Column(String, primary_key=True)
+    card_id = Column(String, ForeignKey("diagnostic_cards.id"), index=True, nullable=False)
+    ai_diagnosis = Column(String, nullable=True)
+    provider = Column(String, nullable=True)
+    pre_feedback_confidence = Column(Float, nullable=False, default=0.0)
+    feedback = Column(String, nullable=False)
+    correction_text = Column(String, nullable=True)
+    knowledge_entry_id = Column(String, ForeignKey("knowledge_embeddings.id"), nullable=True)
+    repair_outcome = Column(String, nullable=True)
+    outcome_notes = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    outcome_at = Column(DateTime, nullable=True)
+
+
+class LearningMetric(Base):
+    """Aggregated accuracy metrics per diagnosis category."""
+
+    __tablename__ = "learning_metrics"
+
+    diagnosis_type = Column(String, primary_key=True)
+    total_cases = Column(Integer, nullable=False, default=0)
+    correct_cases = Column(Integer, nullable=False, default=0)
+    accuracy = Column(Float, nullable=False, default=0.0)
+    avg_confidence = Column(Float, nullable=False, default=0.0)
+    confidence_evolution = Column(JSON, nullable=False, default=dict)
+    last_updated = Column(
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+
+class RouteEvent(Base):
+    """Lightweight log of Brain routing decisions for KB maturity metrics."""
+
+    __tablename__ = "route_events"
+
+    id = Column(String, primary_key=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False, index=True)
+    diagnosis_type = Column(String, nullable=False, default="unknown", index=True)
+    kb_mode = Column(String, nullable=False, default="disabled")
+    strong_match = Column(Boolean, nullable=False, default=False)
+    used_online = Column(Boolean, nullable=False, default=False)
+    provider = Column(String, nullable=True)
+    latency_ms = Column(Integer, nullable=False, default=0)
+    cost_estimate = Column(Float, nullable=False, default=0.0)
+
+
+class ProviderMetric(Base):
+    """Per-provider accuracy metrics."""
+
+    __tablename__ = "provider_metrics"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    provider = Column(String, nullable=False, index=True)
+    diagnosis_type = Column(String, nullable=False, index=True)
+    total_cases = Column(Integer, nullable=False, default=0)
+    correct_cases = Column(Integer, nullable=False, default=0)
+    accuracy = Column(Float, nullable=False, default=0.0)
+    avg_latency_ms = Column(Float, nullable=False, default=0.0)

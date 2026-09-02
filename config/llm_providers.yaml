@@ -1,0 +1,58 @@
+# ALPILAB Brain — LLM provider configuration
+# Providers without a valid env_var are auto-disabled at startup.
+
+providers:
+  claude:
+    enabled: true
+    model: claude-3-5-sonnet-20241022
+    env_var: ANTHROPIC_API_KEY
+    cost_per_1k: 0.003
+    capabilities:
+      - reasoning
+      - diagnosis
+      - code_analysis
+    priority: 1
+
+  gpt4:
+    enabled: true
+    model: gpt-4o-mini
+    env_var: OPENAI_API_KEY
+    cost_per_1k: 0.0015
+    capabilities:
+      - reasoning
+      - diagnosis
+      - quick_answer
+      - explanation
+      - knowledge_search
+    priority: 2
+
+  gemini:
+    enabled: true
+    model: gemini-3.6-flash
+    env_var: GOOGLE_API_KEY
+    cost_per_1k: 0.0005
+    capabilities:
+      - quick_answer
+      - explanation
+    priority: 3
+
+  perplexity:
+    enabled: true
+    model: sonar
+    env_var: PERPLEXITY_API_KEY
+    cost_per_1k: 0.001
+    capabilities:
+      - knowledge_search
+    priority: 4
+
+  ollama:
+    enabled: true
+    model: llama3.2
+    env_var: ALPILAB_OLLAMA_URL
+    cost_per_1k: 0.0
+    capabilities:
+      - reasoning
+      - diagnosis
+      - quick_answer
+      - explanation
+    priority: 99

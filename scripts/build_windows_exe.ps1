@@ -87,6 +87,19 @@ if (Test-IsAdmin) {
 Prepare-ReleaseDir
 Remove-PreviousRelease
 
+$specPath = Join-Path $RepoRoot "packaging\alpilab.spec"
+$specContent = Get-Content -LiteralPath $specPath -Raw
+if ($specContent -match '(?i)--add-data[^\r\n]*\.env') {
+    Write-Host ""
+    Write-Host "[ERRORE] Riferimento .env in PyInstaller --add-data." -ForegroundColor Red
+    exit 1
+}
+if ($specContent -match '(?i)datas[\s\S]{0,400}\.env') {
+    Write-Host ""
+    Write-Host "[ERRORE] packaging/alpilab.spec include .env nel bundle." -ForegroundColor Red
+    exit 1
+}
+
 Write-Host "[1] Build UI (always, so EXE is not stuck with a stale VITE_WS_URL)..." -ForegroundColor Yellow
 Push-Location frontend
 npm install

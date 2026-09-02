@@ -113,6 +113,8 @@ def _configure_local_env(host: str, port: int, session_id: str) -> None:
     db = sqlite_path()
     os.environ.setdefault("ALPILAB_SESSION_STORE", "sqlite")
     os.environ.setdefault("ALPILAB_SQLITE_PATH", str(db))
+    os.environ.setdefault("ALPILAB_DATABASE_URL", f"sqlite:///{db.as_posix()}")
+    os.environ.setdefault("ALPILAB_OLLAMA_URL", "http://127.0.0.1:11434")
     os.environ.setdefault("ALPILAB_DEFAULT_SESSION", session_id)
     os.environ.setdefault("HOST", host)
     os.environ.setdefault("PORT", str(port))
@@ -128,6 +130,17 @@ def _configure_local_env(host: str, port: int, session_id: str) -> None:
         str(Path.home() / ".alpilab" / "agent_identity.json"),
     )
     apply_alpilab_check_env()
+
+
+def _ensure_orm_database() -> None:
+    """Create Brain/ORM tables on the same SQLite file used by the Local Hub."""
+    try:
+        from app.models.database import init_db
+
+        init_db()
+        logger.info("ORM database ready at %s", sqlite_path())
+    except Exception:
+        logger.exception("ORM database init failed")
 
 
 def _ensure_windows_apps_file() -> None:
@@ -250,8 +263,12 @@ def main(argv: list[str] | None = None) -> None:
 
     log_path = log_dir() / "hub.log"
     _configure_hub_logging(log_path)
+    from app.config.env_loader import load_environment
+
+    load_environment()
     ensure_windows_autostart(bool(cfg.get("start_with_windows", True)))
     _configure_local_env(host, port, session_id)
+    _ensure_orm_database()
     _ensure_windows_apps_file()
     if args.no_agent or not cfg.get("start_pc_agent", True):
         os.environ["ALPILAB_HUB_START_AGENT"] = "false"

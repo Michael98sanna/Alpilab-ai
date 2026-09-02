@@ -18,6 +18,20 @@ export interface DiagnosticMessage {
   role: string;
   content: string;
   timestamp: string;
+  tool_calls?: {
+    brain?: {
+      provider?: string;
+      model?: string;
+      source?: "local_kb" | "hybrid" | "online";
+      confidence?: number;
+      kb_hits?: number;
+      used_online?: boolean;
+      latency_ms?: number;
+      knowledge_entry_id?: string | null;
+      low_accuracy_warning?: boolean;
+      local_model?: boolean;
+    };
+  } | null;
 }
 
 export interface DiagnosticCardSummary {
