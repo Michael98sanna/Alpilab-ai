@@ -55,7 +55,8 @@ notepad .env
 |-----------|----------|---------------|------|
 | `OPENAI_API_KEY` | OpenAI (GPT) | No* | Prefisso `sk-`. Serve **credito API** separato da ChatGPT Plus |
 | `ANTHROPIC_API_KEY` | Claude | No* | Prefisso `sk-ant-` |
-| `GOOGLE_API_KEY` | Gemini | No | Prefisso `AIza` |
+| `GOOGLE_API_KEY` | Gemini | No | Prefisso `AIza` (o `AQ.` per le chiavi più recenti). Tier gratuito **molto limitato** (~20 richieste/giorno) |
+| `GROQ_API_KEY` | Groq | No | Prefisso `gsk_`. Tier gratuito **molto più ampio** (migliaia di richieste, limiti per minuto), nessuna carta richiesta |
 | `PERPLEXITY_API_KEY` | Perplexity | No | Prefisso `pplx-` |
 | `ALPILAB_OLLAMA_URL` | Ollama locale | No | Default `http://127.0.0.1:11434` |
 
@@ -66,9 +67,22 @@ notepad .env
 - **OpenAI:** https://platform.openai.com/api-keys  
 - **Anthropic:** https://console.anthropic.com/  
 - **Google AI:** https://aistudio.google.com/apikey  
+- **Groq:** https://console.groq.com/keys  
 - **Perplexity:** https://www.perplexity.ai/settings/api  
 
 > **ChatGPT Plus ≠ API OpenAI.** L'abbonamento ChatGPT non abilita automaticamente le chiamate API: serve un account con fatturazione/credito API.
+
+---
+
+## Come vengono combinate le risposte in diagnosi
+
+Per le domande di diagnosi, ALPILAB interroga **prima Ollama** (locale, gratis).
+Se la risposta locale sembra utile, viene passata a un provider cloud gratuito
+(Groq, o Gemini se Groq non è configurato) per essere verificata e arricchita
+in un'unica risposta finale — mostrata come provider `ollama+groq` o
+`ollama+gemini`. Se Ollama non ha nulla di utile, si interroga direttamente il
+provider cloud. Groq viene preferito a Gemini per questo confronto perché ha
+un tier gratuito molto più ampio.
 
 ---
 

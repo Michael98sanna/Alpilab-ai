@@ -13,6 +13,7 @@ from app.ai.providers.base import LLMProvider
 from app.ai.providers.claude import ClaudeProvider
 from app.ai.providers.gemini import GeminiProvider
 from app.ai.providers.gpt4 import GPT4Provider
+from app.ai.providers.groq import GroqProvider
 from app.ai.providers.key_validation import env_secret, key_present, key_shape_valid
 from app.ai.providers.ollama import OllamaProvider
 from app.ai.providers.perplexity import PerplexityProvider
@@ -23,6 +24,7 @@ _PROVIDER_CLASSES: dict[str, type[LLMProvider]] = {
     "claude": ClaudeProvider,
     "gpt4": GPT4Provider,
     "gemini": GeminiProvider,
+    "groq": GroqProvider,
     "perplexity": PerplexityProvider,
     "ollama": OllamaProvider,
 }

@@ -53,7 +53,7 @@ class LLMProvider(ABC):
         if not self.is_configured:
             return False
         try:
-            response = self.complete("ping", system_prompt="Reply with OK.", max_tokens=32)
+            response = self.complete("ping", system_prompt="Reply with OK.", max_tokens=256)
             return bool(response.content.strip())
         except Exception:
             logger.debug("Health check failed for %s", self.name, exc_info=True)

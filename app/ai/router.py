@@ -36,6 +36,8 @@ from app.ai.schemas import (
 
     KnowledgeCase,
 
+    LLMResponse,
+
     ResponseSource,
 
     TaskType,
@@ -115,21 +117,42 @@ _SYSTEM_PROMPTS: dict[TaskType, str] = {
 
 
 
+_DIAGNOSIS_SYNTHESIS_HINT = (
+    "\n\nNota per il revisore: un modello locale gratuito (meno affidabile) ha già "
+    "proposto questa ipotesi diagnostica per lo stesso caso. Verificala, correggila "
+    "se necessario e arricchiscila con la tua competenza per dare una risposta "
+    "finale unica, più completa e operativa. Se sei in disaccordo, spiega perché.\n"
+    "Ipotesi locale:\n"
+)
+
+_MIN_USEFUL_LOCAL_ANSWER_CHARS = 30
+
+_LOCAL_ANSWER_FALLBACK_MARKERS = (
+    "nessun provider ai disponibile",
+    "non disponibile",
+)
+
+
 _INTENT_PROVIDER_ORDER: dict[TaskType, tuple[str, ...]] = {
 
-    TaskType.DIAGNOSIS: ("claude", "gpt4", "ollama"),
+    TaskType.DIAGNOSIS: ("claude", "gpt4", "groq", "ollama"),
 
-    TaskType.REASONING: ("claude", "gpt4", "ollama"),
+    TaskType.REASONING: ("claude", "gpt4", "groq", "ollama"),
 
-    TaskType.CODE_ANALYSIS: ("claude", "gpt4", "ollama"),
+    TaskType.CODE_ANALYSIS: ("claude", "gpt4", "groq", "ollama"),
 
-    TaskType.KNOWLEDGE_SEARCH: ("perplexity", "gpt4", "ollama"),
+    TaskType.KNOWLEDGE_SEARCH: ("perplexity", "gpt4", "groq", "ollama"),
 
-    TaskType.QUICK_ANSWER: ("gpt4", "gemini", "ollama"),
+    TaskType.QUICK_ANSWER: ("gpt4", "groq", "gemini", "ollama"),
 
-    TaskType.EXPLANATION: ("gpt4", "gemini", "ollama"),
+    TaskType.EXPLANATION: ("gpt4", "groq", "gemini", "ollama"),
 
 }
+
+# Cloud providers tried (in order) to verify/enrich a local Ollama diagnosis.
+# Gemini's free tier has a very low daily request cap, so Groq (much higher
+# free limits) is tried first when both are configured.
+_DIAGNOSIS_VERIFIER_ORDER: tuple[str, ...] = ("groq", "gemini")
 
 
 
@@ -313,9 +336,13 @@ class BrainRouter:
 
         start = time.perf_counter()
 
-        task = classify_task(prompt)
-
         search_text = symptom or prompt
+
+        # Classify on the raw symptom/message, not the context-enriched prompt:
+        # the enriched prompt always contains template words like "sintomo"
+        # ("Sintomo attuale: ..."), which would otherwise force every message
+        # into TaskType.DIAGNOSIS and starve other providers (e.g. Gemini).
+        task = classify_task(search_text)
 
         dtype = diagnosis_type or self.learning.extract_diagnosis_category(search_text)
 
@@ -533,7 +560,7 @@ class BrainRouter:
 
                     else:
 
-                        llm_answer = self._call_chain(
+                        llm_answer = self._route_completion(
 
                             prompt, _SYSTEM_PROMPTS[task], task
 
@@ -669,7 +696,7 @@ class BrainRouter:
 
         system = _SYSTEM_PROMPTS[task]
 
-        llm = self._call_chain(enriched, system, task)
+        llm = self._route_completion(enriched, system, task)
 
         latency = int((time.perf_counter() - start) * 1000)
 
@@ -721,7 +748,7 @@ class BrainRouter:
 
     ) -> IntelligentRouteResult:
 
-        llm = self._call_chain(prompt, _SYSTEM_PROMPTS[task], task)
+        llm = self._route_completion(prompt, _SYSTEM_PROMPTS[task], task)
 
         latency = int((time.perf_counter() - start) * 1000)
         confidence = llm.confidence
@@ -759,6 +786,73 @@ class BrainRouter:
         )
 
 
+
+    def _provider_by_name(self, name: str) -> LLMProvider | None:
+        return next((p for p in self.providers if p.name == name), None)
+
+    @staticmethod
+    def _is_useful_local_answer(content: str) -> bool:
+        text = (content or "").strip()
+        if len(text) < _MIN_USEFUL_LOCAL_ANSWER_CHARS:
+            return False
+        lowered = text.lower()
+        return not any(marker in lowered for marker in _LOCAL_ANSWER_FALLBACK_MARKERS)
+
+    def _diagnosis_combo(self, prompt: str, system: str) -> LLMResponse | None:
+        """Ollama-first, cloud-checked diagnosis: combine when both have signal.
+
+        Tries each configured verifier in `_DIAGNOSIS_VERIFIER_ORDER` (Groq
+        before Gemini, since Groq's free tier allows far more requests/day)
+        so a quota-exhausted verifier doesn't block the others.
+        """
+        verifiers = [
+            provider
+            for name in _DIAGNOSIS_VERIFIER_ORDER
+            if (provider := self._provider_by_name(name)) is not None
+            and provider.is_configured
+        ]
+        if not verifiers:
+            return None
+
+        ollama = self._provider_by_name("ollama")
+        local_answer: str | None = None
+        if ollama is not None and ollama.is_configured:
+            try:
+                local_result = ollama.complete(prompt, system_prompt=system)
+                if self._is_useful_local_answer(local_result.content):
+                    local_answer = local_result.content
+            except Exception:
+                logger.debug("Local Ollama pass failed before cloud combo", exc_info=True)
+
+        combo_prompt = prompt
+        if local_answer:
+            combo_prompt = f"{prompt}{_DIAGNOSIS_SYNTHESIS_HINT}{local_answer}"
+
+        for verifier in verifiers:
+            try:
+                result = verifier.complete(combo_prompt, system_prompt=system)
+            except Exception:
+                logger.warning(
+                    "%s diagnosis combo failed, trying next verifier",
+                    verifier.name,
+                    exc_info=True,
+                )
+                continue
+            if local_answer:
+                result = result.model_copy(update={"provider": f"ollama+{verifier.name}"})
+            return result
+        return None
+
+    def _route_completion(
+        self, prompt: str, system: str, task: TaskType, *, allow_combo: bool = True
+    ):
+        """Pick a completion strategy: Ollama+Gemini combo for diagnosis, else the
+        plain provider fallback chain."""
+        if allow_combo and task == TaskType.DIAGNOSIS:
+            combo = self._diagnosis_combo(prompt, system)
+            if combo is not None:
+                return combo
+        return self._call_chain(prompt, system, task)
 
     def _call_chain(self, prompt: str, system: str, task: TaskType):
 

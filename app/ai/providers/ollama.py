@@ -7,13 +7,16 @@ import os
 
 import httpx
 
-from app.ai.providers.base import DEFAULT_TIMEOUT_SEC, LLMProvider
+from app.ai.providers.base import LLMProvider
 from app.ai.providers.ollama_support import ollama_model_installed
 from app.ai.schemas import LLMResponse
 
 logger = logging.getLogger(__name__)
 
 LOCAL_MODEL_MAX_CONFIDENCE = 0.45
+# Local generation on modest hardware can take much longer than a cloud call;
+# Ollama has no per-call cost, so it can afford a generous timeout.
+OLLAMA_TIMEOUT_SEC = 120.0
 
 
 class OllamaProvider(LLMProvider):
@@ -47,7 +50,7 @@ class OllamaProvider(LLMProvider):
             payload["system"] = system_prompt
 
         try:
-            with httpx.Client(timeout=DEFAULT_TIMEOUT_SEC) as client:
+            with httpx.Client(timeout=OLLAMA_TIMEOUT_SEC) as client:
                 response = client.post(f"{self.base_url}/api/generate", json=payload)
                 response.raise_for_status()
                 data = response.json()
@@ -73,7 +76,7 @@ class OllamaProvider(LLMProvider):
         try:
             if not ollama_model_installed(self.base_url, self.model):
                 return False
-            response = self.complete("ping", system_prompt="Reply with OK.", max_tokens=32)
+            response = self.complete("ping", system_prompt="Reply with OK.", max_tokens=256)
             return bool(response.content.strip())
         except Exception:
             logger.debug("Ollama health check failed", exc_info=True)

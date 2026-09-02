@@ -58,6 +58,7 @@ hidden += [
 datas = [
     (str(_ROOT / "frontend" / "dist"), "frontend/dist"),
     (str(_ROOT / "pc_agent" / "windows_apps.json.example"), "pc_agent"),
+    (str(_ROOT / "config" / "llm_providers.yaml"), "config"),
 ]
 
 a = Analysis(

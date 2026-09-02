@@ -56,7 +56,7 @@ def probe_ollama(provider, *, live: bool = True) -> dict[str, Any]:
                 "latency_ms": None,
             }
         start = time.perf_counter()
-        result = provider.complete("ping", system_prompt="Reply OK.", max_tokens=32)
+        result = provider.complete("ping", system_prompt="Reply OK.", max_tokens=256)
         latency_ms = int((time.perf_counter() - start) * 1000)
         return {
             "name": provider.name,
@@ -125,7 +125,7 @@ def probe_cloud_provider(provider: LLMProvider, *, live: bool = True) -> dict[st
 
     start = time.perf_counter()
     try:
-        result = provider.complete("ping", system_prompt="Reply OK.", max_tokens=32)
+        result = provider.complete("ping", system_prompt="Reply OK.", max_tokens=256)
         latency_ms = int((time.perf_counter() - start) * 1000)
         return {
             "name": provider.name,

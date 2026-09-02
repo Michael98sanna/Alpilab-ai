@@ -36,6 +36,18 @@ providers:
       - explanation
     priority: 3
 
+  groq:
+    enabled: true
+    model: qwen/qwen3.8-27b
+    env_var: GROQ_API_KEY
+    cost_per_1k: 0.0
+    capabilities:
+      - reasoning
+      - diagnosis
+      - quick_answer
+      - explanation
+    priority: 4
+
   perplexity:
     enabled: true
     model: sonar
@@ -43,7 +55,7 @@ providers:
     cost_per_1k: 0.001
     capabilities:
       - knowledge_search
-    priority: 4
+    priority: 5
 
   ollama:
     enabled: true

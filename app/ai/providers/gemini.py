@@ -10,6 +10,12 @@ from app.ai.schemas import LLMResponse
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
+# Newer Gemini "thinking" models spend part of maxOutputTokens on internal
+# reasoning before writing the visible answer. Reserve extra headroom so the
+# caller's requested max_tokens still describes the visible-answer budget,
+# instead of the answer getting cut off mid-sentence.
+THINKING_TOKEN_RESERVE = 1024
+
 
 class GeminiAPIError(RuntimeError):
     """Gemini HTTP error with response metadata for diagnostics."""
@@ -46,7 +52,7 @@ class GeminiProvider(LLMProvider):
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": temperature,
-                "maxOutputTokens": max_tokens,
+                "maxOutputTokens": max_tokens + THINKING_TOKEN_RESERVE,
             },
         }
         if system_prompt:

@@ -9,12 +9,14 @@ KEY_ENV_VARS: dict[str, str] = {
     "claude": "ANTHROPIC_API_KEY",
     "gpt4": "OPENAI_API_KEY",
     "gemini": "GOOGLE_API_KEY",
+    "groq": "GROQ_API_KEY",
     "perplexity": "PERPLEXITY_API_KEY",
 }
 
 EXPECTED_PREFIXES: dict[str, str] = {
     "ANTHROPIC_API_KEY": "sk-ant-",
     "OPENAI_API_KEY": "sk-",
+    "GROQ_API_KEY": "gsk_",
     "PERPLEXITY_API_KEY": "pplx-",
 }
 
@@ -25,6 +27,7 @@ SECRET_PATTERNS = (
     re.compile(r"sk-[A-Za-z0-9_-]{8,}"),
     re.compile(r"AIza[A-Za-z0-9_-]{8,}"),
     re.compile(r"AQ\.[A-Za-z0-9._-]{8,}"),
+    re.compile(r"gsk_[A-Za-z0-9_-]{8,}"),
     re.compile(r"pplx-[A-Za-z0-9_-]{8,}"),
 )
 
