@@ -71,9 +71,17 @@ _SYSTEM_PROMPTS: dict[TaskType, str] = {
 
         "Sei un tecnico senior di riparazione smartphone in laboratorio ALPILAB. "
 
-        "Rispondi in italiano, in modo conciso e operativo. Proponi test concreti "
+        "Rispondi in italiano in modo netto, diretto e conciso: massimo 5-6 righe "
 
-        "prima di concludere. Se non sei sicuro, dillo esplicitamente."
+        "o punti elenco brevi, senza titoli o sezioni. Dai subito l'ipotesi più "
+
+        "probabile e 2-3 test concreti per confermarla. Nessun preambolo, nessuna "
+
+        "domanda al cliente, nessun commento su altre risposte o modelli: scrivi "
+
+        "solo la tua valutazione finale, come se fosse l'unica. Se non sei sicuro, "
+
+        "dillo in una riga."
 
     ),
 
@@ -95,9 +103,13 @@ _SYSTEM_PROMPTS: dict[TaskType, str] = {
 
     TaskType.REASONING: (
 
-        "Sei un tecnico ALPILAB. Ragiona passo passo sulle cause probabili "
+        "Sei un tecnico ALPILAB. Rispondi in italiano in modo netto e conciso "
 
-        "senza inventare dati non verificati."
+        "(massimo 5-6 righe), indicando la causa più probabile e perché. "
+
+        "Nessun preambolo né commento su altre risposte o modelli: scrivi solo "
+
+        "la tua conclusione finale. Non inventare dati non verificati."
 
     ),
 
@@ -118,18 +130,29 @@ _SYSTEM_PROMPTS: dict[TaskType, str] = {
 
 
 _DIAGNOSIS_SYNTHESIS_HINT = (
-    "\n\nNota per il revisore: un modello locale gratuito (meno affidabile) ha già "
-    "proposto questa ipotesi diagnostica per lo stesso caso. Verificala, correggila "
-    "se necessario e arricchiscila con la tua competenza per dare una risposta "
-    "finale unica, più completa e operativa. Se sei in disaccordo, spiega perché.\n"
-    "Ipotesi locale:\n"
+    "\n\n[Appunto interno, solo per te — non citarlo né farvi riferimento nella "
+    "risposta: una bozza rapida generata da un modello locale più debole è "
+    "riportata sotto, solo come spunto per non ripetere le stesse ovvietà. "
+    "Non menzionare questa bozza, non dire che la stai correggendo o "
+    "confrontando: scrivi un'unica risposta finale, come se fosse la tua prima "
+    "e unica valutazione del caso.]\n"
+    "Bozza locale (privata, non citare):\n"
+)
+
+_LOCAL_DRAFT_SYSTEM_SUFFIX = (
+    " Questa è solo una bozza interna: rispondi in 2-3 frasi brevissime, senza elenchi."
 )
 
 _MIN_USEFUL_LOCAL_ANSWER_CHARS = 30
 
-# Cap Ollama's local draft length in the diagnosis combo: it only needs to be
-# long enough for the cloud verifier to react to, not a finished answer.
-_LOCAL_DRAFT_MAX_TOKENS = 350
+# Cap Ollama's local draft length in the diagnosis combo: it's a private,
+# never-shown seed for the cloud verifier, not a finished answer — keep it
+# short so the slow local model doesn't dominate total response latency.
+_LOCAL_DRAFT_MAX_TOKENS = 150
+
+# Cap the verifier's final answer too, in line with the concise-answer system
+# prompts — a shorter generation is also a faster one.
+_DIAGNOSIS_ANSWER_MAX_TOKENS = 500
 
 _LOCAL_ANSWER_FALLBACK_MARKERS = (
     "nessun provider ai disponibile",
@@ -826,7 +849,9 @@ class BrainRouter:
                 # so a full-length local answer would only add latency without
                 # adding value — Ollama's generation time scales with tokens.
                 local_result = ollama.complete(
-                    prompt, system_prompt=system, max_tokens=_LOCAL_DRAFT_MAX_TOKENS
+                    prompt,
+                    system_prompt=system + _LOCAL_DRAFT_SYSTEM_SUFFIX,
+                    max_tokens=_LOCAL_DRAFT_MAX_TOKENS,
                 )
                 if self._is_useful_local_answer(local_result.content):
                     local_answer = local_result.content
@@ -839,7 +864,11 @@ class BrainRouter:
 
         for verifier in verifiers:
             try:
-                result = verifier.complete(combo_prompt, system_prompt=system)
+                result = verifier.complete(
+                    combo_prompt,
+                    system_prompt=system,
+                    max_tokens=_DIAGNOSIS_ANSWER_MAX_TOKENS,
+                )
             except Exception:
                 logger.warning(
                     "%s diagnosis combo failed, trying next verifier",
