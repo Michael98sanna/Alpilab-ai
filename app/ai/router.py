@@ -127,6 +127,10 @@ _DIAGNOSIS_SYNTHESIS_HINT = (
 
 _MIN_USEFUL_LOCAL_ANSWER_CHARS = 30
 
+# Cap Ollama's local draft length in the diagnosis combo: it only needs to be
+# long enough for the cloud verifier to react to, not a finished answer.
+_LOCAL_DRAFT_MAX_TOKENS = 350
+
 _LOCAL_ANSWER_FALLBACK_MARKERS = (
     "nessun provider ai disponibile",
     "non disponibile",
@@ -818,7 +822,12 @@ class BrainRouter:
         local_answer: str | None = None
         if ollama is not None and ollama.is_configured:
             try:
-                local_result = ollama.complete(prompt, system_prompt=system)
+                # Short draft: the cloud verifier rewrites/expands this anyway,
+                # so a full-length local answer would only add latency without
+                # adding value — Ollama's generation time scales with tokens.
+                local_result = ollama.complete(
+                    prompt, system_prompt=system, max_tokens=_LOCAL_DRAFT_MAX_TOKENS
+                )
                 if self._is_useful_local_answer(local_result.content):
                     local_answer = local_result.content
             except Exception:
